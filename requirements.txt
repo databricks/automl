@@ -5,13 +5,6 @@
 # * Keep dependencies sorted.
 
 holidays
-ipykernel
-ipywidgets
-jupyter_client
-matplotlib
-mlflow
-nbconvert
-nbformat
 numpy
 pandas
 plotly
