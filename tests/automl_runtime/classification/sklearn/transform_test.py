@@ -5,7 +5,7 @@ class DummyTest(unittest.TestCase):
     """
     Dummy test to check github action setup.
     """
-    def test_nev(self):
+    def test_new(self):
         import sklearn
         sklearn.__version__
 
