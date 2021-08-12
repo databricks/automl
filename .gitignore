@@ -155,3 +155,6 @@ mlruns
 .idea_modules/
 .idea/
 .vscode/
+
+# JIRA plugin
+atlassian-ide-plugin.xml
