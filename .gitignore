@@ -127,3 +127,31 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.DS_Store
+
+# Sphinx build
+_build
+
+# mypy cache
+.mypy_cache/
+
+# Coverage
+.coverage*
+coverage.xml
+
+# Spark
+spark-warehouse/
+
+# Pypandoc
+pandoc*
+whatsnew
+
+# Mlflow directory during documentation generation
+mlruns
+
+## Plugin-specific files:
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+.idea/
+.vscode/
