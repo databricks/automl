@@ -43,3 +43,5 @@ jobs:
       working-directory: runtime
     - name: Comment coverage
       uses: coroo/pytest-coverage-commentator@v1.0.2
+      with:
+        pytest-coverage: runtime/pytest-coverage.txt
