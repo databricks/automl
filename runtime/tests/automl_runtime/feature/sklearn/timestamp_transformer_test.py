@@ -6,7 +6,7 @@ import numpy as np
 from databricks.automl_runtime.feature.sklearn.timestamp_transformer import TimestampTransformer
 
 
-class TestDateTransformer(unittest.TestCase):
+class TestTimestampTransformer(unittest.TestCase):
 
     def setUp(self) -> None:
         num_rows = 4
