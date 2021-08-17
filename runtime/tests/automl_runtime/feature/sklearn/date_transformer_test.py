@@ -34,15 +34,12 @@ class TestDateTransformer(unittest.TestCase):
     def test_transform(self):
         date_transformed = self.transformer.transform(self.X[['date1']])
         np.testing.assert_array_almost_equal(date_transformed.to_numpy(), self.date_expected, decimal=5,
-                                             err_msg="Actual: {}\nExpected: {}\nEquality: {}".format(
-                                                 date_transformed, self.date_expected,
-                                                 date_transformed == self.date_expected))
+                                             err_msg=f"Actual: {date_transformed}\nExpected: {self.date_expected}\n"
+                                                     f"Equality: {date_transformed == self.date_expected}")
 
     def test_with_pipeline(self):
         pipeline = Pipeline([("date_transformer", self.transformer)])
-        timestamp_transformed = pipeline.fit_transform(self.X[['timestamp1']])
-        np.testing.assert_array_almost_equal(timestamp_transformed.to_numpy(), self.date_expected, decimal=5,
-                                             err_msg="Actual: {}\nExpected: {}\nEquality: {}".format(
-                                                 timestamp_transformed,
-                                                 self.date_expected,
-                                                 timestamp_transformed == self.date_expected))
+        date_transformed = pipeline.fit_transform(self.X[['date1']])
+        np.testing.assert_array_almost_equal(date_transformed.to_numpy(), self.date_expected, decimal=5,
+                                             err_msg=f"Actual: {date_transformed}\nExpected: {self.date_expected}\n"
+                                                     f"Equality: {date_transformed == self.date_expected}")

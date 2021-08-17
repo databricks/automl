@@ -36,16 +36,14 @@ class TestTimestampTransformer(unittest.TestCase):
     def test_transform(self):
         timestamp_transformed = self.transformer.transform(self.X[['timestamp1']])
         np.testing.assert_array_almost_equal(timestamp_transformed.to_numpy(), self.timestamp_expected, decimal=5,
-                                             err_msg="Actual: {}\nExpected: {}\nEquality: {}".format(
-                                                 timestamp_transformed,
-                                                 self.timestamp_expected,
-                                                 timestamp_transformed == self.timestamp_expected))
+                                             err_msg=f"Actual: {timestamp_transformed}\n"
+                                                     f"Expected: {self.timestamp_expected}\n"
+                                                     f"Equality: {timestamp_transformed == self.timestamp_expected}")
 
     def test_with_pipeline(self):
         pipeline = Pipeline([("ts_transformer", self.transformer)])
         timestamp_transformed = pipeline.fit_transform(self.X[['timestamp1']])
         np.testing.assert_array_almost_equal(timestamp_transformed.to_numpy(), self.timestamp_expected, decimal=5,
-                                             err_msg="Actual: {}\nExpected: {}\nEquality: {}".format(
-                                                 timestamp_transformed,
-                                                 self.timestamp_expected,
-                                                 timestamp_transformed == self.timestamp_expected))
+                                             err_msg=f"Actual: {timestamp_transformed}\n"
+                                                     f"Expected: {self.timestamp_expected}\n"
+                                                     f"Equality: {timestamp_transformed == self.timestamp_expected}")
