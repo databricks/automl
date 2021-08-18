@@ -16,10 +16,10 @@
 
 import pandas as pd
 
-from databricks.automl_runtime.sklearn.base_datetime_transformer import BaseDateTimeTransformer
+from databricks.automl_runtime.sklearn.base_datetime_transformer import BaseDatetimeTransformer
 
 
-class DateTransformer(BaseDateTimeTransformer):
+class DateTransformer(BaseDatetimeTransformer):
     """
     Generate features from date column.
     """

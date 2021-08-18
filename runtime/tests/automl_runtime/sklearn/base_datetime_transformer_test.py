@@ -19,10 +19,10 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from databricks.automl_runtime.sklearn.base_datetime_transformer import BaseDateTimeTransformer
+from databricks.automl_runtime.sklearn.base_datetime_transformer import BaseDatetimeTransformer
 
 
-class TestDateTransformer(unittest.TestCase):
+class TestBaseDatetimeTransformer(unittest.TestCase):
     PRECISION = 5
 
     def setUp(self) -> None:
@@ -32,7 +32,7 @@ class TestDateTransformer(unittest.TestCase):
         ], axis=1)
 
     def test_cyclic_transform(self):
-        cyclic_transformed = pd.concat(BaseDateTimeTransformer._cyclic_transform(self.X['timestamp1'].dt.hour, 24),
+        cyclic_transformed = pd.concat(BaseDatetimeTransformer._cyclic_transform(self.X['timestamp1'].dt.hour, 24),
                                        axis=1)
         cyclic_expected = np.array([[0.9659258262890683, 0.25881904510252074],
                                     [1.0, 6.123233995736766e-17],
@@ -43,7 +43,7 @@ class TestDateTransformer(unittest.TestCase):
                                                      f"Equality: {cyclic_transformed == cyclic_expected}")
 
     def test_generate_datetime_features(self):
-        feature_generated = BaseDateTimeTransformer._generate_datetime_features(self.X[['timestamp1']]).to_numpy()
+        feature_generated = BaseDatetimeTransformer._generate_datetime_features(self.X[['timestamp1']]).to_numpy()
         feature_expected = np.array([
             [1485925200, False, 0.9165622558699762, -0.39989202431974097,
              0.2424681428783799, 0.97015936819118, 0.5251794996758523,

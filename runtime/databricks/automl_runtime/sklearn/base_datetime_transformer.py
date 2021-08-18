@@ -23,7 +23,7 @@ import holidays
 from sklearn.base import TransformerMixin, BaseEstimator
 
 
-class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
+class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
     """
     Abstract transformer for datetime feature.
     Implements common functions to transform date and timestamp.
