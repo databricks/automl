@@ -24,10 +24,11 @@ class TimestampTransformer(BaseDateTimeTransformer):
     Generate features from timestamp column.
     """
 
-    columns_to_ohe = [10]  # index of hour column
+    HOUR_COLUMN_INDEX = 10
 
     def transform(self, X):
-        """Transform timestamp data to datetime features.
+        """
+        Transform timestamp data to datetime features.
 
         Parameters
         ----------

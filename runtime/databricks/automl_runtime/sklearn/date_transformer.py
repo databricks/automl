@@ -25,7 +25,8 @@ class DateTransformer(BaseDateTimeTransformer):
     """
 
     def transform(self, X):
-        """Transform date data to datetime features.
+        """
+        Transform date data to datetime features.
 
         Parameters
         ----------

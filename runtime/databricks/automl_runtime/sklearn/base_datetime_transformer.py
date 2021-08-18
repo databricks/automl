@@ -37,8 +37,8 @@ class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
     WEEKEND_START = 5
 
     def fit(self, X, y=None):
-        """Do nothing and return the estimator unchanged
-
+        """
+        Do nothing and return the estimator unchanged.
         This method is just there to implement the usual API and hence work in pipelines.
         """
         return self
@@ -49,7 +49,8 @@ class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
 
     @staticmethod
     def _cyclic_transform(unit, period):
-        """Encode cyclic features with a sine/cosine transform.
+        """
+        Encode cyclic features with a sine/cosine transform.
 
         Parameters
         ----------
@@ -68,7 +69,8 @@ class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
 
     @classmethod
     def _generate_datetime_features(cls, X, include_timestamp=True):
-        """Extract relevant features from the datetime column.
+        """
+        Extract relevant features from the datetime column.
 
         For each datetime column, extract relevant information from the date:
         - Unix timestamp
