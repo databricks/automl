@@ -25,10 +25,17 @@ class DateTransformer(BaseDateTimeTransformer):
     """
 
     def transform(self, X):
-        """
-        Transform date data to datetime features.
-        :param X: A pandas dataframe of shape (n_samples, 1), where the only column is a date column
-        :return: A pandas dataframe with transformed features
+        """Transform date data to datetime features.
+
+        Parameters
+        ----------
+        X : pd.DataFrame of shape (n_samples, 1)
+            The only column is a date column.
+
+        Returns
+        -------
+        X_tr : pd.DataFrame of shape (n_samples, 10)
+            Transformed features.
         """
         X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime, errors="coerce")
         X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch

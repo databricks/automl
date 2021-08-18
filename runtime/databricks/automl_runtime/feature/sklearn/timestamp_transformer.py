@@ -27,10 +27,17 @@ class TimestampTransformer(BaseDateTimeTransformer):
     columns_to_ohe = [10]  # index of hour column
 
     def transform(self, X):
-        """
-        Transform timestamp data to datetime features.
-        :param X: A pandas dataframe of shape (n_samples, 1), where the only column is a timestamp column
-        :return: A pandas dataframe with transformed features
+        """Transform timestamp data to datetime features.
+
+        Parameters
+        ----------
+        X : pd.DataFrame of shape (n_samples, 1)
+            The only column is a timestamp column.
+
+        Returns
+        -------
+        X_tr : pd.DataFrame of shape (n_samples, 13)
+            Transformed features.
         """
         X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch
 

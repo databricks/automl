@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
+from abc import ABC, abstractmethod
+
 import numpy as np
 import pandas as pd
 import holidays
-
-from abc import ABC, abstractmethod
 
 from sklearn.base import TransformerMixin, BaseEstimator
 
@@ -37,9 +37,9 @@ class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
     WEEKEND_START = 5
 
     def fit(self, X, y=None):
-        """
-        Do nothing and return the estimator unchanged. This method is just there to implement
-        the usual API and hence work in sklearn pipelines.
+        """Do nothing and return the estimator unchanged
+
+        This method is just there to implement the usual API and hence work in pipelines.
         """
         return self
 
@@ -49,18 +49,54 @@ class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
 
     @staticmethod
     def _cyclic_transform(unit, period):
-        """
-        Encode cyclic features with a sine/cosine transform.
+        """Encode cyclic features with a sine/cosine transform.
+
+        Parameters
+        ----------
+        unit : array-like
+            cyclic features to transform.
+
+        period : int
+            period for the sine/cosine transform.
+
+        Returns
+        -------
+        cyclic_transformed : list of two array-like objects
+            The sine and cosine transformed cyclic features.
         """
         return [np.sin(2 * np.pi * unit / period), np.cos(2 * np.pi * unit / period)]
 
     @classmethod
     def _generate_datetime_features(cls, X, include_timestamp=True):
-        """
-        Extract relevant features from the datetime column.
-        :param X: A pandas dataframe of shape (n_samples, 1), where the only column is a datetime column
-        :param include_timestamp: A boolean indicates if the input column include timestamp information
-        :return: A pandas dataframe with generated features
+        """Extract relevant features from the datetime column.
+
+        For each datetime column, extract relevant information from the date:
+        - Unix timestamp
+        - whether the date is a weekend
+        - whether the date is a holiday
+        - cyclic features
+
+        For cyclic features, plot the values along a unit circle to encode temporal proximity:
+        - hour of the day
+        - hours since the beginning of the week
+        - hours since the beginning of the month
+        - hours since the beginning of the year
+
+        Additionally, extract extra information from columns with timestamps:
+        - hour of the day
+
+        Parameters
+        ----------
+        X : pd.DataFrame of shape (n_samples, 1)
+            The only column is a datetime column.
+
+        include_timestamp : boolean, default=True
+            Indicates if the input column include timestamp information.
+
+        Returns
+        -------
+        X_features : pd.DataFrame
+            The generated features.
         """
         col = X.columns[0]
         dt = X[col].dt
