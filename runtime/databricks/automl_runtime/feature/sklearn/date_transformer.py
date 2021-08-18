@@ -20,9 +20,17 @@ from databricks.automl_runtime.feature.sklearn.base_datetime_transformer import 
 
 
 class DateTransformer(BaseDateTimeTransformer):
+    """
+    Generate features from date column.
+    """
 
     def transform(self, X):
+        """
+        Transform date data to datetime features.
+        :param X: A pandas dataframe of shape (n_samples, 1), where the only column is a date column
+        :return: A pandas dataframe with transformed features
+        """
         X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime, errors="coerce")
         X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch
 
-        return self._generate_features(X, include_timestamp=False)
+        return self._generate_datetime_features(X, include_timestamp=False)

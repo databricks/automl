@@ -20,9 +20,18 @@ from databricks.automl_runtime.feature.sklearn.base_datetime_transformer import 
 
 
 class TimestampTransformer(BaseDateTimeTransformer):
+    """
+    Generate features from timestamp column.
+    """
+
     columns_to_ohe = [10]  # index of hour column
 
     def transform(self, X):
+        """
+        Transform timestamp data to datetime features.
+        :param X: A pandas dataframe of shape (n_samples, 1), where the only column is a timestamp column
+        :return: A pandas dataframe with transformed features
+        """
         X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch
 
-        return self._generate_features(X, include_timestamp=True)
+        return self._generate_datetime_features(X, include_timestamp=True)

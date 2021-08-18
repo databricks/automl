@@ -42,8 +42,8 @@ class TestDateTransformer(unittest.TestCase):
                                              err_msg=f"Actual: {cyclic_transformed}\nExpected: {cyclic_expected}\n"
                                                      f"Equality: {cyclic_transformed == cyclic_expected}")
 
-    def test_generate_features(self):
-        feature_generated = BaseDateTimeTransformer._generate_features(self.X[['timestamp1']]).to_numpy()
+    def test_generate_datetime_features(self):
+        feature_generated = BaseDateTimeTransformer._generate_datetime_features(self.X[['timestamp1']]).to_numpy()
         feature_expected = np.array([
             [1485925200, False, 0.9165622558699762, -0.39989202431974097,
              0.2424681428783799, 0.97015936819118, 0.5251794996758523,

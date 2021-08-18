@@ -24,6 +24,11 @@ from sklearn.base import TransformerMixin, BaseEstimator
 
 
 class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
+    """
+    Abstract transformer for datetime feature.
+    Implements common functions to transform date and timestamp.
+    """
+
     EPOCH = "1970-01-01"
     HOURS_IN_DAY = 24
     DAYS_IN_WEEK = 7
@@ -34,7 +39,7 @@ class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
     def fit(self, X, y=None):
         """
         Do nothing and return the estimator unchanged. This method is just there to implement
-        the usual API and hence work in pipelines.
+        the usual API and hence work in sklearn pipelines.
         """
         return self
 
@@ -50,9 +55,12 @@ class BaseDateTimeTransformer(ABC, TransformerMixin, BaseEstimator):
         return [np.sin(2 * np.pi * unit / period), np.cos(2 * np.pi * unit / period)]
 
     @classmethod
-    def _generate_features(cls, X, include_timestamp=True):
+    def _generate_datetime_features(cls, X, include_timestamp=True):
         """
         Extract relevant features from the datetime column.
+        :param X: A pandas dataframe of shape (n_samples, 1), where the only column is a datetime column
+        :param include_timestamp: A boolean indicates if the input column include timestamp information
+        :return: A pandas dataframe with generated features
         """
         col = X.columns[0]
         dt = X[col].dt
