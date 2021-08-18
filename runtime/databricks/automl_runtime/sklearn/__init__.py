@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from databricks.automl_runtime.feature.sklearn.date_transformer import DateTransformer
-from databricks.automl_runtime.feature.sklearn.timestamp_transformer import TimestampTransformer
+from databricks.automl_runtime.sklearn.date_transformer import DateTransformer
+from databricks.automl_runtime.sklearn.timestamp_transformer import TimestampTransformer
 
 __all__ = ["DateTransformer", "TimestampTransformer"]
