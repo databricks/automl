@@ -39,7 +39,7 @@ jobs:
       working-directory: runtime
     - name: Test with pytest
       run: |
-        pytest --cache-clear --cov=app tests/ > pytest-coverage.txt
+        python -m pytest --cache-clear --cov=databricks tests/ > pytest-coverage.txt
       working-directory: runtime
     - name: Comment coverage
       uses: coroo/pytest-coverage-commentator@v1.0.2
