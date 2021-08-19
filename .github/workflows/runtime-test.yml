@@ -39,10 +39,18 @@ jobs:
       working-directory: runtime
     - name: Test with pytest
       run: |
-        python -m pytest --cache-clear --cov=databricks tests/ | tee pytest-coverage.txt
+        python -m pytest --cache-clear --cov=databricks tests/ --cov-report=xml
       working-directory: runtime
-    - name: Comment coverage
+    - name: Upload coverage to Codecov
       continue-on-error: true
-      uses: coroo/pytest-coverage-commentator@v1.0.2
+      uses: codecov/codecov-action@v2
       with:
-        pytest-coverage: pytest-coverage.txt
+        token: ${{ secrets.CODECOV_TOKEN }}
+        directory: ./coverage/reports/
+        env_vars: OS,PYTHON
+        fail_ci_if_error: true
+        files: runtime/coverage1.xml,runtime/coverage2.xml
+        flags: unittests
+        name: automl-codecov
+        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true
