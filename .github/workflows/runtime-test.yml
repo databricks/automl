@@ -49,8 +49,8 @@ jobs:
         directory: ./coverage/reports/
         env_vars: OS,PYTHON
         fail_ci_if_error: true
-        files: runtime/coverage1.xml,runtime/coverage2.xml
+        files: ./coverage1.xml, ./coverage2.xml
         flags: unittests
         name: automl-codecov
-        path_to_write_report: ./coverage/codecov_report.txt
         verbose: true
+	working-directory: runtime
