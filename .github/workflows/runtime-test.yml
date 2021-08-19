@@ -49,7 +49,7 @@ jobs:
         directory: ./coverage/reports/
         env_vars: OS,PYTHON
         fail_ci_if_error: true
-        files: coverage.xml
+        files: runtime/coverage.xml
         flags: unittests
         name: automl-codecov
         verbose: true
