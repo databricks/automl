@@ -29,15 +29,16 @@ jobs:
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --select=E901,E999,F821,F822,F823,F401,F405 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+        flake8 . --count --exit-zero --max-line-length=100 --statistics
       working-directory: runtime
     - name: Test with pytest
       run: |
-        pytest --cache-clear --cov=app tests/ > pytest-coverage.txt
+        python -m pytest --cache-clear --cov=databricks tests/ | tee pytest-coverage.txt
       working-directory: runtime
     - name: Comment coverage
+      continue-on-error: true
       uses: coroo/pytest-coverage-commentator@v1.0.2
       with:
         pytest-coverage: runtime/pytest-coverage.txt
