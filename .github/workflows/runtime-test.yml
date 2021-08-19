@@ -40,10 +40,9 @@ jobs:
     - name: Test with pytest
       run: |
         python -m pytest --cache-clear --cov=databricks tests/ | tee pytest-coverage.txt
-        pwd
       working-directory: runtime
     - name: Comment coverage
       continue-on-error: true
       uses: coroo/pytest-coverage-commentator@v1.0.2
       with:
-        pytest-coverage: runtime/pytest-coverage.txt
+        pytest-coverage: pytest-coverage.txt
