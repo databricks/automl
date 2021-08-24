@@ -28,9 +28,10 @@ class TestTimestampTransformer(unittest.TestCase):
     def setUp(self) -> None:
         num_rows = 4
         self.X = pd.concat([
-            pd.Series(range(num_rows), name='int1'),
-            pd.Series(range(num_rows), name='timestamp1').apply(
+            pd.Series(range(num_rows), name="int1"),
+            pd.Series(range(num_rows), name="timestamp1").apply(
                 lambda i: pd.Timestamp(2017, 2, 1, i + 5) if i < 3 else pd.Timestamp(pd.NaT)),
+            pd.Series(range(num_rows), name="timestamp_str").apply(lambda i: f"2020-07-0{i+1} 01:23:45"),
         ], axis=1)
         self.timestamp_expected = np.array([
             [1485925200, False, 0.9165622558699762, -0.39989202431974097,
@@ -47,18 +48,38 @@ class TestTimestampTransformer(unittest.TestCase):
              0.20129852008866006, 0.9795299412524945, 0.01716632975470737,
              0.9998526477050269, 0.0, 1.0, 0, True, True],
         ])
+        self.timestamp_str_expected = np.array([
+            [1593566625, False, 0.9659258262890683, -0.25881904510252063,
+             0.20956351245274862, 0.9777950369318034, -0.0007152988127704499,
+             -0.9999997441737715, 0.25881904510252074, 0.9659258262890683, 1.0, False, False],
+            [1593653025, False, 0.39989202431974136, -0.916562255869976,
+             0.4021024289259159, 0.9155946901614702, -0.01788151877495909,
+             -0.9998401128612018, 0.25881904510252074, 0.9659258262890683, 1.0, False, False],
+            [1593739425, False, -0.4672686282730616, -0.88411539350461,
+             0.578179224713827, 0.8159097891981183, -0.0350424689714891,
+             -0.9993858240781597, 0.25881904510252074, 0.9659258262890683, 1.0, True, False],
+            [1593825825, True, -0.9825664732332883, -0.18591160716291416,
+             0.7305852951087796, 0.6828214455996658, -0.05219309199157016,
+             -0.9986370117056345, 0.25881904510252074, 0.9659258262890683, 1.0, True, False],
+        ])
         self.transformer = TimestampTransformer()
 
     def test_transform(self):
-        timestamp_transformed = self.transformer.transform(self.X[['timestamp1']])
+        timestamp_transformed = self.transformer.transform(self.X[["timestamp1"]])
         np.testing.assert_array_almost_equal(timestamp_transformed.to_numpy(), self.timestamp_expected, decimal=5,
                                              err_msg=f"Actual: {timestamp_transformed}\n"
                                                      f"Expected: {self.timestamp_expected}\n"
                                                      f"Equality: {timestamp_transformed == self.timestamp_expected}")
 
+        timestamp_str_transformed = self.transformer.transform(self.X[["timestamp_str"]])
+        np.testing.assert_array_almost_equal(timestamp_str_transformed.to_numpy(), self.timestamp_str_expected, decimal=5,
+                                             err_msg=f"Actual: {timestamp_str_transformed}\n"
+                                                     f"Expected: {self.timestamp_str_expected}\n"
+                                                     f"Equality: {timestamp_str_transformed == self.timestamp_str_expected}")
+
     def test_with_pipeline(self):
         pipeline = Pipeline([("ts_transformer", self.transformer)])
-        timestamp_transformed = pipeline.fit_transform(self.X[['timestamp1']])
+        timestamp_transformed = pipeline.fit_transform(self.X[["timestamp1"]])
         np.testing.assert_array_almost_equal(timestamp_transformed.to_numpy(), self.timestamp_expected, decimal=5,
                                              err_msg=f"Actual: {timestamp_transformed}\n"
                                                      f"Expected: {self.timestamp_expected}\n"
