@@ -25,7 +25,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 
 class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
     """
-    Abstract transformer for datetime feature.
+    Abstract transformer for datetime features.
     Implements common functions to transform date and timestamp.
     """
 
@@ -43,7 +43,6 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
         """
         return self
 
-    @abstractmethod
     def transform(self, X):
         pass
 
@@ -93,7 +92,7 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
             The only column is a datetime column.
 
         include_timestamp : boolean, default=True
-            Indicates if the input column include timestamp information.
+            Indicates if the input column includes timestamp information.
 
         Returns
         -------

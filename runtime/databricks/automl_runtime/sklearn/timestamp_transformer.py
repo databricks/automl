@@ -40,6 +40,7 @@ class TimestampTransformer(BaseDatetimeTransformer):
         X_tr : pd.DataFrame of shape (n_samples, 13)
             Transformed features.
         """
+        X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime, errors="coerce")
         X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch
 
         return self._generate_datetime_features(X, include_timestamp=True)
