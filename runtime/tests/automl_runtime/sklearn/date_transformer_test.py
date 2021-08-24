@@ -29,7 +29,7 @@ class TestDateTransformer(unittest.TestCase):
         num_rows = 4
         self.X = pd.concat([
             pd.Series(range(num_rows), name='int1'),
-            pd.Series(range(num_rows), name='date1').apply(lambda i: "2020-07-0{}".format(i + 1))
+            pd.Series(range(num_rows), name='date1').apply(lambda i: "2020-08-0{}".format(i + 1))
         ], axis=1)
         self.date_expected = np.array([
             [1593561600, False, 0.9749279121818236, -0.22252093395631434,
