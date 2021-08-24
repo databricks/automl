@@ -43,6 +43,7 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
         """
         return self
 
+    @abstractmethod
     def transform(self, X):
         pass
 
