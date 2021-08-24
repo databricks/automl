@@ -28,8 +28,8 @@ class TestDateTransformer(unittest.TestCase):
     def setUp(self) -> None:
         num_rows = 4
         self.X = pd.concat([
-            pd.Series(range(num_rows), name='int1'),
-            pd.Series(range(num_rows), name='date1').apply(lambda i: "2020-07-0{}".format(i + 1))
+            pd.Series(range(num_rows), name="int1"),
+            pd.Series(range(num_rows), name="date1").apply(lambda i: f"2020-07-0{i+1}")
         ], axis=1)
         self.date_expected = np.array([
             [1593561600, False, 0.9749279121818236, -0.22252093395631434,
@@ -48,14 +48,14 @@ class TestDateTransformer(unittest.TestCase):
         self.transformer = DateTransformer()
 
     def test_transform(self):
-        date_transformed = self.transformer.transform(self.X[['date1']])
+        date_transformed = self.transformer.transform(self.X[["date1"]])
         np.testing.assert_array_almost_equal(date_transformed.to_numpy(), self.date_expected, decimal=5,
                                              err_msg=f"Actual: {date_transformed}\nExpected: {self.date_expected}\n"
                                                      f"Equality: {date_transformed == self.date_expected}")
 
     def test_with_pipeline(self):
         pipeline = Pipeline([("date_transformer", self.transformer)])
-        date_transformed = pipeline.fit_transform(self.X[['date1']])
+        date_transformed = pipeline.fit_transform(self.X[["date1"]])
         np.testing.assert_array_almost_equal(date_transformed.to_numpy(), self.date_expected, decimal=5,
                                              err_msg=f"Actual: {date_transformed}\nExpected: {self.date_expected}\n"
                                                      f"Equality: {date_transformed == self.date_expected}")

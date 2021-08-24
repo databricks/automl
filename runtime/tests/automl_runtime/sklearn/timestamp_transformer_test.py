@@ -31,7 +31,7 @@ class TestTimestampTransformer(unittest.TestCase):
             pd.Series(range(num_rows), name="int1"),
             pd.Series(range(num_rows), name="timestamp1").apply(
                 lambda i: pd.Timestamp(2017, 2, 1, i + 5) if i < 3 else pd.Timestamp(pd.NaT)),
-            pd.Series(range(num_rows), name="timestamp_str").apply(lambda i: "2020-07-0{} 01:23:45".format(i + 1)),
+            pd.Series(range(num_rows), name="timestamp_str").apply(lambda i: f"2020-07-0{i+1} 01:23:45"),
         ], axis=1)
         self.timestamp_expected = np.array([
             [1485925200, False, 0.9165622558699762, -0.39989202431974097,
