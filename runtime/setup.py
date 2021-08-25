@@ -16,7 +16,7 @@
 # limitations under the License.
 
 from os import path
-from setuptools import find_packages, setup
+from setuptools import setup
 import sys
 
 DESCRIPTION = "Databricks AutoML Runtime Package"
