@@ -1,0 +1,55 @@
+# whenever you push a tagged commit to your Git repository remote on GitHub, this workflow will publish it to PyPI.
+# And it’ll publish any push to TestPyPI which is useful for providing test builds.
+# Follow the guide: https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+
+name: Publish AutoML runtime package to PyPI and TestPyPI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install flake8 pytest pytest-cov
+        python -m pip install build --user
+        if [ -f environment.txt ]; then pip install -r environment.txt; fi
+      working-directory: runtime
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E901,E999,F821,F822,F823,F401,F405 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-line-length=100 --statistics
+      working-directory: runtime
+    - name: Test with pytest
+      run: |
+        python -m pytest --cache-clear --cov=databricks tests/
+      working-directory: runtime
+    - name: Build a binary wheel and and a source tarball
+      run: |
+        python -m build --sdist --wheel --outdir dist/
+      working-directory: runtime
+    - name: Publish distribution to Test PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
+    - name: Publish distribution to PyPI
+      if: startsWith(github.ref, "refs/tags")
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
