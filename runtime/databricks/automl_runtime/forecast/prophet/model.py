@@ -68,7 +68,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         from prophet.serialize import model_from_json
         return model_from_json(self._model_json)
 
-    def _make_future_dataframe(self, horizon: int) -> pd.Dataframe:
+    def _make_future_dataframe(self, horizon: int) -> pd.DataFrame:
         """
         Generate future dataframe by calling the API from prophet
         :param horizon: Int number of periods to forecast forward.
