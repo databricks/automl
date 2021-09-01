@@ -133,7 +133,7 @@ class MultiSeriesProphetModel(ProphetModel):
         from prophet.serialize import model_from_json
         return model_from_json(self._model_json[id])
 
-    def _make_future_dataframe(self, id: str, horizon: int) -> pd.Dataframe:
+    def _make_future_dataframe(self, id: str, horizon: int) -> pd.DataFrame:
         """
         Generate future dataframe for one model by calling the API from prophet
         :param id: identity for the Prophet model
