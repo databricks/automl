@@ -21,6 +21,7 @@ import prophet
 def generate_cutoffs(model: prophet.forecaster.Prophet, horizon: pd.Timedelta, num_folds: int) -> List[pd.Timestamp]:
     """
     Custom Implementation to Generate cutoff dates for cross validation
+    Adding the control of number of folds comparing the method from prophet.
     :param model: Prophet class object. Fitted Prophet model.
     :param horizon: pd.Timedelta forecast horizon.
     :param num_folds: int number of cutoffs for cross validation.
