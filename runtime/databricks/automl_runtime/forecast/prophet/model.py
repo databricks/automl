@@ -57,7 +57,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
                         can use to perform inference.
         """
-        from prophet import Prophet
+        from prophet import Prophet  # pylint: disable=F401
         return
 
     def model(self) -> prophet.forecaster.Prophet:
