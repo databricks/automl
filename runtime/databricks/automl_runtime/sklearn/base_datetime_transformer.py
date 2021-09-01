@@ -45,7 +45,7 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
 
     @abstractmethod
     def transform(self, X):
-        pass
+        pass  # pragma: no cover
 
     @staticmethod
     def _cyclic_transform(unit, period):

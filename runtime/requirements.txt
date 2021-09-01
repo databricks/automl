@@ -5,6 +5,7 @@
 # * Keep dependencies sorted.
 
 holidays
+mlflow
 numpy
 pandas
 plotly
