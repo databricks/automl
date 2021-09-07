@@ -3,6 +3,7 @@
 # * Keep dependencies sorted.
 
 holidays==0.10.5.2
+hyperopt==0.2.5
 koalas==1.8.1
 mlflow==1.20.1
 numpy==1.19.2
