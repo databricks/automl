@@ -16,9 +16,7 @@
 
 import unittest
 import pandas as pd
-
 from hyperopt import hp
-from prophet.serialize import model_to_json
 
 from databricks.automl_runtime.forecast.prophet.forecastor import ProphetHyperoptEstimator
 
