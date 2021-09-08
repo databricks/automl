@@ -18,7 +18,7 @@ import unittest
 import pandas as pd
 from hyperopt import hp
 
-from databricks.automl_runtime.forecast.prophet.forecastor import ProphetHyperoptEstimator
+from databricks.automl_runtime.forecast.prophet.forecast import ProphetHyperoptEstimator
 
 
 class TestProphetHyperoptEstimator(unittest.TestCase):

@@ -25,6 +25,6 @@ def fail_safe_with_default(default_result):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            print(f"Encountered an exception while training timeseries: {repr(e)}")
+            print(f"Encountered an exception: {repr(e)}")
             return default_result
     return fail_safe

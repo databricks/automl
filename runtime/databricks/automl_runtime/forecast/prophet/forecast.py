@@ -25,18 +25,30 @@ import pandas as pd
 from databricks.automl_runtime.forecast.prophet.diagnostics import generate_cutoffs
 
 
-class ContextType(Enum):
-    JUPYTER = 1
-    DATABRICKS = 2
+class ProphetHyperParams(Enum):
+    CHANGEPOINT_PRIOR_SCALE = "changepoint_prior_scale"
+    SEASONALITY_PRIOR_SCALE = "seasonality_prior_scale"
+    HOLIDAYS_PRIOR_SCALE = "holidays_prior_scale"
+    SEASONALITY_MODE = "seasonality_mode"
 
 
 def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
                          horizon: int, frequency: str, num_folds: int,
-                         interval_width: int, primary_metric: str, country_holidays: Optional[str] = None):
+                         interval_width: int, primary_metric: str,
+                         country_holidays: Optional[str] = None) -> Dict[str, Any]:
     """
     Training function for hyperparameter tuning with hyperopt
-    :param params: input hyperparameters
-    :return:
+
+    :param params: Input hyperparameters
+    :param history_pd: pd.DataFrame containing the history. Must have columns ds (date
+            type) and y, the time series
+    :param horizon: Forecast horizon
+    :param frequency: Frequency of the time series
+    :param num_folds: Number of folds for cross validation
+    :param interval_width: Width of the uncertainty intervals provided for the forecast
+    :param primary_metric: Metric that will be optimized across trials
+    :param country_holidays: Built-in holidays for the specified country
+    :return: Dictionary as the format for hyperopt
     """
     import pandas as pd
     from prophet import Prophet
@@ -70,9 +82,19 @@ class ProphetHyperoptEstimator(ABC):
                  random_state: int = 0, is_parallel: bool = True) -> None:
         """
         Initialization
-        :param model_json: json string of the Prophet model or
-        the dictionary of json strings of Prophet model for multi-series forecasting
-        :param horizon: Int number of periods to forecast forward.
+
+        :param horizon: Number of periods to forecast forward
+        :param frequency_unit: Frequency of the time series
+        :param metric: Metric that will be optimized across trials
+        :param interval_width: Width of the uncertainty intervals provided for the forecast
+        :param country_holidays: Built-in holidays for the specified country
+        :param search_space: Search space for hyperparameter tuning with hyperopt
+        :param algo: Search algorithm
+        :param num_folds: Number of folds for cross validation
+        :param max_eval: Max number of trials generated in hyperopt
+        :param trial_timeout: timeout for hyperopt
+        :param random_state: random seed for hyperopt
+        :param is_parallel: Indicators to decide that whether run hyperopt in parallel
         """
         self._horizon = horizon
         self._frequency_unit = frequency_unit
@@ -87,13 +109,12 @@ class ProphetHyperoptEstimator(ABC):
         self._timeout = trial_timeout
         self._is_parallel = is_parallel
 
-    def fit(self, df: pd.DataFrame):
+    def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Fit the Prophet model with hyperparameter tunings
         :param df: pd.DataFrame containing the history. Must have columns ds (date
             type) and y
-        :param kwargs:
-        :return:
+        :return: DataFrame with model json and metrics in cross validation
         """
         import pandas as pd
         from prophet import Prophet
@@ -124,10 +145,10 @@ class ProphetHyperoptEstimator(ABC):
             rstate=self._random_state)
 
         # Retrain the model with all history data.
-        model = Prophet(changepoint_prior_scale=best_result.get("changepoint_prior_scale", 0.05),
-                        seasonality_prior_scale=best_result.get("seasonality_prior_scale", 10.0),
-                        holidays_prior_scale=best_result.get("holidays_prior_scale", 10.0),
-                        seasonality_mode=seasonality_mode[best_result.get("seasonality_mode", 0)],
+        model = Prophet(changepoint_prior_scale=best_result.get(ProphetHyperParams.CHANGEPOINT_PRIOR_SCALE, 0.05),
+                        seasonality_prior_scale=best_result.get(ProphetHyperParams.SEASONALITY_PRIOR_SCALE, 10.0),
+                        holidays_prior_scale=best_result.get(ProphetHyperParams.HOLIDAYS_PRIOR_SCALE, 10.0),
+                        seasonality_mode=seasonality_mode[best_result.get(ProphetHyperParams.SEASONALITY_MODE, 0)],
                         interval_width=self._interval_width)
 
         if self._country_holidays:
