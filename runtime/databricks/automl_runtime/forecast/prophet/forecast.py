@@ -75,6 +75,8 @@ class ProphetHyperoptEstimator(ABC):
     """
     Class to do hyper-parameter tunings for prophet with hyperopt
     """
+    SUPPORTED_METRICS = ["mse", "rmse", "mae", "mape", "mdape", "smape", "coverage"]
+
     def __init__(self, horizon: int, frequency_unit: str, metric: str, interval_width: int,
                  country_holidays: str, search_space: Dict[str, Any],
                  algo=hyperopt.tpe.suggest, num_folds: int = 5,
@@ -161,13 +163,8 @@ class ProphetHyperoptEstimator(ABC):
 
         results_pd = pd.DataFrame({"model_json": model_json}, index=[0])
         results_pd.reset_index(level=0, inplace=True)
-        results_pd["mse"] = metrics["mse"]
-        results_pd["rmse"] = metrics["rmse"]
-        results_pd["mae"] = metrics["mae"]
-        results_pd["mape"] = metrics["mape"]
-        results_pd["mdape"] = metrics["mdape"]
-        results_pd["smape"] = metrics["smape"]
-        results_pd["coverage"] = metrics["coverage"]
+        for metric in self.SUPPORTED_METRICS:
+            results_pd[metric] = metrics[metric]
         results_pd["prophet_params"] = str(best_result)
 
         return results_pd

@@ -15,7 +15,7 @@
 #
 import unittest
 
-from databricks.automl_runtime.forecast.prophet.utils import fail_safe_with_default
+from databricks.automl_runtime.utils import fail_safe_with_default
 
 
 @fail_safe_with_default(1)
