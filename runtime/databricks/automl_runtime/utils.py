@@ -13,5 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import wrapt
 
-__version__ = "0.2.0"  # pragma: no cover
+
+def fail_safe_with_default(default_result):
+    """
+    Decorator to ensure that individual failures don't fail training
+    """
+    @wrapt.decorator
+    def fail_safe(func, self, args, kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print(f"Encountered an exception: {repr(e)}")
+            return default_result
+    return fail_safe

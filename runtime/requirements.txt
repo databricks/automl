@@ -5,6 +5,7 @@
 # * Keep dependencies sorted.
 
 holidays
+hyperopt
 mlflow
 numpy
 pandas

@@ -13,5 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import unittest
 
-__version__ = "0.2.0"  # pragma: no cover
+from databricks.automl_runtime.utils import fail_safe_with_default
+
+
+@fail_safe_with_default(1)
+def failed_function():
+    raise Exception()
+
+
+class TestUtilFunctions(unittest.TestCase):
+    def test_failed_functions(self):
+        result = failed_function()
+        self.assertEqual(result, 1)
