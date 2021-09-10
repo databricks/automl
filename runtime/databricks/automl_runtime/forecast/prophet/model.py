@@ -20,6 +20,26 @@ import mlflow
 import pandas as pd
 import prophet
 
+OFFSET_ALIAS_MAP = {
+    "W": "W",
+    "d": "D",
+    "D": "D",
+    "days": "D",
+    "day": "D",
+    "hours": "H",
+    "hour": "H",
+    "hr": "H",
+    "h": "H",
+    "m": "min",
+    "minute": "min",
+    "min": "min",
+    "minutes": "min",
+    "T": "T",
+    "S": "S",
+    "seconds": "S",
+    "sec": "S",
+    "second": "S"
+}
 
 PROPHET_CONDA_ENV = {
     "channels": ["conda-forge"],
@@ -146,7 +166,7 @@ class MultiSeriesProphetModel(ProphetModel):
         date_rng = pd.date_range(
             start=start_time,
             end=end_time + pd.Timedelta(value=horizon, unit=self._frequency),
-            freq=self._frequency
+            freq=OFFSET_ALIAS_MAP[self._frequency]
         )
         return pd.DataFrame(date_rng, columns=["ds"])
 

@@ -60,7 +60,7 @@ class TestProphetModel(unittest.TestCase):
         multi_series_model_json = {"1": model_json, "2": model_json}
         multi_series_start = {"1": pd.Timestamp("2020-07-01"), "2": pd.Timestamp("2020-07-01")}
         prophet_model = MultiSeriesProphetModel(multi_series_model_json, multi_series_start,
-                                                "2020-07-25", 1, "d")
+                                                "2020-07-25", 1, "days")
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
 
