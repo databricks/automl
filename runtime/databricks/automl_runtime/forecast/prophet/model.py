@@ -28,7 +28,7 @@ PROPHET_CONDA_ENV = {
             "pip": [
                 f"prophet=={prophet.__version__}",
                 f"cloudpickle=={cloudpickle.__version__}",
-                f"databricks-automl-runtime==0.1.0"
+                f"databricks-automl-runtime==0.2.0"
             ]
         }
     ],
