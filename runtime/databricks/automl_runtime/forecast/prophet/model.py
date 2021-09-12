@@ -30,6 +30,7 @@ OFFSET_ALIAS_MAP = {
     "hour": "H",
     "hr": "H",
     "h": "H",
+    "H": "H",
     "m": "min",
     "minute": "min",
     "min": "min",
@@ -60,15 +61,17 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
     """
     Prophet mlflow model wrapper for univariate forecasting.
     """
-    def __init__(self, model_json: Union[Dict[str, str], str], horizon: int) -> None:
+    def __init__(self, model_json: Union[Dict[str, str], str], horizon: int, frequency: str) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: json string of the Prophet model or
         the dictionary of json strings of Prophet model for multi-series forecasting
         :param horizon: Int number of periods to forecast forward.
+        :param frequency: the frequency of the time series
         """
         self._model_json = model_json
         self._horizon = horizon
+        self._frequency = frequency
         super().__init__()
 
     def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
@@ -95,7 +98,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         :return: pd.Dataframe that extends forward from the end of self.history for the
         requested number of periods.
         """
-        return self.model().make_future_dataframe(periods=horizon)
+        return self.model().make_future_dataframe(periods=horizon, freq=OFFSET_ALIAS_MAP[self._frequency])
 
     def _predict_impl(self, horizon: int = None) -> pd.DataFrame:
         """
@@ -139,7 +142,7 @@ class MultiSeriesProphetModel(ProphetModel):
         :param horizon: Int number of periods to forecast forward
         :param frequency: the frequency of the time series
         """
-        super().__init__(model_json, horizon)
+        super().__init__(model_json, horizon, frequency)
         self._frequency = frequency
         self._timeseries_end = timeseries_end
         self._timeseries_starts = timeseries_starts

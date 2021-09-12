@@ -23,7 +23,7 @@ from prophet import Prophet
 from prophet.serialize import model_to_json
 
 from databricks.automl_runtime.forecast.prophet.model import mlflow_prophet_log_model, \
-    MultiSeriesProphetModel, ProphetModel
+    MultiSeriesProphetModel, ProphetModel, OFFSET_ALIAS_MAP
 
 
 class TestProphetModel(unittest.TestCase):
@@ -31,7 +31,7 @@ class TestProphetModel(unittest.TestCase):
     def setUp(self) -> None:
         num_rows = 9
         self.X = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{3*i+1}")),
+            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-10-{3*i+1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
         self.model = Prophet()
@@ -42,7 +42,7 @@ class TestProphetModel(unittest.TestCase):
 
     def test_model_save_and_load(self):
         model_json = model_to_json(self.model)
-        prophet_model = ProphetModel(model_json, 1)
+        prophet_model = ProphetModel(model_json, 1, "d")
 
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
@@ -54,6 +54,16 @@ class TestProphetModel(unittest.TestCase):
         prophet_model.predict(self.X)
         forecast_pd = prophet_model._model_impl.python_model.predict_timeseries()
         np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]), self.expected_y)
+
+    def test_make_future_dataframe(self):
+        model_json = model_to_json(self.model)
+        for feq_unit in OFFSET_ALIAS_MAP:
+            prophet_model = ProphetModel(model_json, 1, feq_unit)
+            future_df = prophet_model._make_future_dataframe(1)
+            expected_time = pd.Timestamp("2020-10-25") + pd.Timedelta(1, feq_unit)
+            self.assertEqual(future_df.iloc[-1]["ds"], expected_time,
+                             f"Wrong future dataframe generated with frequency {feq_unit}:"
+                             f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
 
     def test_model_save_and_load_multi_series(self):
         model_json = model_to_json(self.model)
