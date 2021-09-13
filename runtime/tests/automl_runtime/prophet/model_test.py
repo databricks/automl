@@ -38,7 +38,7 @@ class TestProphetModel(unittest.TestCase):
         self.model.fit(self.X)
         self.expected_y = np.array([0,  1.00000000e+00,  2.00000000e+00,  3.00000000e+00,
                                     4.00000000e+00,  5.00000000e+00,  6.00000000e+00,
-                                    7.00000000e+00, 8.00000000e+00,  9.26072713e+00])
+                                    7.00000000e+00, 8.00000000e+00,  8.333333e+00])
 
     def test_model_save_and_load(self):
         model_json = model_to_json(self.model)
