@@ -31,6 +31,7 @@ OFFSET_ALIAS_MAP = {
     "hr": "H",
     "h": "H",
     "H": "H",
+    "M": "min",
     "m": "min",
     "minute": "min",
     "min": "min",
