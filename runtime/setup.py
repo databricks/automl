@@ -45,6 +45,8 @@ setup(
     packages=[
         "databricks",
         "databricks.automl_runtime",
+        "databricks.automl_runtime.forecast",
+        "databricks.automl_runtime.forecast.prophet",
         "databricks.automl_runtime.sklearn"],
     license="http://www.apache.org/licenses/LICENSE-2.0",
     url="https://github.com/databricks/automl",
