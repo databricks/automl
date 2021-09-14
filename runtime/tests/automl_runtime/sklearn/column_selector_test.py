@@ -68,7 +68,7 @@ class TestColumnSelector(unittest.TestCase):
         ])
         model.fit(X=X_in, y=y)
         # Add one column so that the dataframe for prediction is different with the data for training
-        X_in["userless"] = 1
+        X_in["useless"] = 1
         X_out = model.predict(X_in)
         np.testing.assert_array_almost_equal(X_out, X_out_expected,
                                              err_msg=f"Actual: {X_out}\nExpected: {X_out_expected}\n"
