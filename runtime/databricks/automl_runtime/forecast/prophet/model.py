@@ -193,15 +193,37 @@ class MultiSeriesProphetModel(ProphetModel):
         ids = pd.DataFrame(self._model_json.keys(), columns=["ts_id"])
         return ids.groupby("ts_id").apply(lambda df: self._predict_impl(df, horizon)).reset_index()
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, input: pd.DataFrame)-> pd.DataFrame:
+    @staticmethod
+    def get_reserved_cols():
+        reserved_names = [
+            "trend", "additive_terms", "daily", "weekly", "yearly",
+            "holidays", "zeros", "extra_regressors_additive", "yhat",
+            "extra_regressors_multiplicative", "multiplicative_terms",
+        ]
+        rn_l = [n + "_lower" for n in reserved_names]
+        rn_u = [n + "_upper" for n in reserved_names]
+        reserved_names.extend(rn_l)
+        reserved_names.extend(rn_u)
+        reserved_names.extend(["y", "cap", "floor", "y_scaled", "cap_scaled"])
+        return reserved_names
+
+    def model_predict(self, df: pd.DataFrame, horizon: int = None) -> pd.DataFrame:
+        forecast_df = self._predict_impl(df,  horizon)
+        return_cols = self.get_reserved_cols() + ["ds", "ts_id"]
+        result_df = pd.DataFrame(columns=return_cols)
+        result_df = pd.concat([result_df, forecast_df])
+        result_df["ts_id"] = str(df["ts_id"].iloc[0])
+        return result_df[return_cols]
+
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, input_df: pd.DataFrame) -> pd.DataFrame:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
                         can use to perform inference.
-        :param input: Input dataframe
+        :param input_df: Input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        return self._predict_impl(input)
+        return self._predict_impl(input_df)
 
 
 def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProphetModel]) -> None:
