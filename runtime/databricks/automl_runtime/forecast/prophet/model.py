@@ -208,6 +208,12 @@ class MultiSeriesProphetModel(ProphetModel):
         return reserved_names
 
     def model_predict(self, df: pd.DataFrame, horizon: int = None) -> pd.DataFrame:
+        """
+        Predict API used for pandas UDF.
+        :param df: Input dataframe.
+        :param horizon: Int number of periods to forecast forward.
+        :return: A pd.DataFrame with the forecast components.
+        """
         forecast_df = self._predict_impl(df,  horizon)
         return_cols = self.get_reserved_cols() + ["ds", "ts_id"]
         result_df = pd.DataFrame(columns=return_cols)
