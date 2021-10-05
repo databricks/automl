@@ -84,5 +84,5 @@ class TestProphetModel(unittest.TestCase):
         prophet_model._model_impl.python_model.predict_timeseries()
 
         # Check model_predict function
-        prophet_model.model_predict(ids)
+        prophet_model._model_impl.python_model.model_predict(ids)
 
