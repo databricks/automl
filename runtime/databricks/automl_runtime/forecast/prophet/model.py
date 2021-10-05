@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import cloudpickle
 import mlflow
@@ -194,7 +194,11 @@ class MultiSeriesProphetModel(ProphetModel):
         return ids.groupby("ts_id").apply(lambda df: self._predict_impl(df, horizon)).reset_index()
 
     @staticmethod
-    def get_reserved_cols():
+    def get_reserved_cols() -> List[str]:
+        """
+        Get the list of reserved columns for prophet.
+        :return: List of the reserved column names
+        """
         reserved_names = [
             "trend", "additive_terms", "daily", "weekly", "yearly",
             "holidays", "zeros", "extra_regressors_additive", "yhat",
