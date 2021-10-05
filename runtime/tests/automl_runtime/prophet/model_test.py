@@ -82,3 +82,7 @@ class TestProphetModel(unittest.TestCase):
         ids = pd.DataFrame(multi_series_model_json.keys(), columns=["ts_id"])
         prophet_model.predict(ids)
         prophet_model._model_impl.python_model.predict_timeseries()
+
+        # Check model_predict function
+        prophet_model._model_impl.python_model.model_predict(ids)
+
