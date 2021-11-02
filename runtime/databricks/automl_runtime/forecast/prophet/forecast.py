@@ -164,7 +164,10 @@ class ProphetHyperoptEstimator(ABC):
         results_pd = pd.DataFrame({"model_json": model_json}, index=[0])
         results_pd.reset_index(level=0, inplace=True)
         for metric in self.SUPPORTED_METRICS:
-            results_pd[metric] = metrics[metric]
+            if metric in metrics.keys():
+                results_pd[metric] = metrics[metric]
+            else:
+                results_pd[metric] = np.nan
         results_pd["prophet_params"] = str(best_result)
 
         return results_pd
