@@ -16,7 +16,6 @@
 
 import unittest
 from unittest import mock
-from unittest.mock import patch
 
 import numpy as np
 from hyperopt import STATUS_OK
