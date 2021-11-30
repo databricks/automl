@@ -106,7 +106,7 @@ class ProphetHyperoptEstimator(ABC):
         self._search_space = search_space
         self._algo = algo
         self._num_folds = num_folds
-        self._random_state = np.random.RandomState(random_state)
+        self._random_state = np.random.default_rng(random_state)
         self._max_eval = max_eval
         self._timeout = trial_timeout
         self._is_parallel = is_parallel
