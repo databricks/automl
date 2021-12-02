@@ -30,7 +30,9 @@ NO_PROGRESS_STOP_THRESHOLD = 20
 
 def early_stop_fn(trials, best_loss=None, no_progress_iters=0, completed_trial_ids=set()):
     """
-    The function checks if hyperopt should stop searching given results from the runs.
+    The function checks if hyperopt should stop searching given results from the runs. 
+    See hyperopt documentation for more details on the API of this function:
+    https://github.com/hyperopt/hyperopt/blob/master/hyperopt/fmin.py#L487
 
     :param trials: SparkTrials
     :param best_loss: best validation loss so far

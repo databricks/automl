@@ -22,8 +22,6 @@ from hyperopt import STATUS_OK
 
 from databricks.automl_runtime.hyperopt.early_stop import early_stop_fn
 
-np.random.seed(5)
-
 
 def mock_trial(tid, ok=False, loss=None):
     mock_trial = {"tid": tid, "result": {}}
