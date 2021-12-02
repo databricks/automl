@@ -17,7 +17,6 @@
 import unittest
 from unittest import mock
 
-import numpy as np
 from hyperopt import STATUS_OK
 
 from databricks.automl_runtime.hyperopt.early_stop import early_stop_fn
