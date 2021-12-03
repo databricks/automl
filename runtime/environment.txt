@@ -1,5 +1,4 @@
 # Instructions:
-# * Should match package versions under https://github.com/databricks/universe/tree/master/spark/images/deps-audit/ml.
 # * Keep dependencies sorted.
 
 holidays==0.11.2
