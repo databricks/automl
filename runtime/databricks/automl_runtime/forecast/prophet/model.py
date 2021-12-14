@@ -72,6 +72,8 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         the dictionary of json strings of Prophet model for multi-series forecasting
         :param horizon: Int number of periods to forecast forward.
         :param frequency: the frequency of the time series
+        :param time_col: the column name of the time column
+        :param target_col: the column name of the predict target column
         """
         self._model_json = model_json
         self._horizon = horizon
@@ -139,7 +141,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
                         can use to perform inference.
-        :param input: Input dataframe
+        :param input_df: Input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
         self._validate_id_cols(input_df, [self._time_col])
@@ -164,6 +166,9 @@ class MultiSeriesProphetModel(ProphetModel):
         :param timeseries_end: the end time of the time series
         :param horizon: Int number of periods to forecast forward
         :param frequency: the frequency of the time series
+        :param time_col: the column name of the time column
+        :param target_col: the column name of the predict target column
+        :param id_cols: the column names of the identity columns for multi-series time series
         """
         super().__init__(model_json, horizon, frequency, time_col, target_col)
         self._frequency = frequency
