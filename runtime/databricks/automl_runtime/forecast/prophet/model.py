@@ -52,7 +52,7 @@ PROPHET_CONDA_ENV = {
             "pip": [
                 f"prophet=={prophet.__version__}",
                 f"cloudpickle=={cloudpickle.__version__}",
-                f"databricks-automl-runtime==0.2.0"
+                f"databricks-automl-runtime==0.2.5"
             ]
         }
     ],
@@ -82,7 +82,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         self._target_col = target_col
         super().__init__()
 
-    def _validate_id_cols(self, df: pd.DataFrame, required_cols: List[str]):
+    def _validate_cols(self, df: pd.DataFrame, required_cols: List[str]):
         df_cols = set(df.columns)
         required_cols_set = set(required_cols)
         if not required_cols_set.issubset(df_cols):
@@ -144,7 +144,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         :param input_df: Input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        self._validate_id_cols(input_df, [self._time_col])
+        self._validate_cols(input_df, [self._time_col])
         input_df.rename(columns={self._time_col: "ds"}, inplace=True)
         predict_df = self.model().predict(input_df)
         predict_df.rename(columns={"yhat": self._target_col, "ds": self._time_col}, inplace=True)
@@ -262,7 +262,7 @@ class MultiSeriesProphetModel(ProphetModel):
         :param input_df: Input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        self._validate_id_cols(input_df, self._id_cols + [self._time_col])
+        self._validate_cols(input_df, self._id_cols + [self._time_col])
         input_df["ts_id"] = input_df[self._id_cols].agg('-'.join, axis=1)
         input_df.rename(columns={self._time_col: "ds"}, inplace=True)
         group_cols = ["ts_id"] + self._id_cols
