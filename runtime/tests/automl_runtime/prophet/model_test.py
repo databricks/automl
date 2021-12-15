@@ -42,7 +42,7 @@ class TestProphetModel(unittest.TestCase):
         cls.model.fit(cls.X)
         cls.expected_y = np.array([0,  1.00000000e+00,  2.00000000e+00,  3.00000000e+00,
                                    4.00000000e+00,  5.00000000e+00,  6.00000000e+00,
-                                   7.00000000e+00, 8.00000000e+00,  8.364378e+00])
+                                   7.00000000e+00, 8.00000000e+00,  8.333333e+00])
         cls.model_json = model_to_json(cls.model)
 
     def test_model_save_and_load(self):
@@ -95,7 +95,7 @@ class TestProphetModel(unittest.TestCase):
         forecast_pd = prophet_model.predict(test_df)
         self.assertListEqual(list(forecast_pd.columns), ["id", "time", "target"])
         np.testing.assert_array_almost_equal(np.array(forecast_pd["target"]),
-                                             np.array([10.364378, 11.371524]))
+                                             np.array([10.333333, 11.333333]))
 
     def test_validate_predict_cols(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "time", "target")
