@@ -143,9 +143,8 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         :return: A pd.DataFrame with the forecast components.
         """
         self._validate_cols(model_input, [self._time_col])
-        model_input.rename(columns={self._time_col: "ds"}, inplace=True)
-
-        predict_df = self.model().predict(model_input)
+        test_df = pd.DataFrame({"ds": model_input[self._time_col]})
+        predict_df = self.model().predict(test_df)
         return predict_df["yhat"]
 
 
@@ -259,11 +258,12 @@ class MultiSeriesProphetModel(ProphetModel):
         :return: A pd.DataFrame with the forecast components.
         """
         self._validate_cols(model_input, self._id_cols + [self._time_col])
-        model_input["ts_id"] = model_input[self._id_cols].agg('-'.join, axis=1)
-        model_input.rename(columns={self._time_col: "ds"}, inplace=True)
+        test_df = model_input.copy()
+        test_df["ts_id"] = test_df[self._id_cols].agg('-'.join, axis=1)
+        test_df.rename(columns={self._time_col: "ds"}, inplace=True)
         group_cols = ["ts_id"] + self._id_cols
-        predict_df = model_input.groupby(group_cols).apply(lambda df: self.model(df.name[0]).predict(df)).reset_index()
-        return_df = model_input.merge(predict_df, how="left", on=self._id_cols)
+        predict_df = test_df.groupby(group_cols).apply(lambda df: self.model(df.name[0]).predict(df)).reset_index()
+        return_df = test_df.merge(predict_df, how="left", on=self._id_cols)
         return return_df["yhat"]
 
 

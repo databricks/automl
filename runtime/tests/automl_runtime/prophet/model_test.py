@@ -89,7 +89,7 @@ class TestProphetModel(unittest.TestCase):
         # Check predict API
         test_df = pd.DataFrame({
             "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
-            "id": [1, 2],
+            "id": ["1", "2"],
         })
         forecast_y = prophet_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
