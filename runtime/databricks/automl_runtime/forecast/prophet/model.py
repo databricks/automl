@@ -65,7 +65,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
     Prophet mlflow model wrapper for univariate forecasting.
     """
     def __init__(self, model_json: Union[Dict[str, str], str], horizon: int, frequency: str,
-                 time_col: str, target_col: str) -> None:
+                 time_col: str) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: json string of the Prophet model or
@@ -73,13 +73,11 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         :param horizon: Int number of periods to forecast forward.
         :param frequency: the frequency of the time series
         :param time_col: the column name of the time column
-        :param target_col: the column name of the predict target column
         """
         self._model_json = model_json
         self._horizon = horizon
         self._frequency = frequency
         self._time_col = time_col
-        self._target_col = target_col
         super().__init__()
 
     def _validate_cols(self, df: pd.DataFrame, required_cols: List[str]):
@@ -146,6 +144,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         """
         self._validate_cols(model_input, [self._time_col])
         model_input.rename(columns={self._time_col: "ds"}, inplace=True)
+
         predict_df = self.model().predict(model_input)
         return predict_df["yhat"]
 
@@ -155,8 +154,7 @@ class MultiSeriesProphetModel(ProphetModel):
     Prophet mlflow model wrapper for multi-series forecasting.
     """
     def __init__(self, model_json: Dict[str, str], timeseries_starts: Dict[str, pd.Timestamp],
-                 timeseries_end: str, horizon: int, frequency: str, time_col: str,
-                 target_col: str, id_cols: List[str],
+                 timeseries_end: str, horizon: int, frequency: str, time_col: str, id_cols: List[str],
                  ) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
@@ -166,10 +164,9 @@ class MultiSeriesProphetModel(ProphetModel):
         :param horizon: Int number of periods to forecast forward
         :param frequency: the frequency of the time series
         :param time_col: the column name of the time column
-        :param target_col: the column name of the predict target column
         :param id_cols: the column names of the identity columns for multi-series time series
         """
-        super().__init__(model_json, horizon, frequency, time_col, target_col)
+        super().__init__(model_json, horizon, frequency, time_col)
         self._frequency = frequency
         self._timeseries_end = timeseries_end
         self._timeseries_starts = timeseries_starts

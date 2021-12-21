@@ -72,7 +72,7 @@ class TestProphetModel(unittest.TestCase):
         multi_series_model_json = {"1": self.model_json, "2": self.model_json}
         multi_series_start = {"1": pd.Timestamp("2020-07-01"), "2": pd.Timestamp("2020-07-01")}
         prophet_model = MultiSeriesProphetModel(multi_series_model_json, multi_series_start,
-                                                "2020-07-25", 1, "days", "time", "target", ["id"])
+                                                "2020-07-25", 1, "days", "time", ["id"])
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
 
@@ -87,17 +87,16 @@ class TestProphetModel(unittest.TestCase):
         prophet_model._model_impl.python_model.predict_timeseries()
 
         # Check predict API
-        num_rows = 2
-        test_df = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="time").apply(lambda i: f"2020-11-{3*i+1}")),
-            pd.Series(range(num_rows), name="id").apply(lambda i: f"{i%2+1}")
-        ], axis=1)
+        test_df = pd.DataFrame({
+            "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
+            "id": [1, 2],
+        })
         forecast_y = prophet_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
                                              np.array([10.333333, 11.333333]))
 
     def test_validate_predict_cols(self):
-        prophet_model = ProphetModel(self.model_json, 1, "d", "time", "target")
+        prophet_model = ProphetModel(self.model_json, 1, "d", "time")
         test_df = pd.concat([
             pd.to_datetime(pd.Series(range(2), name="ds").apply(lambda i: f"2020-11-{3*i+1}")),
             pd.Series(range(2), name="id").apply(lambda i: f"{i%2+1}")
