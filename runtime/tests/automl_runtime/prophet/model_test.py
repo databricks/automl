@@ -92,9 +92,8 @@ class TestProphetModel(unittest.TestCase):
             pd.to_datetime(pd.Series(range(num_rows), name="time").apply(lambda i: f"2020-11-{3*i+1}")),
             pd.Series(range(num_rows), name="id").apply(lambda i: f"{i%2+1}")
         ], axis=1)
-        forecast_pd = prophet_model.predict(test_df)
-        self.assertListEqual(list(forecast_pd.columns), ["id", "time", "target"])
-        np.testing.assert_array_almost_equal(np.array(forecast_pd["target"]),
+        forecast_y = prophet_model.predict(test_df)
+        np.testing.assert_array_almost_equal(np.array(forecast_y),
                                              np.array([10.333333, 11.333333]))
 
     def test_validate_predict_cols(self):

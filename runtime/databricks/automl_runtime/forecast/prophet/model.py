@@ -136,19 +136,18 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         """
         return self._predict_impl(horizon)
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, input_df: pd.DataFrame) -> pd.DataFrame:
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.DataFrame:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
                         can use to perform inference.
-        :param input_df: Input dataframe
+        :param model_input: Input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        self._validate_cols(input_df, [self._time_col])
-        input_df.rename(columns={self._time_col: "ds"}, inplace=True)
-        predict_df = self.model().predict(input_df)
-        predict_df.rename(columns={"yhat": self._target_col, "ds": self._time_col}, inplace=True)
-        return predict_df[[self._time_col, self._target_col]]
+        self._validate_cols(model_input, [self._time_col])
+        model_input.rename(columns={self._time_col: "ds"}, inplace=True)
+        predict_df = self.model().predict(model_input)
+        return predict_df["yhat"]
 
 
 class MultiSeriesProphetModel(ProphetModel):
@@ -254,22 +253,21 @@ class MultiSeriesProphetModel(ProphetModel):
         result_df["ts_id"] = str(df["ts_id"].iloc[0])
         return result_df[return_cols]
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, input_df: pd.DataFrame) -> pd.DataFrame:
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.DataFrame:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
                         can use to perform inference.
-        :param input_df: Input dataframe
+        :param model_input: Input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        self._validate_cols(input_df, self._id_cols + [self._time_col])
-        input_df["ts_id"] = input_df[self._id_cols].agg('-'.join, axis=1)
-        input_df.rename(columns={self._time_col: "ds"}, inplace=True)
+        self._validate_cols(model_input, self._id_cols + [self._time_col])
+        model_input["ts_id"] = model_input[self._id_cols].agg('-'.join, axis=1)
+        model_input.rename(columns={self._time_col: "ds"}, inplace=True)
         group_cols = ["ts_id"] + self._id_cols
-        predict_df = input_df.groupby(group_cols).apply(lambda df: self.model(df.name[0]).predict(df)).reset_index()
-        predict_df.rename(columns={"yhat": self._target_col, "ds": self._time_col}, inplace=True)
-
-        return predict_df[self._id_cols + [self._time_col, self._target_col]]
+        predict_df = model_input.groupby(group_cols).apply(lambda df: self.model(df.name[0]).predict(df)).reset_index()
+        return_df = model_input.merge(predict_df, how="left", on=self._id_cols)
+        return return_df["yhat"]
 
 
 def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProphetModel]) -> None:
