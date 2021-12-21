@@ -46,7 +46,7 @@ class TestProphetModel(unittest.TestCase):
         cls.model_json = model_to_json(cls.model)
 
     def test_model_save_and_load(self):
-        prophet_model = ProphetModel(self.model_json, 1, "d", "ds", "y")
+        prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
 
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
@@ -61,7 +61,7 @@ class TestProphetModel(unittest.TestCase):
 
     def test_make_future_dataframe(self):
         for feq_unit in OFFSET_ALIAS_MAP:
-            prophet_model = ProphetModel(self.model_json, 1, feq_unit, "ds", "y")
+            prophet_model = ProphetModel(self.model_json, 1, feq_unit, "ds")
             future_df = prophet_model._make_future_dataframe(1)
             expected_time = pd.Timestamp("2020-10-25") + pd.Timedelta(1, feq_unit)
             self.assertEqual(future_df.iloc[-1]["ds"], expected_time,
@@ -115,7 +115,7 @@ class TestProphetModel(unittest.TestCase):
         multi_series_model_json = {"1": self.model_json, "2": self.model_json}
         multi_series_start = {"1": pd.Timestamp("2020-07-01"), "2": pd.Timestamp("2020-07-01")}
         prophet_model = MultiSeriesProphetModel(multi_series_model_json, multi_series_start,
-                                                "2020-07-25", 1, "days", "ds", "y", ["id1"])
+                                                "2020-07-25", 1, "days", "ds", ["id1"])
         test_df = pd.concat([
             pd.to_datetime(pd.Series(range(2), name="ds").apply(lambda i: f"2020-11-{3*i+1}")),
             pd.Series(range(2), name="id").apply(lambda i: f"{i%2+1}")
