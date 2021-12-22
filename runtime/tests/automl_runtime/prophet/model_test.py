@@ -89,20 +89,21 @@ class TestProphetModel(unittest.TestCase):
 
         # Check predict API
         test_df = pd.DataFrame({
-            "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
-            "id": ["1", "2"],
+            "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-01"),
+                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+            "id": ["1", "2", "1", "2"],
         })
         expected_test_df = test_df.copy()
         forecast_y = prophet_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
-                                             np.array([10.333333, 11.333333]))
+                                             np.array([10.333333, 10.333333, 11.333333, 11.333333]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
 
     def test_validate_predict_cols(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "time")
         test_df = pd.DataFrame({
-            "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
+            "date": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
             "id": ["1", "2"],
         })
         with mlflow.start_run() as run:
