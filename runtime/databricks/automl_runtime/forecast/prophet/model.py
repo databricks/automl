@@ -134,7 +134,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         """
         return self._predict_impl(horizon)
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.DataFrame:
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
@@ -249,7 +249,7 @@ class MultiSeriesProphetModel(ProphetModel):
         result_df["ts_id"] = str(df["ts_id"].iloc[0])
         return result_df[return_cols]
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.DataFrame:
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
