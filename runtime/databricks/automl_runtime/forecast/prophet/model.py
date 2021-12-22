@@ -261,9 +261,8 @@ class MultiSeriesProphetModel(ProphetModel):
         test_df = model_input.copy()
         test_df["ts_id"] = test_df[self._id_cols].agg('-'.join, axis=1)
         test_df.rename(columns={self._time_col: "ds"}, inplace=True)
-        group_cols = ["ts_id"] + self._id_cols
-        predict_df = test_df.groupby(group_cols).apply(lambda df: self.model(df.name[0]).predict(df)).reset_index()
-        return_df = test_df.merge(predict_df, how="left", on=self._id_cols)
+        predict_df = test_df.groupby("ts_id").apply(lambda df: self.model(df.name[0]).predict(df)).reset_index()
+        return_df = test_df.merge(predict_df, how="left", on="ts_id")
         return return_df["yhat"]
 
 

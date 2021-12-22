@@ -101,10 +101,10 @@ class TestProphetModel(unittest.TestCase):
 
     def test_validate_predict_cols(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "time")
-        test_df = pd.concat([
-            pd.to_datetime(pd.Series(range(2), name="ds").apply(lambda i: f"2020-11-{3*i+1}")),
-            pd.Series(range(2), name="id").apply(lambda i: f"{i%2+1}")
-        ], axis=1)
+        test_df = pd.DataFrame({
+            "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
+            "id": ["1", "2"],
+        })
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
         # Load the saved model from mlflow
