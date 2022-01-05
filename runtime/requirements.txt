@@ -3,10 +3,12 @@
 
 holidays
 hyperopt
+koalas
 mlflow
 numpy
 pandas
 plotly
+pmdarima
 prophet
 pyarrow
 requests

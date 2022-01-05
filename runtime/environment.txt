@@ -4,9 +4,10 @@
 holidays==0.11.2
 hyperopt==0.2.7
 koalas==1.8.1
-mlflow==1.20.1
+mlflow==1.22.0
 numpy==1.20.2
 pandas==1.2.4
+pmdarima==1.8.4
 prophet==1.0.1
 pyarrow==4.0.0
 scikit-learn==0.24.1
