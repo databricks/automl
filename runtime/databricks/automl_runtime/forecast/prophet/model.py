@@ -20,27 +20,7 @@ import mlflow
 import pandas as pd
 import prophet
 
-OFFSET_ALIAS_MAP = {
-    "W": "W",
-    "d": "D",
-    "D": "D",
-    "days": "D",
-    "day": "D",
-    "hours": "H",
-    "hour": "H",
-    "hr": "H",
-    "h": "H",
-    "H": "H",
-    "m": "min",
-    "minute": "min",
-    "min": "min",
-    "minutes": "min",
-    "T": "T",
-    "S": "S",
-    "seconds": "S",
-    "sec": "S",
-    "second": "S"
-}
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
 PROPHET_CONDA_ENV = {
     "channels": ["conda-forge"],

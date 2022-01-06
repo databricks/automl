@@ -71,7 +71,6 @@ class TestDiagnostics(unittest.TestCase):
         y_train = self.X[self.X["ds"] <= cutoff_one].set_index("ds")
         test_df = self.X[self.X['ds'] > cutoff_one].copy()
         test_df["cutoff"] = [cutoff_one] * 2 + [cutoff_two] * 3
-        print(test_df)
         with StepwiseContext(max_steps=1):
             model = auto_arima(y=y_train, m=1)
 

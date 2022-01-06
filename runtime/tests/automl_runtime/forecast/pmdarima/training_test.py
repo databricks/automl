@@ -19,10 +19,8 @@ import unittest
 import pandas as pd
 import pmdarima as pm
 
-from hyperopt import hp
-
-from databricks.automl_runtime.forecast.pmdarima.diagnostics import generate_cutoffs
 from databricks.automl_runtime.forecast.pmdarima.training import ArimaEstimator
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
 
 class TestArimaEstimator(unittest.TestCase):
@@ -30,7 +28,7 @@ class TestArimaEstimator(unittest.TestCase):
     def setUp(self) -> None:
         num_rows = 12
         self.df = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
+            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
 
@@ -50,3 +48,13 @@ class TestArimaEstimator(unittest.TestCase):
         result = ArimaEstimator._fit_predict(self.df, cutoffs, seasonal_period=1)
         self.assertIn("metrics", result)
         self.assertIsInstance(result["model"], pm.arima.ARIMA)
+
+    def test_fill_missing_time_steps(self):
+        supported_freq = ["W", "days", "hr", "min", "sec"]
+        for frequency in supported_freq:
+            ds = pd.date_range(start="2020-07-01", periods=12, freq=OFFSET_ALIAS_MAP[frequency])
+            indices_to_drop = [5, 8]
+            df_missing = pd.DataFrame({"ds": ds, "y": range(12)}).drop(indices_to_drop).reset_index(drop=True)
+            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency)
+            for index in indices_to_drop:
+                self.assertTrue(df_filled["y"][index], df_filled["y"][index - 1])

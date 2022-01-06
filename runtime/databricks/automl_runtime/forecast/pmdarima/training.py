@@ -19,6 +19,7 @@ from typing import List
 import pandas as pd
 
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import generate_cutoffs, cross_validation
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
 
 class ArimaEstimator:
@@ -54,11 +55,12 @@ class ArimaEstimator:
         history_pd = df.sort_values(by=["ds"]).reset_index(drop=True)
         history_pd["ds"] = pd.to_datetime(history_pd["ds"])
 
+        # Impute missing time steps
+        history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
+
         # Generate cutoffs for cross validation
         cutoffs = generate_cutoffs(history_pd, horizon=self._horizon, unit=self._frequency_unit,
                                    num_folds=self._num_folds)
-
-        # TODO: Impute missing time steps
 
         # Tune seasonal periods
         best_result = None
@@ -103,3 +105,8 @@ class ArimaEstimator:
             metrics["mape"] = np.nan
 
         return {"metrics": metrics, "model": arima_model}
+
+    @staticmethod
+    def _fill_missing_time_steps(df, frequency):
+        # Forward fill missing time steps
+        return df.set_index("ds").resample(rule=OFFSET_ALIAS_MAP[frequency]).pad().reset_index()
