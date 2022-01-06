@@ -20,7 +20,7 @@ import pickle
 import pandas as pd
 import mlflow
 import numpy as np
-from pmdarima.arima import auto_arima, StepwiseContext
+from pmdarima.arima import ARIMA
 
 from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel
 from databricks.automl_runtime.forecast.pmdarima.utils import mlflow_arima_log_model
@@ -34,8 +34,8 @@ class TestUtils(unittest.TestCase):
             pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-10-{i + 1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
-        with StepwiseContext(max_steps=1):
-            model = auto_arima(y=self.X.set_index("date"), m=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(self.X.set_index("date"))
         self.pickled_model = pickle.dumps(model)
 
     def test_mlflow_arima_log_model(self):
@@ -54,8 +54,9 @@ class TestUtils(unittest.TestCase):
 
         # Check the forecasts (including in-sample ones) with the saved model
         forecast_pd = loaded_model._model_impl.python_model.predict_timeseries()
-        expected_yhat = np.array([4.002726, 0.068215, 1.572192, 2.354237, 3.519087,
-                                  4.385046, 5.478589, 6.378852, 7.441261, 8.360274])
+        expected_yhat = np.array([1.848777e+00, 2.113822e-03, 2.001169e+00, 2.997075e+00,
+                                  3.998042e+00, 4.996253e+00, 5.996520e+00, 6.995212e+00,
+                                  7.995219e+00, 8.994120e+00])
         np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]), expected_yhat)
 
     def test_mlflow_arima_log_model_multiseries(self):
@@ -81,6 +82,6 @@ class TestUtils(unittest.TestCase):
                      pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
             "id": ["1", "2", "1", "2"],
         })
-        expected_yhat = np.array([3.519087, 3.519087, 5.833953, 5.833953])
+        expected_yhat = np.array([3.998042, 3.998042, 23.269537, 23.269537])
         yhat = prophet_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(yhat), expected_yhat)

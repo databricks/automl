@@ -22,7 +22,7 @@ import pandas as pd
 import numpy as np
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE
-from pmdarima.arima import auto_arima, StepwiseContext
+from pmdarima.arima import ARIMA
 
 from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel
 
@@ -35,8 +35,8 @@ class TestArimaModel(unittest.TestCase):
             pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-10-{i + 1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
-        with StepwiseContext(max_steps=1):
-            model = auto_arima(y=self.X.set_index("date"), m=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(self.X.set_index("date"))
         pickled_model = pickle.dumps(model)
         self.arima_model = ArimaModel(pickled_model, horizon=1, frequency='d',
                                       start_ds=pd.to_datetime("2020-10-01"), end_ds=pd.to_datetime("2020-10-09"),
@@ -44,8 +44,9 @@ class TestArimaModel(unittest.TestCase):
 
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
-        expected_yhat = np.array([4.002726, 0.068215, 1.572192, 2.354237, 3.519087,
-                                  4.385046, 5.478589, 6.378852, 7.441261, 8.360274])
+        expected_yhat = np.array([1.848777e+00, 2.113822e-03, 2.001169e+00, 2.997075e+00,
+                                  3.998042e+00, 4.996253e+00, 5.996520e+00, 6.995212e+00,
+                                  7.995219e+00, 8.994120e+00])
         np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]), expected_yhat)
 
     def test_predict_success(self):
@@ -53,7 +54,7 @@ class TestArimaModel(unittest.TestCase):
             "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-11-04")]
         })
         expected_test_df = test_df.copy()
-        expected_yhat = np.array([3.519087, 5.833953])
+        expected_yhat = np.array([3.998042, 23.269537])
         yhat = self.arima_model.predict(None, test_df)
         np.testing.assert_array_almost_equal(np.array(yhat), expected_yhat)
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
@@ -98,8 +99,8 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
             pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-10-{i + 1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
-        with StepwiseContext(max_steps=1):
-            model = auto_arima(y=self.X.set_index("date"), m=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(self.X.set_index("date"))
         pickled_model = pickle.dumps(model)
         pickled_model_dict = {"1": pickled_model, "2": pickled_model}
         start_ds_dict = {"1": pd.Timestamp("2020-10-01"), "2": pd.Timestamp("2020-10-01")}
@@ -110,8 +111,9 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
 
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
-        expected_yhat_one_series = np.array([4.002726, 0.068215, 1.572192, 2.354237, 3.519087,
-                                             4.385046, 5.478589, 6.378852, 7.441261, 8.360274])
+        expected_yhat_one_series = np.array([1.848777e+00, 2.113822e-03, 2.001169e+00, 2.997075e+00,
+                                  3.998042e+00, 4.996253e+00, 5.996520e+00, 6.995212e+00,
+                                  7.995219e+00, 8.994120e+00])
         expected_yhat = np.append(expected_yhat_one_series, expected_yhat_one_series)
         np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]), expected_yhat)
 
@@ -122,7 +124,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
             "id": ["1", "2", "1", "2"],
         })
         expected_test_df = test_df.copy()
-        expected_yhat = np.array([3.519087, 3.519087, 5.833953, 5.833953])
+        expected_yhat = np.array([3.998042, 3.998042, 23.269537, 23.269537])
         yhat = self.arima_model.predict(None, test_df)
         np.testing.assert_array_almost_equal(np.array(yhat), expected_yhat)
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
