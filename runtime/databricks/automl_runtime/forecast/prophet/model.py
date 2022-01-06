@@ -21,6 +21,8 @@ import pandas as pd
 import prophet
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from mlflow.exceptions import MlflowException
+from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
 PROPHET_CONDA_ENV = {
     "channels": ["conda-forge"],
@@ -29,7 +31,7 @@ PROPHET_CONDA_ENV = {
             "pip": [
                 f"prophet=={prophet.__version__}",
                 f"cloudpickle=={cloudpickle.__version__}",
-                f"databricks-automl-runtime==0.2.0"
+                f"databricks-automl-runtime==0.2.5"
             ]
         }
     ],
@@ -41,18 +43,33 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
     """
     Prophet mlflow model wrapper for univariate forecasting.
     """
-    def __init__(self, model_json: Union[Dict[str, str], str], horizon: int, frequency: str) -> None:
+
+    def __init__(self, model_json: Union[Dict[str, str], str], horizon: int, frequency: str,
+                 time_col: str) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: json string of the Prophet model or
         the dictionary of json strings of Prophet model for multi-series forecasting
         :param horizon: Int number of periods to forecast forward.
         :param frequency: the frequency of the time series
+        :param time_col: the column name of the time column
         """
         self._model_json = model_json
         self._horizon = horizon
         self._frequency = frequency
+        self._time_col = time_col
         super().__init__()
+
+    def _validate_cols(self, df: pd.DataFrame, required_cols: List[str]):
+        df_cols = set(df.columns)
+        required_cols_set = set(required_cols)
+        if not required_cols_set.issubset(df_cols):
+            raise MlflowException(
+                message=(
+                    f"Input data columns '{list(df_cols)}' do not contain the required columns '{required_cols}'"
+                ),
+                error_code=INVALID_PARAMETER_VALUE,
+            )
 
     def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
         """
@@ -97,23 +114,28 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         """
         return self._predict_impl(horizon)
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, input: pd.DataFrame) -> pd.DataFrame:
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
                         can use to perform inference.
-        :param input: Input dataframe
+        :param model_input: Input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        return self._predict_impl()
+        self._validate_cols(model_input, [self._time_col])
+        test_df = pd.DataFrame({"ds": model_input[self._time_col]})
+        predict_df = self.model().predict(test_df)
+        return predict_df["yhat"]
 
 
 class MultiSeriesProphetModel(ProphetModel):
     """
     Prophet mlflow model wrapper for multi-series forecasting.
     """
+
     def __init__(self, model_json: Dict[str, str], timeseries_starts: Dict[str, pd.Timestamp],
-                 timeseries_end: str, horizon: int, frequency: str) -> None:
+                 timeseries_end: str, horizon: int, frequency: str, time_col: str, id_cols: List[str],
+                 ) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: the dictionary of json strings of Prophet model for multi-series forecasting
@@ -121,11 +143,14 @@ class MultiSeriesProphetModel(ProphetModel):
         :param timeseries_end: the end time of the time series
         :param horizon: Int number of periods to forecast forward
         :param frequency: the frequency of the time series
+        :param time_col: the column name of the time column
+        :param id_cols: the column names of the identity columns for multi-series time series
         """
-        super().__init__(model_json, horizon, frequency)
+        super().__init__(model_json, horizon, frequency, time_col)
         self._frequency = frequency
         self._timeseries_end = timeseries_end
         self._timeseries_starts = timeseries_starts
+        self._id_cols = id_cols
 
     def model(self, id: str) -> prophet.forecaster.Prophet:
         """
@@ -198,22 +223,28 @@ class MultiSeriesProphetModel(ProphetModel):
         :param horizon: Int number of periods to forecast forward.
         :return: A pd.DataFrame with the forecast components.
         """
-        forecast_df = self._predict_impl(df,  horizon)
+        forecast_df = self._predict_impl(df, horizon)
         return_cols = self.get_reserved_cols() + ["ds", "ts_id"]
         result_df = pd.DataFrame(columns=return_cols)
         result_df = pd.concat([result_df, forecast_df])
         result_df["ts_id"] = str(df["ts_id"].iloc[0])
         return result_df[return_cols]
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, input_df: pd.DataFrame) -> pd.DataFrame:
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
                         can use to perform inference.
-        :param input_df: Input dataframe
+        :param model_input: Input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        return self._predict_impl(input_df)
+        self._validate_cols(model_input, self._id_cols + [self._time_col])
+        test_df = model_input.copy()
+        test_df["ts_id"] = test_df[self._id_cols].agg('-'.join, axis=1)
+        test_df.rename(columns={self._time_col: "ds"}, inplace=True)
+        predict_df = test_df.groupby("ts_id").apply(lambda df: self.model(df.name[0]).predict(df)).reset_index()
+        return_df = test_df.merge(predict_df, how="left", on=["ts_id", "ds"])
+        return return_df["yhat"]
 
 
 def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProphetModel]) -> None:

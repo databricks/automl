@@ -1,7 +1,7 @@
 # Instructions:
 # * Keep dependencies sorted.
 
-holidays==0.11.2
+holidays==0.11.3.1
 hyperopt==0.2.7
 koalas==1.8.1
 mlflow==1.22.0
