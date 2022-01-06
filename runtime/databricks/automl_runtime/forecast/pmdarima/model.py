@@ -56,7 +56,7 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
         :param context: A PythonModelContext instance containing artifacts that the model
                         can use to perform inference.
         """
-        from pmdarima.arima import ARIMA
+        from pmdarima.arima import ARIMA  # noqa: F401
         return
 
     def model(self) -> pmdarima.arima.ARIMA:
@@ -195,7 +195,7 @@ class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
         :param context: A PythonModelContext instance containing artifacts that the model
                         can use to perform inference.
         """
-        from pmdarima.arima import ARIMA
+        from pmdarima.arima import ARIMA  # noqa: F401
         return
 
     def model(self, id_):
