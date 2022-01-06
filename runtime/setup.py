@@ -46,6 +46,7 @@ setup(
         "databricks",
         "databricks.automl_runtime",
         "databricks.automl_runtime.forecast",
+        "databricks.automl_runtime.forecast.pmdarima",
         "databricks.automl_runtime.forecast.prophet",
         "databricks.automl_runtime.hyperopt",
         "databricks.automl_runtime.sklearn"],
