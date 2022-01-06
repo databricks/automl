@@ -19,7 +19,6 @@ import pickle
 import pytest
 
 import pandas as pd
-import mlflow
 import numpy as np
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE
