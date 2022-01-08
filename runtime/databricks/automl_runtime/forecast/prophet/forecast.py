@@ -161,7 +161,7 @@ class ProphetHyperoptEstimator(ABC):
         model.fit(df)
 
         model_json = model_to_json(model)
-        print("model_json": model_json)
+        print("model_json:", model_json)
         metrics = trials.best_trial["result"]["metrics"]
 
         results_pd = pd.DataFrame({"model_json": model_json}, index=[0])
