@@ -147,10 +147,10 @@ class ProphetHyperoptEstimator(ABC):
             rstate=self._random_state)
 
         # Retrain the model with all history data.
-        model = Prophet(changepoint_prior_scale=best_result.get(ProphetHyperParams.CHANGEPOINT_PRIOR_SCALE, 0.05),
-                        seasonality_prior_scale=best_result.get(ProphetHyperParams.SEASONALITY_PRIOR_SCALE, 10.0),
-                        holidays_prior_scale=best_result.get(ProphetHyperParams.HOLIDAYS_PRIOR_SCALE, 10.0),
-                        seasonality_mode=seasonality_mode[best_result.get(ProphetHyperParams.SEASONALITY_MODE, 0)],
+        model = Prophet(changepoint_prior_scale=best_result.get(ProphetHyperParams.CHANGEPOINT_PRIOR_SCALE.value, 0.05),
+                        seasonality_prior_scale=best_result.get(ProphetHyperParams.SEASONALITY_PRIOR_SCALE.value, 10.0),
+                        holidays_prior_scale=best_result.get(ProphetHyperParams.HOLIDAYS_PRIOR_SCALE.value, 10.0),
+                        seasonality_mode=seasonality_mode[best_result.get(ProphetHyperParams.SEASONALITY_MODE.value, 0)],
                         interval_width=self._interval_width)
 
         if self._country_holidays:
