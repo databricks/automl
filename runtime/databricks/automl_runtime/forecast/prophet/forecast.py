@@ -146,6 +146,8 @@ class ProphetHyperoptEstimator(ABC):
             timeout=self._timeout,
             rstate=self._random_state)
 
+        print("best_result:", best_result)
+
         # Retrain the model with all history data.
         model = Prophet(changepoint_prior_scale=best_result.get(ProphetHyperParams.CHANGEPOINT_PRIOR_SCALE.value, 0.05),
                         seasonality_prior_scale=best_result.get(ProphetHyperParams.SEASONALITY_PRIOR_SCALE.value, 10.0),
@@ -159,6 +161,7 @@ class ProphetHyperoptEstimator(ABC):
         model.fit(df)
 
         model_json = model_to_json(model)
+        print("model_json": model_json)
         metrics = trials.best_trial["result"]["metrics"]
 
         results_pd = pd.DataFrame({"model_json": model_json}, index=[0])
