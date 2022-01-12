@@ -149,9 +149,9 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
 
     def infer_signature(self, sample_input: pd.DataFrame) -> ModelSignature:
         if not sample_input:
-            sample_input = self._make_future_dataframe(1)
+            sample_input = self._make_future_dataframe(horizon=1)
             sample_input.rename(columns={"ds": self._time_col}, inplace=True)
-        signature = infer_signature(sample_input, self.predict(_, sample_input)) # noqa
+        signature = infer_signature(sample_input, self.predict(context=None, model_input=sample_input)) # noqa
         return signature
 
 
