@@ -36,7 +36,8 @@ class TestProphetModel(unittest.TestCase):
     def setUpClass(cls) -> None:
         num_rows = 9
         cls.X = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-10-{3*i+1}")),
+            pd.to_datetime(pd.Series(range(num_rows), name="ds")
+                           .apply(lambda i: f"2020-10-{3*i+1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
         cls.model = Prophet()
@@ -134,4 +135,3 @@ class TestProphetModel(unittest.TestCase):
         with pytest.raises(MlflowException, match="Input data columns") as e:
             prophet_model.predict(test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
-

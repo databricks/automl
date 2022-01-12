@@ -151,7 +151,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         if not sample_input:
             sample_input = self._make_future_dataframe(horizon=1)
             sample_input.rename(columns={"ds": self._time_col}, inplace=True)
-        signature = infer_signature(sample_input, self.predict(context=None, model_input=sample_input)) # noqa
+        signature = infer_signature(sample_input, self.predict(context=None, model_input=sample_input))
         return signature
 
 
@@ -280,5 +280,9 @@ def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProph
     :param prophet_model: Prophet model wrapper
     :param sample_input: sample input Dataframes for model inference
     """
-    signature = prophet_model.infer_signature(sample_input)
+    # log the model without signature if infer_signature is failed.
+    try:
+        signature = prophet_model.infer_signature(sample_input)
+    except Exception: # noqa
+        signature = None
     mlflow.pyfunc.log_model("model", conda_env=PROPHET_CONDA_ENV, python_model=prophet_model, signature=signature)
