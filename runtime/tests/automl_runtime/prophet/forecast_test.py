@@ -15,6 +15,7 @@
 #
 
 import unittest
+import json
 import pandas as pd
 from hyperopt import hp
 
@@ -29,7 +30,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{i+1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
-        self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -6.9, -0.69)}
+        self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
 
     def test_sequential_training(self):
         hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
@@ -51,3 +52,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         self.assertAlmostEqual(results["mdape"][0], 0)
         self.assertAlmostEqual(results["smape"][0], 0)
         self.assertAlmostEqual(results["coverage"][0], 1)
+        # check the best result parameter is inside the search space
+        model_json = json.loads(results["model_json"][0])
+        self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
+        self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
