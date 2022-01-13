@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Databricks, Inc.
+# Copyright (C) 2022 Databricks, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,16 @@
 # limitations under the License.
 #
 
+from typing import List
+
 import pandas as pd
 import numpy as np
+import pmdarima
 
 
-def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str, num_folds: int):
+def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str, num_folds: int) -> List[pd.Timestamp]:
     """
-    Custom implementation to generate cutoff times for cross validation.
-    Adding the control of number of folds comparing the method from prophet.
+    Generate cutoff times for cross validation with the control of number of folds.
     :param df: pd.DataFrame of the historical data
     :param horizon: int number of time into the future for forecasting.
     :param unit: frequency of the timeseries, which must be a pandas offset alias.
@@ -60,10 +62,12 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str, num_folds: int):
     return list(reversed(result))
 
 
-def cross_validation(arima_model, df, cutoffs):
+def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoffs: List[pd.Timestamp]) -> pd.DataFrame:
     """
-    Cross-Validation for time series. Computes forecasts from historical cutoff points.
-    The function is a modification of prophet.diagnostics.cross_validation that works for ARIMA model.
+    Cross-Validation for time series forecasting.
+
+    Computes forecasts from historical cutoff points. The function is a modification of
+    prophet.diagnostics.cross_validation that works for ARIMA model.
     :param arima_model: pmdarima.arima.ARIMA object. Fitted ARIMA model.
     :param df: pd.DataFrame of the historical data
     :param cutoffs: list of pd.Timestamp specifying cutoffs to be used during cross validation.
@@ -84,7 +88,8 @@ def cross_validation(arima_model, df, cutoffs):
     return pd.concat(predicts, axis=0).reset_index(drop=True)
 
 
-def single_cutoff_forecast(arima_model, test_df, prev_cutoff, cutoff):
+def single_cutoff_forecast(arima_model: pmdarima.arima.ARIMA, test_df: pd.DataFrame, prev_cutoff: pd.Timestamp,
+                           cutoff: pd.Timestamp) -> pd.DataFrame:
     """
     Forecast for single cutoff. Used in the cross validation function.
     :param arima_model: pmdarima.arima.ARIMA object. Fitted ARIMA model.

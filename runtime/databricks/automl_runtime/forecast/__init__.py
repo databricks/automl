@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Databricks, Inc.
+# Copyright (C) 2022 Databricks, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ OFFSET_ALIAS_MAP = {
     "minute": "min",
     "min": "min",
     "minutes": "min",
-    "T": "T",
+    "T": "min",
     "S": "S",
     "seconds": "S",
     "sec": "S",

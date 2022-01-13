@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Databricks, Inc.
+# Copyright (C) 2022 Databricks, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,25 +39,25 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
         :param end_ds: the end time of training data
         :param time_col: the column name of the time column
         """
+        super().__init__()
         self._pickled_model = pickled_model
         self._horizon = horizon
         self._frequency = frequency
         self._start_ds = start_ds
         self._end_ds = end_ds
         self._time_col = time_col
-        super().__init__()
 
     def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
         """
+        Loads artifacts from the specified PythonModelContext.
+
         Loads artifacts from the specified PythonModelContext that can be used by
         PythonModel.predict when evaluating inputs. When loading an MLflow model with
-        load_pyfunc, this method is called as soon as the PythonModel is
-        constructed.
+        load_pyfunc, this method is called as soon as the PythonModel is constructed.
         :param context: A PythonModelContext instance containing artifacts that the model
                         can use to perform inference.
         """
         from pmdarima.arima import ARIMA  # noqa: F401
-        return
 
     def model(self) -> pmdarima.arima.ARIMA:
         """
@@ -80,9 +80,10 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
 
     def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
-        Predict API from mlflow.pyfunc.PythonModel. Returns the prediction values for given timestamps in the input
-        dataframe. If an input timestamp to predict does not match the original frequency that the model trained on,
-        an exception will be thrown.
+        Predict API from mlflow.pyfunc.PythonModel.
+
+        Returns the prediction values for given timestamps in the input dataframe. If an input timestamp
+        to predict does not match the original frequency that the model trained on, an exception will be thrown.
         :param context: A PythonModelContext instance containing artifacts that the model
                         can use to perform inference.
         :param model_input: The input dataframe of the model. Should have the same time column name
@@ -188,15 +189,15 @@ class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
 
     def load_context(self, context):
         """
+        Loads artifacts from the specified PythonModelContext.
+
         Loads artifacts from the specified PythonModelContext that can be used by
         PythonModel.predict when evaluating inputs. When loading an MLflow model with
-        load_pyfunc, this method is called as soon as the PythonModel is
-        constructed.
+        load_pyfunc, this method is called as soon as the PythonModel is constructed.
         :param context: A PythonModelContext instance containing artifacts that the model
                         can use to perform inference.
         """
         from pmdarima.arima import ARIMA  # noqa: F401
-        return
 
     def model(self, id_):
         """
@@ -226,7 +227,10 @@ class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
 
     def predict(self, context, model_input):
         """
-        Predict API from mlflow.pyfunc.PythonModel
+        Predict API from mlflow.pyfunc.PythonModel.
+
+        Returns the prediction values for given timestamps in the input dataframe. If an input timestamp
+        to predict does not match the original frequency that the model trained on, an exception will be thrown.
         :param context: A PythonModelContext instance containing artifacts that the model
                         can use to perform inference.
         :param model_input: input dataframe of the model. Should have the same time column
