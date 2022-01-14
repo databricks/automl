@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from typing import List
+from abc import ABC, abstractmethod
+from typing import List, Dict
 
 import pandas as pd
 import mlflow
@@ -25,7 +25,36 @@ from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
 
-class ArimaModel(mlflow.pyfunc.PythonModel):
+class AbstractArimaModel(ABC, mlflow.pyfunc.PythonModel):
+    @abstractmethod
+    def __init__(self):
+        super().__init__()
+
+    def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
+        """
+        Loads artifacts from the specified PythonModelContext.
+
+        Loads artifacts from the specified PythonModelContext that can be used by
+        PythonModel.predict when evaluating inputs. When loading an MLflow model with
+        load_pyfunc, this method is called as soon as the PythonModel is constructed.
+        :param context: A PythonModelContext instance containing artifacts that the model
+                        can use to perform inference.
+        """
+        from pmdarima.arima import ARIMA  # noqa: F401
+
+    @staticmethod
+    def _validate_cols(df: pd.DataFrame, required_cols: List[str]):
+        df_cols = set(df.columns)
+        required_cols_set = set(required_cols)
+        if not required_cols_set.issubset(df_cols):
+            raise MlflowException(
+                message=(
+                    f"Input data columns '{list(df_cols)}' do not contain the required columns '{required_cols}'"
+                ),
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+
+class ArimaModel(AbstractArimaModel):
     """
     ARIMA mlflow model wrapper for univariate forecasting.
     """
@@ -48,18 +77,6 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
         self._start_ds = start_ds
         self._end_ds = end_ds
         self._time_col = time_col
-
-    def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
-        """
-        Loads artifacts from the specified PythonModelContext.
-
-        Loads artifacts from the specified PythonModelContext that can be used by
-        PythonModel.predict when evaluating inputs. When loading an MLflow model with
-        load_pyfunc, this method is called as soon as the PythonModel is constructed.
-        :param context: A PythonModelContext instance containing artifacts that the model
-                        can use to perform inference.
-        """
-        from pmdarima.arima import ARIMA  # noqa: F401
 
     def model(self) -> pmdarima.arima.ARIMA:
         """
@@ -93,7 +110,11 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
         :return: A pd.Series with the prediction values.
         """
         self._validate_cols(model_input, [self._time_col])
-        df = model_input.rename(columns={self._time_col: "ds"})
+        result_df = self._predict_impl(model_input)
+        return result_df["yhat"]
+
+    def _predict_impl(self, input_df: pd.DataFrame) -> pd.DataFrame:
+        df = input_df.rename(columns={self._time_col: "ds"})
         # Check if the time has correct frequency
         diff = (df["ds"] - self._start_ds) / pd.Timedelta(1, unit=self._frequency)
         if not diff.apply(float.is_integer).all():
@@ -123,12 +144,12 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
         if pred_start_ds <= self._end_ds:
             in_sample_pd = self._predict_in_sample(start_ds=pred_start_ds, end_ds=self._end_ds)
             preds_pds.append(in_sample_pd)
-        # Map predictions back to given time column
+        # Map predictions back to given timestamps
         preds_pd = pd.concat(preds_pds).set_index("ds")
         df = df.set_index("ds").join(preds_pd, how="left").reset_index()
-        return df["yhat"]
+        return df
 
-    def _predict_in_sample(self, start_ds: pd.Timestamp = None, end_ds: pd.Timestamp = None):
+    def _predict_in_sample(self, start_ds: pd.Timestamp = None, end_ds: pd.Timestamp = None) -> pd.DataFrame:
         if start_ds and end_ds:
             start_idx = int((start_ds - self._start_ds) / pd.Timedelta(1, unit=self._frequency))
             end_idx = int((end_ds - self._start_ds) / pd.Timedelta(1, unit=self._frequency))
@@ -143,7 +164,7 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
         return in_sample_pd
 
-    def _forecast(self, horizon: int = None):
+    def _forecast(self, horizon: int = None) -> pd.DataFrame:
         horizon = horizon or self._horizon
         preds, conf = self.model().predict(horizon, return_conf_int=True)
         dates = pd.date_range(start=self._end_ds, periods=horizon + 1, freq=self._frequency)[1:]
@@ -151,25 +172,15 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
         preds_pd[["yhat_lower", "yhat_upper"]] = conf
         return preds_pd
 
-    @staticmethod
-    def _validate_cols(df: pd.DataFrame, required_cols: List[str]):
-        df_cols = set(df.columns)
-        required_cols_set = set(required_cols)
-        if not required_cols_set.issubset(df_cols):
-            raise MlflowException(
-                message=(
-                    f"Input data columns '{list(df_cols)}' do not contain the required columns '{required_cols}'"
-                ),
-                error_code=INVALID_PARAMETER_VALUE,
-            )
 
-
-class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
+class MultiSeriesArimaModel(AbstractArimaModel):
     """
     ARIMA mlflow model wrapper for multivariate forecasting.
     """
 
-    def __init__(self, pickled_model_dict, horizon, frequency, start_ds_dict, end_ds_dict, time_col, id_cols):
+    def __init__(self, pickled_model_dict: Dict[str, bytes], horizon: int, frequency: str,
+                 start_ds_dict: Dict[str, pd.Timestamp], end_ds_dict: Dict[str, pd.Timestamp],
+                 time_col: str, id_cols: List[str]) -> None:
         """
         Initialize the mlflow Python model wrapper for multiseries ARIMA.
         :param pickled_model_dict: the dictionary of binarized ARIMA models for different time series.
@@ -180,6 +191,7 @@ class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
         """
+        super().__init__()
         self._pickled_models = pickled_model_dict
         self._horizon = horizon
         self._frequency = frequency
@@ -187,29 +199,17 @@ class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
         self._ends = end_ds_dict
         self._time_col = time_col
         self._id_cols = id_cols
-        super().__init__()
 
-    def load_context(self, context):
+    def model(self, id_: str) -> pmdarima.arima.ARIMA:
         """
-        Loads artifacts from the specified PythonModelContext.
-
-        Loads artifacts from the specified PythonModelContext that can be used by
-        PythonModel.predict when evaluating inputs. When loading an MLflow model with
-        load_pyfunc, this method is called as soon as the PythonModel is constructed.
-        :param context: A PythonModelContext instance containing artifacts that the model
-                        can use to perform inference.
-        """
-        from pmdarima.arima import ARIMA  # noqa: F401
-
-    def model(self, id_):
-        """
-        Deserialize the ARIMA model by pickle.
+        Deserialize the ARIMA model for specified time series by pickle.
+        :param: id for specified time series.
         :return: ARIMA model
         """
         import pickle
         return pickle.loads(self._pickled_models[id_])
 
-    def predict_timeseries(self, horizon=None):
+    def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:
         """
         Predict target column for given horizon and history data.
         :param horizon: Int number of periods to forecast forward.
@@ -220,14 +220,14 @@ class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
         preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon), ids))
         return pd.concat(preds_dfs).reset_index(drop=True)
 
-    def _predict_timeseries_single_id(self, id_, horizon):
-        future_pd = self._forecast(id_, horizon)
-        in_sample_pd = self._predict_in_sample(id_)
-        preds_df = pd.concat([in_sample_pd, future_pd])
+    def _predict_timeseries_single_id(self, id_: str, horizon: int) -> pd.DataFrame:
+        arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency,
+                                           self._starts[id_], self._ends[id_], self._time_col)
+        preds_df = arima_model_single_id.predict_timeseries(horizon)
         preds_df["ts_id"] = id_
-        return preds_df.reset_index(drop=True)
+        return preds_df
 
-    def predict(self, context, model_input):
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
         Predict API from mlflow.pyfunc.PythonModel.
 
@@ -240,7 +240,7 @@ class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
         :return: A pd.Series with the prediction values.
         """
         self._validate_cols(model_input, self._id_cols + [self._time_col])
-        df = model_input.rename(columns={self._time_col: "ds"})
+        df = model_input.copy()
         df["ts_id"] = df[self._id_cols].apply(lambda r: "-".join(r.values.astype(str)), axis=1)
         known_ids = set(self._pickled_models.keys())
         ids = set(df["ts_id"].unique())
@@ -254,76 +254,12 @@ class MultiSeriesArimaModel(mlflow.pyfunc.PythonModel):
                 error_code=INVALID_PARAMETER_VALUE,
             )
         preds_df = df.groupby("ts_id").apply(self._predict_single_id).reset_index(drop=True)
-        df = df.merge(preds_df, how="left", on=["ds", "ts_id"])  # merge predictions to original order
+        df = df.merge(preds_df, how="left", on=[self._time_col, "ts_id"])  # merge predictions to original order
         return df["yhat"]
 
-    def _predict_single_id(self, df):
+    def _predict_single_id(self, df: pd.DataFrame) -> pd.DataFrame:
         id_ = df["ts_id"].to_list()[0]
-        # Check if the time has correct frequency
-        diff = (df["ds"] - self._starts[id_]) / pd.Timedelta(1, unit=self._frequency)
-        if not diff.apply(float.is_integer).all():
-            raise MlflowException(
-                message=(
-                    f"Input time column '{self._time_col}' includes different frequency."
-                ),
-                error_code=INVALID_PARAMETER_VALUE,
-            )
-        # Validate the time range
-        pred_start_ds = min(df["ds"])
-        if pred_start_ds < self._starts[id_]:
-            raise MlflowException(
-                message=(
-                    f"Input time column '{self._time_col}' includes time earlier than "
-                    "the history data that the model was trained on."
-                ),
-                error_code=INVALID_PARAMETER_VALUE,
-            )
-        preds_pds = []
-        # Out-of-sample prediction if needed
-        horizon = int((max(df["ds"]) - self._ends[id_]) / pd.Timedelta(1, unit=self._frequency))
-        if horizon > 0:
-            future_pd = self._forecast(id_, horizon)
-            preds_pds.append(future_pd)
-        # In-sample prediction if needed
-        if pred_start_ds <= self._ends[id_]:
-            in_sample_pd = self._predict_in_sample(id_, start_ds=pred_start_ds, end_ds=self._ends[id_])
-            preds_pds.append(in_sample_pd)
-        # Map predictions back to given time column
-        preds_pd = pd.concat(preds_pds).set_index("ds")
-        df = df.set_index("ds").join(preds_pd, how="left").reset_index()
+        arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency,
+                                           self._starts[id_], self._ends[id_], self._time_col)
+        df["yhat"] = arima_model_single_id.predict(None, df).to_list()
         return df
-
-    def _predict_in_sample(self, id_, start_ds=None, end_ds=None):
-        if start_ds and end_ds:
-            start_idx = int((start_ds - self._starts[id_]) / pd.Timedelta(1, unit=self._frequency))
-            end_idx = int((end_ds - self._starts[id_]) / pd.Timedelta(1, unit=self._frequency))
-        else:
-            start_ds = self._starts[id_]
-            end_ds = self._ends[id_]
-            start_idx, end_idx = None, None
-        preds_in_sample, conf_in_sample = self.model(id_).predict_in_sample(
-            start=start_idx, end=end_idx, return_conf_int=True)
-        dates_in_sample = pd.date_range(start=start_ds, end=end_ds, freq=self._frequency)
-        in_sample_pd = pd.DataFrame({'ds': dates_in_sample, 'yhat': preds_in_sample})
-        in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
-        return in_sample_pd
-
-    def _forecast(self, id_, horizon=None):
-        horizon = horizon or self._horizon
-        preds, conf = self.model(id_).predict(horizon, return_conf_int=True)
-        dates = pd.date_range(start=self._ends[id_], periods=horizon + 1, freq=self._frequency)[1:]
-        preds_pd = pd.DataFrame({'ds': dates, 'yhat': preds})
-        preds_pd[["yhat_lower", "yhat_upper"]] = conf
-        return preds_pd
-
-    @staticmethod
-    def _validate_cols(df, required_cols):
-        df_cols = set(df.columns)
-        required_cols_set = set(required_cols)
-        if not required_cols_set.issubset(df_cols):
-            raise MlflowException(
-                message=(
-                    f"Input data columns '{list(df_cols)}' do not contain the required columns '{required_cols}'"
-                ),
-                error_code=INVALID_PARAMETER_VALUE,
-            )

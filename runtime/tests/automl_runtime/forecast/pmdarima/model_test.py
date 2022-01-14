@@ -24,7 +24,7 @@ from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE
 from pmdarima.arima import ARIMA
 
-from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel
+from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel, AbstractArimaModel
 
 
 class TestArimaModel(unittest.TestCase):
@@ -78,16 +78,10 @@ class TestArimaModel(unittest.TestCase):
 
     def test_predict_failure_invalid_time_col_name(self):
         test_df = pd.DataFrame({
-            "time": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-11-04")]
+            "invalid_time_col_name": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-11-04")]
         })
         with pytest.raises(MlflowException, match="Input data columns") as e:
-            ArimaModel._validate_cols(test_df, ["invalid_time_col"])
-        assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
-
-    def test_validate_cols_invalid_time_col_name(self):
-        test_df = pd.DataFrame({"date": []})
-        with pytest.raises(MlflowException, match="Input data columns") as e:
-            ArimaModel._validate_cols(test_df, ["invalid_time_col"])
+            self.arima_model.predict(None, test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
 
@@ -164,14 +158,21 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         test_df = pd.DataFrame({
             "time": [pd.to_datetime("2020-10-05"), pd.to_datetime("2000-10-05"),
                      pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
-            "id": ["1", "2", "1", "2"],
+            "invalid_id_col_name": ["1", "2", "1", "2"],
         })
         with pytest.raises(MlflowException, match="Input data columns") as e:
-            ArimaModel._validate_cols(test_df, ["invalid_time_col"])
+            self.arima_model.predict(None, test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
+
+class TestAbstractArimaModel(unittest.TestCase):
+
+    def test_validate_cols_success(self):
+        test_df = pd.DataFrame({"date": []})
+        AbstractArimaModel._validate_cols(test_df, ["date"])
+
     def test_validate_cols_invalid_id_col_name(self):
-        test_df = pd.DataFrame({"date": [], "id": [], })
+        test_df = pd.DataFrame({"date": [], "invalid_id_col_name": [], })
         with pytest.raises(MlflowException, match="Input data columns") as e:
-            ArimaModel._validate_cols(test_df, ["invalid_id_col"])
+            AbstractArimaModel._validate_cols(test_df, ["date", "id"])
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
