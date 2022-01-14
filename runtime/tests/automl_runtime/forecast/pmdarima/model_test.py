@@ -38,7 +38,7 @@ class TestArimaModel(unittest.TestCase):
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
         model.fit(self.X.set_index("date"))
         pickled_model = pickle.dumps(model)
-        self.arima_model = ArimaModel(pickled_model, horizon=1, frequency='d',
+        self.arima_model = ArimaModel(pickled_model, horizon=1, frequency='days',
                                       start_ds=pd.to_datetime("2020-10-01"), end_ds=pd.to_datetime("2020-10-09"),
                                       time_col="date")
 

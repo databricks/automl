@@ -28,20 +28,21 @@ class ArimaEstimator:
     """
 
     def __init__(self, horizon: int, frequency_unit: str, metric: str, seasonal_periods: List[int],
-                 num_folds: int = 5, max_eval: int = 10) -> None:
+                 num_folds: int = 5, max_steps: int = 150) -> None:
         """
         :param horizon: Number of periods to forecast forward
         :param frequency_unit: Frequency of the time series
         :param metric: Metric that will be optimized across trials
         :param seasonal_periods: A list of seasonal periods for tuning.
         :param num_folds: Number of folds for cross validation
-        :param max_eval: Max steps
+        :param max_steps: Max steps for stepwise auto_arima
         """
         self._horizon = horizon
-        self._frequency_unit = frequency_unit
+        self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
         self._metric = metric
         self._seasonal_periods = seasonal_periods
         self._num_folds = num_folds
+        self._max_steps = max_steps
 
     def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -66,7 +67,7 @@ class ArimaEstimator:
         best_result = None
         best_metric = float("inf")
         for m in self._seasonal_periods:
-            result = self._fit_predict(df, cutoffs, m)
+            result = self._fit_predict(df, cutoffs, m, self._max_steps)
             metric = result["metrics"]["smape"]
             if metric < best_metric:
                 best_result = result
@@ -78,7 +79,7 @@ class ArimaEstimator:
         return results_pd
 
     @staticmethod
-    def _fit_predict(df, cutoffs, seasonal_period):
+    def _fit_predict(df, cutoffs, seasonal_period, max_steps):
         import numpy as np
         import pmdarima as pm
         from pmdarima.arima import StepwiseContext
@@ -88,7 +89,7 @@ class ArimaEstimator:
         y_train = train_df[["ds", "y"]].set_index("ds")
 
         # Train with the initial interval
-        with StepwiseContext(max_steps=150):
+        with StepwiseContext(max_steps=max_steps):
             arima_model = pm.auto_arima(
                 y=y_train,
                 m=seasonal_period,
@@ -109,4 +110,4 @@ class ArimaEstimator:
     @staticmethod
     def _fill_missing_time_steps(df, frequency):
         # Forward fill missing time steps
-        return df.set_index("ds").resample(rule=OFFSET_ALIAS_MAP[frequency]).pad().reset_index()
+        return df.set_index("ds").resample(rule=frequency).pad().reset_index()

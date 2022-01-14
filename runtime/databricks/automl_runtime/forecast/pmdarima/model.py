@@ -22,6 +22,8 @@ import pmdarima
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+
 
 class ArimaModel(mlflow.pyfunc.PythonModel):
     """
@@ -42,7 +44,7 @@ class ArimaModel(mlflow.pyfunc.PythonModel):
         super().__init__()
         self._pickled_model = pickled_model
         self._horizon = horizon
-        self._frequency = frequency
+        self._frequency = OFFSET_ALIAS_MAP[frequency]
         self._start_ds = start_ds
         self._end_ds = end_ds
         self._time_col = time_col
