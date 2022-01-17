@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import pickle
 from abc import ABC, abstractmethod
 from typing import List, Dict
 
@@ -54,6 +55,7 @@ class AbstractArimaModel(ABC, mlflow.pyfunc.PythonModel):
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
+
 class ArimaModel(AbstractArimaModel):
     """
     ARIMA mlflow model wrapper for univariate forecasting.
@@ -83,7 +85,6 @@ class ArimaModel(AbstractArimaModel):
         Deserialize the ARIMA model by pickle.
         :return: ARIMA model
         """
-        import pickle
         return pickle.loads(self._pickled_model)
 
     def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:
@@ -206,7 +207,6 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         :param: id for specified time series.
         :return: ARIMA model
         """
-        import pickle
         return pickle.loads(self._pickled_models[id_])
 
     def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:

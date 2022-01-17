@@ -28,7 +28,7 @@ class ArimaEstimator:
     """
 
     def __init__(self, horizon: int, frequency_unit: str, metric: str, seasonal_periods: List[int],
-                 num_folds: int = 5, max_steps: int = 150) -> None:
+                 num_folds: int = 20, max_steps: int = 150) -> None:
         """
         :param horizon: Number of periods to forecast forward
         :param frequency_unit: Frequency of the time series
@@ -67,7 +67,7 @@ class ArimaEstimator:
         best_result = None
         best_metric = float("inf")
         for m in self._seasonal_periods:
-            result = self._fit_predict(df, cutoffs, m, self._max_steps)
+            result = self._fit_predict(history_pd, cutoffs, m, self._max_steps)
             metric = result["metrics"]["smape"]
             if metric < best_metric:
                 best_result = result
@@ -94,7 +94,6 @@ class ArimaEstimator:
                 y=y_train,
                 m=seasonal_period,
                 stepwise=True,
-                error_action='ignore'
             )
 
         # Evaluate with cross validation
