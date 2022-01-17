@@ -19,7 +19,6 @@ import pickle
 import pytest
 
 import pandas as pd
-import numpy as np
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE
 from pmdarima.arima import ARIMA
@@ -44,19 +43,17 @@ class TestArimaModel(unittest.TestCase):
 
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
-        expected_yhat = np.array([1.848777e+00, 2.113822e-03, 2.001169e+00, 2.997075e+00,
-                                  3.998042e+00, 4.996253e+00, 5.996520e+00, 6.995212e+00,
-                                  7.995219e+00, 8.994120e+00])
-        np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]), expected_yhat)
+        expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        self.assertEqual(10, forecast_pd.shape[0])
 
     def test_predict_success(self):
         test_df = pd.DataFrame({
             "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-11-04")]
         })
         expected_test_df = test_df.copy()
-        expected_yhat = np.array([3.998042, 23.269537])
         yhat = self.arima_model.predict(None, test_df)
-        np.testing.assert_array_almost_equal(np.array(yhat), expected_yhat)
+        self.assertEqual(10, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
     def test_predict_failure_unmatched_frequency(self):
@@ -105,11 +102,9 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
 
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
-        expected_yhat_one_series = np.array([1.848777e+00, 2.113822e-03, 2.001169e+00, 2.997075e+00,
-                                  3.998042e+00, 4.996253e+00, 5.996520e+00, 6.995212e+00,
-                                  7.995219e+00, 8.994120e+00])
-        expected_yhat = np.append(expected_yhat_one_series, expected_yhat_one_series)
-        np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]), expected_yhat)
+        expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        self.assertEqual(20, forecast_pd.shape[0])
 
     def test_predict_success(self):
         test_df = pd.DataFrame({
@@ -118,9 +113,8 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
             "id": ["1", "2", "1", "2"],
         })
         expected_test_df = test_df.copy()
-        expected_yhat = np.array([3.998042, 3.998042, 23.269537, 23.269537])
         yhat = self.arima_model.predict(None, test_df)
-        np.testing.assert_array_almost_equal(np.array(yhat), expected_yhat)
+        self.assertEqual(10, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
     def test_predict_fail_unseen_id(self):
