@@ -53,7 +53,7 @@ class TestArimaModel(unittest.TestCase):
         })
         expected_test_df = test_df.copy()
         yhat = self.arima_model.predict(None, test_df)
-        self.assertEqual(10, len(yhat))
+        self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
     def test_predict_failure_unmatched_frequency(self):
@@ -114,7 +114,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         })
         expected_test_df = test_df.copy()
         yhat = self.arima_model.predict(None, test_df)
-        self.assertEqual(10, len(yhat))
+        self.assertEqual(4, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
     def test_predict_fail_unseen_id(self):

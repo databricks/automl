@@ -81,7 +81,7 @@ class ArimaEstimator:
         return results_pd
 
     @staticmethod
-    def _fit_predict(df, cutoffs, seasonal_period, max_steps):
+    def _fit_predict(df: pd.DataFrame, cutoffs: List[pd.Timestamp], seasonal_period: int, max_steps: int = 150):
         train_df = df[df['ds'] <= cutoffs[0]]
         y_train = train_df[["ds", "y"]].set_index("ds")
 
@@ -104,6 +104,6 @@ class ArimaEstimator:
         return {"metrics": metrics, "model": arima_model}
 
     @staticmethod
-    def _fill_missing_time_steps(df, frequency):
+    def _fill_missing_time_steps(df: pd.DataFrame, frequency: str):
         # Forward fill missing time steps
-        return df.set_index("ds").resample(rule=frequency).pad().reset_index()
+        return df.set_index("ds").resample(rule=OFFSET_ALIAS_MAP[frequency]).pad().reset_index()
