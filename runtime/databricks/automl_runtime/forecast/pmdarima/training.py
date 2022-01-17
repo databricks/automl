@@ -17,6 +17,11 @@
 from typing import List
 
 import pandas as pd
+import pickle
+import numpy as np
+import pmdarima as pm
+from pmdarima.arima import StepwiseContext
+from prophet.diagnostics import performance_metrics
 
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import generate_cutoffs, cross_validation
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
@@ -50,9 +55,6 @@ class ArimaEstimator:
         :param df: A pd.DataFrame containing the history data. Must have columns ds and y.
         :return: A pd.DataFrame with the best model (pickled) and its metrics from cross validation.
         """
-        import pandas as pd
-        import pickle
-
         history_pd = df.sort_values(by=["ds"]).reset_index(drop=True)
         history_pd["ds"] = pd.to_datetime(history_pd["ds"])
 
@@ -80,11 +82,6 @@ class ArimaEstimator:
 
     @staticmethod
     def _fit_predict(df, cutoffs, seasonal_period, max_steps):
-        import numpy as np
-        import pmdarima as pm
-        from pmdarima.arima import StepwiseContext
-        from prophet.diagnostics import performance_metrics
-
         train_df = df[df['ds'] <= cutoffs[0]]
         y_train = train_df[["ds", "y"]].set_index("ds")
 

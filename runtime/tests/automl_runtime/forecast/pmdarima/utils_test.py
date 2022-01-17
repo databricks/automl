@@ -19,7 +19,6 @@ import pickle
 
 import pandas as pd
 import mlflow
-import numpy as np
 from pmdarima.arima import ARIMA
 
 from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel
