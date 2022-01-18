@@ -20,31 +20,10 @@ import mlflow
 import pandas as pd
 import prophet
 
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 from mlflow.exceptions import MlflowException
 from mlflow.models.signature import infer_signature, ModelSignature
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
-
-OFFSET_ALIAS_MAP = {
-    "W": "W",
-    "d": "D",
-    "D": "D",
-    "days": "D",
-    "day": "D",
-    "hours": "H",
-    "hour": "H",
-    "hr": "H",
-    "h": "H",
-    "H": "H",
-    "m": "min",
-    "minute": "min",
-    "min": "min",
-    "minutes": "min",
-    "T": "T",
-    "S": "S",
-    "seconds": "S",
-    "sec": "S",
-    "second": "S"
-}
 
 PROPHET_CONDA_ENV = {
     "channels": ["conda-forge"],
@@ -65,6 +44,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
     """
     Prophet mlflow model wrapper for univariate forecasting.
     """
+
     def __init__(self, model_json: Union[Dict[str, str], str], horizon: int, frequency: str,
                  time_col: str) -> None:
         """
@@ -160,6 +140,7 @@ class MultiSeriesProphetModel(ProphetModel):
     """
     Prophet mlflow model wrapper for multi-series forecasting.
     """
+
     def __init__(self, model_json: Dict[str, str], timeseries_starts: Dict[str, pd.Timestamp],
                  timeseries_end: str, horizon: int, frequency: str, time_col: str, id_cols: List[str],
                  ) -> None:
@@ -250,7 +231,7 @@ class MultiSeriesProphetModel(ProphetModel):
         :param horizon: Int number of periods to forecast forward.
         :return: A pd.DataFrame with the forecast components.
         """
-        forecast_df = self._predict_impl(df,  horizon)
+        forecast_df = self._predict_impl(df, horizon)
         return_cols = self.get_reserved_cols() + ["ds", "ts_id"]
         result_df = pd.DataFrame(columns=return_cols)
         result_df = pd.concat([result_df, forecast_df])
