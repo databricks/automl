@@ -21,7 +21,7 @@ import pandas as pd
 import mlflow
 import pmdarima
 import matplotlib.pyplot as plt
-from matplotlib import Axes
+from matplotlib.axes import Axes
 from matplotlib.dates import AutoDateLocator, AutoDateFormatter
 
 from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel
