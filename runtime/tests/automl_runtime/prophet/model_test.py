@@ -138,6 +138,6 @@ class TestProphetModel(unittest.TestCase):
         run_id = run.info.run_id
         prophet_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
-        with pytest.raises(MlflowException, match="Input data columns") as e:
+        with pytest.raises(MlflowException, match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
