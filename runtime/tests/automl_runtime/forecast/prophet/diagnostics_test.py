@@ -27,7 +27,8 @@ class TestGenerateCutoffs(unittest.TestCase):
     def setUp(self) -> None:
         num_rows = 9
         self.X = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{3*i+1}")),
+            pd.to_datetime(pd.Series(range(num_rows), name="ds")
+                           .apply(lambda i: f"2020-07-{3*i+1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
         self.model = Prophet()

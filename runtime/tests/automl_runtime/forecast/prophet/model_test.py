@@ -24,7 +24,7 @@ from pandas._testing import assert_frame_equal
 from prophet import Prophet
 from prophet.serialize import model_to_json
 from mlflow.exceptions import MlflowException
-from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE
+from mlflow.protos.databricks_pb2 import ErrorCode, INTERNAL_ERROR
 
 from databricks.automl_runtime.forecast.prophet.model import mlflow_prophet_log_model, \
     MultiSeriesProphetModel, ProphetModel, OFFSET_ALIAS_MAP
@@ -36,7 +36,8 @@ class TestProphetModel(unittest.TestCase):
     def setUpClass(cls) -> None:
         num_rows = 9
         cls.X = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-10-{3*i+1}")),
+            pd.to_datetime(pd.Series(range(num_rows), name="ds")
+                           .apply(lambda i: f"2020-10-{3*i+1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
         cls.model = Prophet()
@@ -74,8 +75,13 @@ class TestProphetModel(unittest.TestCase):
         multi_series_start = {"1": pd.Timestamp("2020-07-01"), "2": pd.Timestamp("2020-07-01")}
         prophet_model = MultiSeriesProphetModel(multi_series_model_json, multi_series_start,
                                                 "2020-07-25", 1, "days", "time", ["id"])
+        test_df = pd.DataFrame({
+            "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-01"),
+                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+            "id": ["1", "2", "1", "2"],
+        })
         with mlflow.start_run() as run:
-            mlflow_prophet_log_model(prophet_model)
+            mlflow_prophet_log_model(prophet_model, sample_input=test_df)
 
         # Load the saved model from mlflow
         run_id = run.info.run_id
@@ -88,11 +94,7 @@ class TestProphetModel(unittest.TestCase):
         prophet_model._model_impl.python_model.predict_timeseries()
 
         # Check predict API
-        test_df = pd.DataFrame({
-            "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-01"),
-                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
-            "id": ["1", "2", "1", "2"],
-        })
+
         expected_test_df = test_df.copy()
         forecast_y = prophet_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
@@ -112,26 +114,30 @@ class TestProphetModel(unittest.TestCase):
         run_id = run.info.run_id
         prophet_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
-        with pytest.raises(MlflowException, match="Input data columns") as e:
+        with pytest.raises(MlflowException, match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
-        assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
+        assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)
 
     def test_validate_predict_cols_multi_series(self):
         multi_series_model_json = {"1": self.model_json, "2": self.model_json}
         multi_series_start = {"1": pd.Timestamp("2020-07-01"), "2": pd.Timestamp("2020-07-01")}
         prophet_model = MultiSeriesProphetModel(multi_series_model_json, multi_series_start,
                                                 "2020-07-25", 1, "days", "ds", ["id1"])
+        sample_df = pd.DataFrame({
+            "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-01"),
+                   pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+            "id1": ["1", "2", "1", "2"],
+        })
         test_df = pd.DataFrame({
             "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
             "id": ["1", "2"],
         })
         with mlflow.start_run() as run:
-            mlflow_prophet_log_model(prophet_model)
+            mlflow_prophet_log_model(prophet_model, sample_input=sample_df)
         # Load the saved model from mlflow
         run_id = run.info.run_id
         prophet_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
-        with pytest.raises(MlflowException, match="Input data columns") as e:
+        with pytest.raises(MlflowException, match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
-        assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
-
+        assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)

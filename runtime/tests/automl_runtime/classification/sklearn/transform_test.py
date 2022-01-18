@@ -8,4 +8,3 @@ class DummyTest(unittest.TestCase):
     def test_new(self):
         import sklearn
         sklearn.__version__
-
