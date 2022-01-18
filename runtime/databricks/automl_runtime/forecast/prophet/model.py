@@ -52,7 +52,8 @@ PROPHET_CONDA_ENV = {
         {
             "pip": [
                 f"prophet=={prophet.__version__}",
-                f"cloudpickle=={cloudpickle.__version__}"
+                f"cloudpickle=={cloudpickle.__version__}",
+                f"databricks-automl-runtime==0.2.5",
             ]
         }
     ],
@@ -147,8 +148,8 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         predict_df = self.model().predict(test_df)
         return predict_df["yhat"]
 
-    def infer_signature(self, sample_input: pd.DataFrame) -> ModelSignature:
-        if not sample_input:
+    def infer_signature(self, sample_input: pd.DataFrame = None) -> ModelSignature:
+        if sample_input is None:
             sample_input = self._make_future_dataframe(horizon=1)
             sample_input.rename(columns={"ds": self._time_col}, inplace=True)
         signature = infer_signature(sample_input, self.predict(context=None, model_input=sample_input))
