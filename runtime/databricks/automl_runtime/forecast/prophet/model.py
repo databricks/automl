@@ -21,6 +21,7 @@ import pandas as pd
 import prophet
 
 from mlflow.exceptions import MlflowException
+from mlflow.models.signature import infer_signature, ModelSignature
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
 OFFSET_ALIAS_MAP = {
@@ -52,7 +53,7 @@ PROPHET_CONDA_ENV = {
             "pip": [
                 f"prophet=={prophet.__version__}",
                 f"cloudpickle=={cloudpickle.__version__}",
-                f"databricks-automl-runtime==0.2.5"
+                f"databricks-automl-runtime==0.2.5",
             ]
         }
     ],
@@ -146,6 +147,13 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         test_df = pd.DataFrame({"ds": model_input[self._time_col]})
         predict_df = self.model().predict(test_df)
         return predict_df["yhat"]
+
+    def infer_signature(self, sample_input: pd.DataFrame = None) -> ModelSignature:
+        if sample_input is None:
+            sample_input = self._make_future_dataframe(horizon=1)
+            sample_input.rename(columns={"ds": self._time_col}, inplace=True)
+        signature = infer_signature(sample_input, self.predict(context=None, model_input=sample_input))
+        return signature
 
 
 class MultiSeriesProphetModel(ProphetModel):
@@ -266,9 +274,16 @@ class MultiSeriesProphetModel(ProphetModel):
         return return_df["yhat"]
 
 
-def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProphetModel]) -> None:
+def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProphetModel],
+                             sample_input: pd.DataFrame = None) -> None:
     """
     Log the model to mlflow
     :param prophet_model: Prophet model wrapper
+    :param sample_input: sample input Dataframes for model inference
     """
-    mlflow.pyfunc.log_model("model", conda_env=PROPHET_CONDA_ENV, python_model=prophet_model)
+    # log the model without signature if infer_signature is failed.
+    try:
+        signature = prophet_model.infer_signature(sample_input)
+    except Exception: # noqa
+        signature = None
+    mlflow.pyfunc.log_model("model", conda_env=PROPHET_CONDA_ENV, python_model=prophet_model, signature=signature)
