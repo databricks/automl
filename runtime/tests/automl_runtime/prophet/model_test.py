@@ -24,7 +24,7 @@ from pandas._testing import assert_frame_equal
 from prophet import Prophet
 from prophet.serialize import model_to_json
 from mlflow.exceptions import MlflowException
-from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE, INTERNAL_ERROR
+from mlflow.protos.databricks_pb2 import ErrorCode, INTERNAL_ERROR
 
 from databricks.automl_runtime.forecast.prophet.model import mlflow_prophet_log_model, \
     MultiSeriesProphetModel, ProphetModel, OFFSET_ALIAS_MAP
@@ -140,4 +140,4 @@ class TestProphetModel(unittest.TestCase):
 
         with pytest.raises(MlflowException, match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
-        assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
+        assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)
