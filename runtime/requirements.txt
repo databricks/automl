@@ -3,7 +3,6 @@
 
 holidays
 hyperopt
-koalas
 mlflow
 numpy
 pandas

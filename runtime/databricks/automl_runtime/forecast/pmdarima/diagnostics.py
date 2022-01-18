@@ -34,7 +34,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str, num_folds: int) 
     period = pd.to_timedelta(period, unit=unit)
     horizon = pd.to_timedelta(horizon, unit=unit)
 
-    period_max = 0
+    period_max = 0  # TODO: set period_max properly once different seasonalities are introduced
     seasonality_timedelta = pd.Timedelta(str(period_max) + " days")
 
     initial = max(3 * horizon, seasonality_timedelta)
