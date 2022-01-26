@@ -29,27 +29,33 @@ from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiS
 class TestArimaModel(unittest.TestCase):
 
     def setUp(self) -> None:
-        num_rows = 9
+        self.num_rows = 9
+        self.start_ds = pd.Timestamp("2020-10-01")
+        self.horizon = 1
+        self.freq = 'W'
+        dates = AbstractArimaModel._get_ds(self.start_ds, periods=self.num_rows, frequency=self.freq)
         self.X = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-10-{i + 1}")),
-            pd.Series(range(num_rows), name="y")
+            pd.Series(dates, name='date'),
+            pd.Series(range(self.num_rows), name="y")
         ], axis=1)
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
         model.fit(self.X.set_index("date"))
         pickled_model = pickle.dumps(model)
-        self.arima_model = ArimaModel(pickled_model, horizon=1, frequency='days',
-                                      start_ds=pd.to_datetime("2020-10-01"), end_ds=pd.to_datetime("2020-10-09"),
+        self.arima_model = ArimaModel(pickled_model, horizon=self.horizon, frequency=self.freq,
+                                      start_ds=self.start_ds, end_ds=pd.Timestamp("2020-11-26"),
                                       time_col="date")
 
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
+        expected_ds = AbstractArimaModel._get_ds(self.start_ds, periods=self.num_rows+self.horizon, frequency=self.freq)
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(10, forecast_pd.shape[0])
+        pd.testing.assert_series_equal(pd.Series(expected_ds, name='ds'), forecast_pd["ds"])
 
     def test_predict_success(self):
         test_df = pd.DataFrame({
-            "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-11-04")]
+            "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")]
         })
         expected_test_df = test_df.copy()
         yhat = self.arima_model.predict(None, test_df)
@@ -58,7 +64,7 @@ class TestArimaModel(unittest.TestCase):
 
     def test_predict_failure_unmatched_frequency(self):
         test_df = pd.DataFrame({
-            "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-06 12:30")]
+            "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10"), pd.to_datetime("2020-11-06")]
         })
         with pytest.raises(MlflowException, match="includes different frequency") as e:
             self.arima_model.predict(None, test_df)
@@ -66,7 +72,7 @@ class TestArimaModel(unittest.TestCase):
 
     def test_predict_failure_invalid_time_range(self):
         test_df = pd.DataFrame({
-            "date": [pd.to_datetime("2000-10-05"), pd.to_datetime("2020-11-04")]
+            "date": [pd.to_datetime("2020-09-24"), pd.to_datetime("2020-10-08")]
         })
         with pytest.raises(MlflowException, match="includes time earlier than the history data that the model was "
                                                   "trained on") as e:
@@ -75,7 +81,7 @@ class TestArimaModel(unittest.TestCase):
 
     def test_predict_failure_invalid_time_col_name(self):
         test_df = pd.DataFrame({
-            "invalid_time_col_name": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-11-04")]
+            "invalid_time_col_name": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")]
         })
         with pytest.raises(MlflowException, match="Input data columns") as e:
             self.arima_model.predict(None, test_df)
@@ -170,3 +176,24 @@ class TestAbstractArimaModel(unittest.TestCase):
         with pytest.raises(MlflowException, match="Input data columns") as e:
             AbstractArimaModel._validate_cols(test_df, ["date", "id"])
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
+
+    def test_get_ds_weekly(self):
+        expected_ds = pd.to_datetime(
+            ['2022-01-01 12:30:00', '2022-01-08 12:30:00',
+             '2022-01-15 12:30:00', '2022-01-22 12:30:00',
+             '2022-01-29 12:30:00', '2022-02-05 12:30:00',
+             '2022-02-12 12:30:00', '2022-02-19 12:30:00']
+        )
+        ds_indices = AbstractArimaModel._get_ds(start_ds=pd.Timestamp("2022-01-01 12:30"), periods=8, frequency='W')
+        pd.testing.assert_index_equal(expected_ds, ds_indices)
+
+    def test_get_ds_hourly(self):
+        expected_ds = pd.to_datetime(
+            ['2021-12-10 09:23:00', '2021-12-10 10:23:00',
+             '2021-12-10 11:23:00', '2021-12-10 12:23:00',
+             '2021-12-10 13:23:00', '2021-12-10 14:23:00',
+             '2021-12-10 15:23:00', '2021-12-10 16:23:00',
+             '2021-12-10 17:23:00', '2021-12-10 18:23:00']
+        )
+        ds_indices = AbstractArimaModel._get_ds(start_ds=pd.Timestamp("2021-12-10 09:23"), periods=10, frequency='H')
+        pd.testing.assert_index_equal(expected_ds, ds_indices)

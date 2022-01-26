@@ -15,10 +15,12 @@
 #
 
 import unittest
+import pytest
 
 import pandas as pd
 import pmdarima as pm
 
+from databricks.automl_runtime.errors import InvalidArgumentError
 from databricks.automl_runtime.forecast.pmdarima.training import ArimaEstimator
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
@@ -43,6 +45,15 @@ class TestArimaEstimator(unittest.TestCase):
         self.assertIn("smape", results_pd)
         self.assertIn("pickled_model", results_pd)
 
+    def test_fit_failure_inconsistent_frequency(self):
+        arima_estimator = ArimaEstimator(horizon=1,
+                                         frequency_unit="W",
+                                         metric="smape",
+                                         seasonal_periods=[1],
+                                         num_folds=2)
+        with pytest.raises(InvalidArgumentError, match="includes different frequency") as e:
+            arima_estimator.fit(self.df)
+
     def test_fit_predict_success(self):
         cutoffs = [pd.to_datetime("2020-07-11")]
         result = ArimaEstimator._fit_predict(self.df, cutoffs, seasonal_period=1)
@@ -52,9 +63,22 @@ class TestArimaEstimator(unittest.TestCase):
     def test_fill_missing_time_steps(self):
         supported_freq = ["W", "days", "hr", "min", "sec"]
         for frequency in supported_freq:
-            ds = pd.date_range(start="2020-07-01", periods=12, freq=OFFSET_ALIAS_MAP[frequency])
+            start_ds = pd.Timestamp("2020-07-01")
+            ds = pd.date_range(start=start_ds, periods=12, freq=OFFSET_ALIAS_MAP[frequency])
+            if ds.min() != start_ds:  # make sure ds have start_ds as the first timestamp
+                offset = ds.min() - start_ds
+                ds = ds - offset
             indices_to_drop = [5, 8]
             df_missing = pd.DataFrame({"ds": ds, "y": range(12)}).drop(indices_to_drop).reset_index(drop=True)
             df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency)
             for index in indices_to_drop:
                 self.assertTrue(df_filled["y"][index], df_filled["y"][index - 1])
+            self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
+            print(df_filled["ds"].to_list())
+
+    def test_validate_ds_freq_matched_frequency(self):
+        ArimaEstimator._validate_ds_freq(self.df, frequency='D')
+
+    def test_validate_ds_freq_unmatched_frequency(self):
+        with pytest.raises(InvalidArgumentError, match="includes different frequency") as e:
+            ArimaEstimator._validate_ds_freq(self.df, frequency='W')
