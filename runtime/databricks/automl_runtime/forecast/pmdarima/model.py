@@ -55,6 +55,15 @@ class AbstractArimaModel(ABC, mlflow.pyfunc.PythonModel):
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
+    @staticmethod
+    def _get_ds(start_ds: pd.Timestamp, periods: int, frequency: str):
+        ds_indices = pd.date_range(start=start_ds, periods=periods, freq=frequency)
+        modified_start_ds = ds_indices.min()
+        if start_ds != modified_start_ds:
+            offset = modified_start_ds - start_ds
+            ds_indices = ds_indices - offset
+        return ds_indices
+
 
 class ArimaModel(AbstractArimaModel):
     """
@@ -160,16 +169,17 @@ class ArimaModel(AbstractArimaModel):
             start_idx, end_idx = None, None
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             start=start_idx, end=end_idx, return_conf_int=True)
-        dates_in_sample = pd.date_range(start=start_ds, end=end_ds, freq=self._frequency)
-        in_sample_pd = pd.DataFrame({'ds': dates_in_sample, 'yhat': preds_in_sample})
+        periods = ((end_ds - start_ds) / pd.Timedelta(1, unit=self._frequency)) + 1
+        ds_indices = self._get_ds(start_ds=start_ds, periods=periods, frequency=self._frequency)
+        in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
         return in_sample_pd
 
     def _forecast(self, horizon: int = None) -> pd.DataFrame:
         horizon = horizon or self._horizon
         preds, conf = self.model().predict(horizon, return_conf_int=True)
-        dates = pd.date_range(start=self._end_ds, periods=horizon + 1, freq=self._frequency)[1:]
-        preds_pd = pd.DataFrame({'ds': dates, 'yhat': preds})
+        ds_indices = self._get_ds(start_ds=self._end_ds, periods=horizon+1, frequency=self._frequency)[1:]
+        preds_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds})
         preds_pd[["yhat_lower", "yhat_upper"]] = conf
         return preds_pd
 
