@@ -20,7 +20,6 @@ import pytest
 import pandas as pd
 import pmdarima as pm
 
-from databricks.automl_runtime.errors import InvalidArgumentError
 from databricks.automl_runtime.forecast.pmdarima.training import ArimaEstimator
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
@@ -51,7 +50,7 @@ class TestArimaEstimator(unittest.TestCase):
                                          metric="smape",
                                          seasonal_periods=[1],
                                          num_folds=2)
-        with pytest.raises(InvalidArgumentError, match="includes different frequency") as e:
+        with pytest.raises(ValueError, match="includes different frequency") as e:
             arima_estimator.fit(self.df)
 
     def test_fit_predict_success(self):
@@ -80,5 +79,5 @@ class TestArimaEstimator(unittest.TestCase):
         ArimaEstimator._validate_ds_freq(self.df, frequency='D')
 
     def test_validate_ds_freq_unmatched_frequency(self):
-        with pytest.raises(InvalidArgumentError, match="includes different frequency") as e:
+        with pytest.raises(ValueError, match="includes different frequency") as e:
             ArimaEstimator._validate_ds_freq(self.df, frequency='W')

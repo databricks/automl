@@ -56,7 +56,14 @@ class AbstractArimaModel(ABC, mlflow.pyfunc.PythonModel):
             )
 
     @staticmethod
-    def _get_ds(start_ds: pd.Timestamp, periods: int, frequency: str):
+    def _get_ds_indices(start_ds: pd.Timestamp, periods: int, frequency: str) -> pd.DatetimeIndex:
+        """
+        Create a DatetimeIndex with specified starting time and frequency, whose length is the given periods.
+        :param start_ds: the pd.Timestamp as the start of the DatetimeIndex.
+        :param periods: the length of the DatetimeIndex.
+        :param frequency: the frequency of the DatetimeIndex.
+        :return: a DatetimeIndex.
+        """
         ds_indices = pd.date_range(start=start_ds, periods=periods, freq=frequency)
         modified_start_ds = ds_indices.min()
         if start_ds != modified_start_ds:
@@ -170,7 +177,7 @@ class ArimaModel(AbstractArimaModel):
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             start=start_idx, end=end_idx, return_conf_int=True)
         periods = ((end_ds - start_ds) / pd.Timedelta(1, unit=self._frequency)) + 1
-        ds_indices = self._get_ds(start_ds=start_ds, periods=periods, frequency=self._frequency)
+        ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
         return in_sample_pd
@@ -178,7 +185,7 @@ class ArimaModel(AbstractArimaModel):
     def _forecast(self, horizon: int = None) -> pd.DataFrame:
         horizon = horizon or self._horizon
         preds, conf = self.model().predict(horizon, return_conf_int=True)
-        ds_indices = self._get_ds(start_ds=self._end_ds, periods=horizon+1, frequency=self._frequency)[1:]
+        ds_indices = self._get_ds_indices(start_ds=self._end_ds, periods=horizon + 1, frequency=self._frequency)[1:]
         preds_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds})
         preds_pd[["yhat_lower", "yhat_upper"]] = conf
         return preds_pd
