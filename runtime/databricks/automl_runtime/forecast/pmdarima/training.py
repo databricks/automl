@@ -23,7 +23,6 @@ import pmdarima as pm
 from pmdarima.arima import StepwiseContext
 from prophet.diagnostics import performance_metrics
 
-from databricks.automl_runtime.errors import InvalidArgumentError
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import generate_cutoffs, cross_validation
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
@@ -122,6 +121,6 @@ class ArimaEstimator:
         start_ds = df["ds"].min()
         diff = (df["ds"] - start_ds) / pd.Timedelta(1, unit=frequency)
         if not diff.apply(float.is_integer).all():
-            raise InvalidArgumentError(
-                message=f"Input time column includes different frequency than the specified frequency {frequency}."
+            raise ValueError(
+                f"Input time column includes different frequency than the specified frequency {frequency}."
             )

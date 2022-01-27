@@ -33,7 +33,7 @@ class TestArimaModel(unittest.TestCase):
         self.start_ds = pd.Timestamp("2020-10-01")
         self.horizon = 1
         self.freq = 'W'
-        dates = AbstractArimaModel._get_ds(self.start_ds, periods=self.num_rows, frequency=self.freq)
+        dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency=self.freq)
         self.X = pd.concat([
             pd.Series(dates, name='date'),
             pd.Series(range(self.num_rows), name="y")
@@ -48,7 +48,7 @@ class TestArimaModel(unittest.TestCase):
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
-        expected_ds = AbstractArimaModel._get_ds(self.start_ds, periods=self.num_rows+self.horizon, frequency=self.freq)
+        expected_ds = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows + self.horizon, frequency=self.freq)
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(10, forecast_pd.shape[0])
         pd.testing.assert_series_equal(pd.Series(expected_ds, name='ds'), forecast_pd["ds"])
@@ -184,7 +184,7 @@ class TestAbstractArimaModel(unittest.TestCase):
              '2022-01-29 12:30:00', '2022-02-05 12:30:00',
              '2022-02-12 12:30:00', '2022-02-19 12:30:00']
         )
-        ds_indices = AbstractArimaModel._get_ds(start_ds=pd.Timestamp("2022-01-01 12:30"), periods=8, frequency='W')
+        ds_indices = AbstractArimaModel._get_ds_indices(start_ds=pd.Timestamp("2022-01-01 12:30"), periods=8, frequency='W')
         pd.testing.assert_index_equal(expected_ds, ds_indices)
 
     def test_get_ds_hourly(self):
@@ -195,5 +195,5 @@ class TestAbstractArimaModel(unittest.TestCase):
              '2021-12-10 15:23:00', '2021-12-10 16:23:00',
              '2021-12-10 17:23:00', '2021-12-10 18:23:00']
         )
-        ds_indices = AbstractArimaModel._get_ds(start_ds=pd.Timestamp("2021-12-10 09:23"), periods=10, frequency='H')
+        ds_indices = AbstractArimaModel._get_ds_indices(start_ds=pd.Timestamp("2021-12-10 09:23"), periods=10, frequency='H')
         pd.testing.assert_index_equal(expected_ds, ds_indices)
