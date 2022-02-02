@@ -33,14 +33,17 @@ class TestGenerateCutoffs(unittest.TestCase):
         self.assertEqual([pd.Timestamp('2020-08-19 12:00:00'), pd.Timestamp('2020-08-23 00:00:00')], cutoffs)
 
     def test_generate_cutoffs_success_large_num_folds(self):
-        cutoffs = generate_cutoffs(self.X, horizon=2, unit="d", seasonal_period=1, num_folds=20)
-        self.assertEqual([pd.Timestamp("2020-07-07 00:00:00"),
-                          pd.Timestamp("2020-07-08 00:00:00"),
-                          pd.Timestamp("2020-07-09 00:00:00"),
-                          pd.Timestamp("2020-07-10 00:00:00"),
-                          pd.Timestamp("2020-07-11 00:00:00"),
-                          pd.Timestamp("2020-07-12 00:00:00"),
-                          pd.Timestamp('2020-07-13 00:00:00')], cutoffs)
+        cutoffs = generate_cutoffs(self.X, horizon=7, unit="d", seasonal_period=1, num_folds=20)
+        self.assertEqual([pd.Timestamp('2020-07-22 12:00:00'),
+                          pd.Timestamp('2020-07-26 00:00:00'),
+                          pd.Timestamp('2020-07-29 12:00:00'),
+                          pd.Timestamp('2020-08-02 00:00:00'),
+                          pd.Timestamp('2020-08-05 12:00:00'),
+                          pd.Timestamp('2020-08-09 00:00:00'),
+                          pd.Timestamp('2020-08-12 12:00:00'),
+                          pd.Timestamp('2020-08-16 00:00:00'),
+                          pd.Timestamp('2020-08-19 12:00:00'),
+                          pd.Timestamp('2020-08-23 00:00:00')], cutoffs)
 
     def test_generate_cutoffs_success_hourly(self):
         df = pd.DataFrame(
@@ -62,7 +65,7 @@ class TestGenerateCutoffs(unittest.TestCase):
     def test_generate_cutoffs_failure_horizon_too_large(self):
         with self.assertRaisesRegex(ValueError, "Less data than horizon after initial window. "
                                                 "Make horizon shorter."):
-            generate_cutoffs(self.X, horizon=9, unit="d", seasonal_period=1, num_folds=3)
+            generate_cutoffs(self.X, horizon=20, unit="d", seasonal_period=1, num_folds=3)
 
     def test_generate_cutoffs_less_data(self):
         with self.assertRaisesRegex(ValueError, "Less data than horizon."):
