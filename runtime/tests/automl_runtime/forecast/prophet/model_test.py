@@ -59,6 +59,7 @@ class TestProphetModel(unittest.TestCase):
         # Check the prediction with the saved model
         prophet_model.predict(self.X)
         forecast_pd = prophet_model._model_impl.python_model.predict_timeseries()
+        print(forecast_pd)
         np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]), self.expected_y)
 
     def test_make_future_dataframe(self):

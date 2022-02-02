@@ -61,8 +61,8 @@ class TestArimaEstimator(unittest.TestCase):
 
     def test_fill_missing_time_steps(self):
         supported_freq = ["W", "days", "hr", "min", "sec"]
+        start_ds = pd.Timestamp("2020-07-01")
         for frequency in supported_freq:
-            start_ds = pd.Timestamp("2020-07-01")
             ds = pd.date_range(start=start_ds, periods=12, freq=OFFSET_ALIAS_MAP[frequency])
             if ds.min() != start_ds:  # make sure ds have start_ds as the first timestamp
                 offset = ds.min() - start_ds
@@ -73,7 +73,6 @@ class TestArimaEstimator(unittest.TestCase):
             for index in indices_to_drop:
                 self.assertTrue(df_filled["y"][index], df_filled["y"][index - 1])
             self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
-            print(df_filled["ds"].to_list())
 
     def test_validate_ds_freq_matched_frequency(self):
         ArimaEstimator._validate_ds_freq(self.df, frequency='D')

@@ -23,7 +23,8 @@ import pmdarima as pm
 from pmdarima.arima import StepwiseContext
 from prophet.diagnostics import performance_metrics
 
-from databricks.automl_runtime.forecast.pmdarima.diagnostics import generate_cutoffs, cross_validation
+from databricks.automl_runtime.forecast.pmdarima.diagnostics import cross_validation
+from databricks.automl_runtime.forecast.utils import generate_cutoffs
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
 
@@ -66,7 +67,7 @@ class ArimaEstimator:
 
         # Generate cutoffs for cross validation
         cutoffs = generate_cutoffs(history_pd, horizon=self._horizon, unit=self._frequency_unit,
-                                   num_folds=self._num_folds)
+                                   seasonal_period=max(self._seasonal_periods), num_folds=self._num_folds)
 
         # Tune seasonal periods
         best_result = None

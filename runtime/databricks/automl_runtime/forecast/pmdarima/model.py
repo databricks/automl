@@ -105,9 +105,9 @@ class ArimaModel(AbstractArimaModel):
 
     def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:
         """
-        Predict target column for given horizon and history data.
+        Predict target column for given horizon_timedelta and history data.
         :param horizon: int number of periods to forecast forward.
-        :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon and history data.
+        :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
         horizon = horizon or self._horizon
         future_pd = self._forecast(horizon)
@@ -228,7 +228,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
 
     def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:
         """
-        Predict target column for given horizon and history data.
+        Predict target column for given horizon_timedelta and history data.
         :param horizon: Int number of periods to forecast forward.
         :return: A pd.DataFrame with the forecast components.
         """
