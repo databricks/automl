@@ -21,6 +21,10 @@ from typing import Any, Dict, Optional
 import hyperopt
 import numpy as np
 import pandas as pd
+from prophet import Prophet
+from prophet.diagnostics import cross_validation, performance_metrics
+from prophet.serialize import model_to_json
+from hyperopt import fmin, Trials, SparkTrials
 
 from databricks.automl_runtime.forecast.utils import generate_cutoffs
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
@@ -51,9 +55,6 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     :param country_holidays: Built-in holidays for the specified country
     :return: Dictionary as the format for hyperopt
     """
-    import pandas as pd
-    from prophet import Prophet
-    from prophet.diagnostics import cross_validation, performance_metrics
 
     model = Prophet(interval_width=interval_width, **params)
     if country_holidays:
@@ -122,10 +123,6 @@ class ProphetHyperoptEstimator(ABC):
             type) and y
         :return: DataFrame with model json and metrics in cross validation
         """
-        import pandas as pd
-        from prophet import Prophet
-        from prophet.serialize import model_to_json
-        from hyperopt import fmin, Trials, SparkTrials
 
         seasonality_mode = ["additive", "multiplicative"]
         search_space = self._search_space

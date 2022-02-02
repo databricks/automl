@@ -69,4 +69,4 @@ class TestGenerateCutoffs(unittest.TestCase):
 
     def test_generate_cutoffs_less_data(self):
         with self.assertRaisesRegex(ValueError, "Less data than horizon."):
-            generate_cutoffs(self.X, horizon=30, unit="days", seasonal_period=1, num_folds=3)
+            generate_cutoffs(self.X, horizon=100, unit="days", seasonal_period=1, num_folds=3)
