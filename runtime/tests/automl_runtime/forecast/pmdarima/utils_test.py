@@ -22,10 +22,10 @@ import mlflow
 from pmdarima.arima import ARIMA
 
 from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel
-from databricks.automl_runtime.forecast.pmdarima.utils import mlflow_arima_log_model
+from databricks.automl_runtime.forecast.pmdarima.utils import mlflow_arima_log_model, plot
 
 
-class TestUtils(unittest.TestCase):
+class TestLogModel(unittest.TestCase):
 
     def setUp(self) -> None:
         num_rows = 9
@@ -74,3 +74,19 @@ class TestUtils(unittest.TestCase):
             "id": ["1", "2", "1", "2"],
         })
         loaded_model.predict(test_df)
+
+
+class TestPlot(unittest.TestCase):
+    def test_plot_success(self):
+        num_rows, horizon = 20, 4
+        yhat = [i + 0.5 for i in range(num_rows)]
+        history_pd = pd.DataFrame({
+            "ds": pd.date_range(start="2020-10-01", periods=num_rows - horizon, freq='d'),
+            "y": range(num_rows - horizon)})
+        forecast_pd = pd.DataFrame({
+            "ds": pd.date_range(start="2020-10-01", periods=num_rows, freq='d'),
+            "yhat": yhat,
+            "yhat_lower": [i - 0.5 for i in yhat],
+            "yhat_upper": [i + 1 for i in yhat]
+        })
+        plot(history_pd, forecast_pd)
