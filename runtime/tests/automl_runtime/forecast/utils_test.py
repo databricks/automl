@@ -45,6 +45,16 @@ class TestGenerateCutoffs(unittest.TestCase):
                           pd.Timestamp('2020-08-19 12:00:00'),
                           pd.Timestamp('2020-08-23 00:00:00')], cutoffs)
 
+    def test_generate_cutoffs_success_with_gaps(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01", periods=30, freq='3d'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_cutoffs(df, horizon=1, unit="d", seasonal_period=1, num_folds=5)
+        self.assertEqual([pd.Timestamp('2020-09-16 00:00:00'),
+                          pd.Timestamp('2020-09-19 00:00:00'),
+                          pd.Timestamp('2020-09-22 00:00:00'),
+                          pd.Timestamp('2020-09-25 00:00:00')], cutoffs)
+
     def test_generate_cutoffs_success_hourly(self):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", periods=168, freq='h'), columns=["ds"]
