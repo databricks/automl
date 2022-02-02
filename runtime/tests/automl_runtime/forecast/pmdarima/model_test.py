@@ -16,6 +16,8 @@
 
 import unittest
 import pickle
+
+import mlflow
 import pytest
 
 import pandas as pd
@@ -23,7 +25,8 @@ from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE
 from pmdarima.arima import ARIMA
 
-from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel, AbstractArimaModel
+from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel, AbstractArimaModel, \
+    mlflow_arima_log_model
 
 
 class TestArimaModel(unittest.TestCase):
@@ -197,3 +200,54 @@ class TestAbstractArimaModel(unittest.TestCase):
         )
         ds_indices = AbstractArimaModel._get_ds_indices(start_ds=pd.Timestamp("2021-12-10 09:23"), periods=10, frequency='H')
         pd.testing.assert_index_equal(expected_ds, ds_indices)
+
+
+class TestLogModel(unittest.TestCase):
+
+    def setUp(self) -> None:
+        num_rows = 9
+        self.X = pd.concat([
+            pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-10-{i + 1}")),
+            pd.Series(range(num_rows), name="y")
+        ], axis=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(self.X.set_index("date"))
+        self.pickled_model = pickle.dumps(model)
+
+    def test_mlflow_arima_log_model(self):
+        arima_model = ArimaModel(self.pickled_model, horizon=1, frequency='d',
+                                 start_ds=pd.to_datetime("2020-10-01"), end_ds=pd.to_datetime("2020-10-09"),
+                                 time_col="date")
+        with mlflow.start_run() as run:
+            mlflow_arima_log_model(arima_model)
+
+        # Load the saved model from mlflow
+        run_id = run.info.run_id
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+
+        # Make sure can make forecasts with the saved model
+        loaded_model.predict(self.X.drop("y", axis=1))
+        loaded_model._model_impl.python_model.predict_timeseries()
+
+    def test_mlflow_arima_log_model_multiseries(self):
+        pickled_model_dict = {"1": self.pickled_model, "2": self.pickled_model}
+        start_ds_dict = {"1": pd.Timestamp("2020-10-01"), "2": pd.Timestamp("2020-10-01")}
+        end_ds_dict = {"1": pd.Timestamp("2020-10-09"), "2": pd.Timestamp("2020-10-09")}
+        multiseries_arima_model = MultiSeriesArimaModel(pickled_model_dict, horizon=1, frequency='d',
+                                                        start_ds_dict=start_ds_dict, end_ds_dict=end_ds_dict,
+                                                        time_col="date", id_cols=["id"])
+        with mlflow.start_run() as run:
+            mlflow_arima_log_model(multiseries_arima_model)
+
+        # Load the saved model from mlflow
+        run_id = run.info.run_id
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+
+        # Make sure can make forecasts with the saved model
+        loaded_model._model_impl.python_model.predict_timeseries()
+        test_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-10-05"),
+                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+            "id": ["1", "2", "1", "2"],
+        })
+        loaded_model.predict(test_df)

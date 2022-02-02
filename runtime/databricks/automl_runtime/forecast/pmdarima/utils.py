@@ -14,38 +14,11 @@
 # limitations under the License.
 #
 
-import pickle
-from typing import Union, Tuple
+from typing import Tuple
 
 import pandas as pd
-import mlflow
-import pmdarima
 import matplotlib.pyplot as plt
 from matplotlib.dates import AutoDateLocator, AutoDateFormatter
-
-from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel
-
-ARIMA_CONDA_ENV = {
-    "channels": ["conda-forge"],
-    "dependencies": [
-        {
-            "pip": [
-                f"pmdarima=={pmdarima.__version__}",
-                f"pickle=={pickle.format_version}",
-                f"pandas=={pd.__version__}",
-            ]
-        }
-    ],
-    "name": "pmdarima_env",
-}
-
-
-def mlflow_arima_log_model(arima_model: Union[ArimaModel, MultiSeriesArimaModel]) -> None:
-    """
-    Log the model to mlflow.
-    :param arima_model: ARIMA model wrapper
-    """
-    mlflow.pyfunc.log_model("model", conda_env=ARIMA_CONDA_ENV, python_model=arima_model)
 
 
 def plot(history_pd: pd.DataFrame, forecast_pd: pd.DataFrame,

@@ -15,7 +15,7 @@
 #
 import pickle
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import pandas as pd
 import mlflow
@@ -24,6 +24,20 @@ from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+
+ARIMA_CONDA_ENV = {
+    "channels": ["conda-forge"],
+    "dependencies": [
+        {
+            "pip": [
+                f"pmdarima=={pmdarima.__version__}",
+                f"pickle=={pickle.format_version}",
+                f"pandas=={pd.__version__}",
+            ]
+        }
+    ],
+    "name": "pmdarima_env",
+}
 
 
 class AbstractArimaModel(ABC, mlflow.pyfunc.PythonModel):
@@ -280,3 +294,11 @@ class MultiSeriesArimaModel(AbstractArimaModel):
                                            self._starts[id_], self._ends[id_], self._time_col)
         df["yhat"] = arima_model_single_id.predict(None, df).to_list()
         return df
+
+
+def mlflow_arima_log_model(arima_model: Union[ArimaModel, MultiSeriesArimaModel]) -> None:
+    """
+    Log the model to mlflow.
+    :param arima_model: ARIMA model wrapper
+    """
+    mlflow.pyfunc.log_model("model", conda_env=ARIMA_CONDA_ENV, python_model=arima_model)
