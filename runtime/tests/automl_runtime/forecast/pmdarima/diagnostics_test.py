@@ -19,8 +19,8 @@ import unittest
 import pandas as pd
 from pmdarima.arima import auto_arima, StepwiseContext
 
-from databricks.automl_runtime.forecast.pmdarima.diagnostics import generate_cutoffs, \
-    cross_validation, single_cutoff_forecast
+from databricks.automl_runtime.forecast.utils import generate_cutoffs
+from databricks.automl_runtime.forecast.pmdarima.diagnostics import cross_validation, single_cutoff_forecast
 
 
 class TestDiagnostics(unittest.TestCase):
@@ -32,28 +32,8 @@ class TestDiagnostics(unittest.TestCase):
             pd.Series(range(num_rows), name="y")
         ], axis=1)
 
-    def test_generate_cutoffs_success(self):
-        cutoffs = generate_cutoffs(self.X, horizon=3, unit="d", num_folds=3)
-        self.assertEqual(cutoffs, [pd.Timestamp("2020-07-10 12:00:00"),
-                                   pd.Timestamp("2020-07-12 00:00:00")])
-
-    def test_generate_cutoffs_success_large_num_folds(self):
-        cutoffs = generate_cutoffs(self.X, horizon=2, unit="d", num_folds=20)
-        self.assertEqual(cutoffs, [pd.Timestamp("2020-07-07 00:00:00"),
-                                   pd.Timestamp("2020-07-08 00:00:00"),
-                                   pd.Timestamp("2020-07-09 00:00:00"),
-                                   pd.Timestamp("2020-07-10 00:00:00"),
-                                   pd.Timestamp("2020-07-11 00:00:00"),
-                                   pd.Timestamp("2020-07-12 00:00:00"),
-                                   pd.Timestamp('2020-07-13 00:00:00')])
-
-    def test_generate_cutoffs_failure_horizon_too_large(self):
-        with self.assertRaisesRegex(ValueError, "Less data than horizon after initial window. "
-                                                "Make horizon shorter."):
-            generate_cutoffs(self.X, horizon=9, unit="d", num_folds=3)
-
     def test_cross_validation_success(self):
-        cutoffs = generate_cutoffs(self.X, horizon=3, unit="d", num_folds=3)
+        cutoffs = generate_cutoffs(self.X, horizon=3, unit="d", seasonal_period=1, num_folds=3)
         y_train = self.X[self.X["ds"] <= cutoffs[0]].set_index("ds")
         with StepwiseContext(max_steps=1):
             model = auto_arima(y=y_train, m=1)

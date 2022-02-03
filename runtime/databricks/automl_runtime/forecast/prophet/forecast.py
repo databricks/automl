@@ -21,8 +21,13 @@ from typing import Any, Dict, Optional
 import hyperopt
 import numpy as np
 import pandas as pd
+from prophet import Prophet
+from prophet.diagnostics import cross_validation, performance_metrics
+from prophet.serialize import model_to_json
+from hyperopt import fmin, Trials, SparkTrials
 
-from databricks.automl_runtime.forecast.prophet.diagnostics import generate_cutoffs
+from databricks.automl_runtime.forecast.utils import generate_cutoffs
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
 
 class ProphetHyperParams(Enum):
@@ -42,7 +47,7 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     :param params: Input hyperparameters
     :param history_pd: pd.DataFrame containing the history. Must have columns ds (date
             type) and y, the time series
-    :param horizon: Forecast horizon
+    :param horizon: Forecast horizon_timedelta
     :param frequency: Frequency of the time series
     :param num_folds: Number of folds for cross validation
     :param interval_width: Width of the uncertainty intervals provided for the forecast
@@ -50,9 +55,6 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     :param country_holidays: Built-in holidays for the specified country
     :return: Dictionary as the format for hyperopt
     """
-    import pandas as pd
-    from prophet import Prophet
-    from prophet.diagnostics import cross_validation, performance_metrics
 
     model = Prophet(interval_width=interval_width, **params)
     if country_holidays:
@@ -60,10 +62,13 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     model.fit(history_pd, iter=200)
 
     # Evaluate Metrics
+    seasonal_period_max = max([s["period"] for s in model.seasonalities.values()]) if model.seasonalities else 0
+    cutoffs = generate_cutoffs(history_pd, horizon=horizon, unit=frequency,
+                               seasonal_period=seasonal_period_max, num_folds=num_folds)
     horizon_timedelta = pd.to_timedelta(horizon, unit=frequency)
-    cutoffs = generate_cutoffs(model, horizon=horizon_timedelta, num_folds=num_folds)
-    # Disable tqdm to make it work with the ipykernel and reduce the output size
-    df_cv = cross_validation(model, horizon=horizon_timedelta, cutoffs=cutoffs, disable_tqdm=True)
+    df_cv = cross_validation(
+        model, horizon=horizon_timedelta, cutoffs=cutoffs, disable_tqdm=True
+    )  # disable tqdm to make it work with ipykernel and reduce the output size
     df_metrics = performance_metrics(df_cv)
 
     metrics = df_metrics.mean().drop("horizon").to_dict()
@@ -99,7 +104,7 @@ class ProphetHyperoptEstimator(ABC):
         :param is_parallel: Indicators to decide that whether run hyperopt in parallel
         """
         self._horizon = horizon
-        self._frequency_unit = frequency_unit
+        self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
         self._metric = metric
         self._interval_width = interval_width
         self._country_holidays = country_holidays
@@ -118,10 +123,6 @@ class ProphetHyperoptEstimator(ABC):
             type) and y
         :return: DataFrame with model json and metrics in cross validation
         """
-        import pandas as pd
-        from prophet import Prophet
-        from prophet.serialize import model_to_json
-        from hyperopt import fmin, Trials, SparkTrials
 
         seasonality_mode = ["additive", "multiplicative"]
         search_space = self._search_space

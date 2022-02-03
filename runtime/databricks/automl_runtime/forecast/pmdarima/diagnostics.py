@@ -21,47 +21,6 @@ import numpy as np
 import pmdarima
 
 
-def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str, num_folds: int) -> List[pd.Timestamp]:
-    """
-    Generate cutoff times for cross validation with the control of number of folds.
-    :param df: pd.DataFrame of the historical data
-    :param horizon: int number of time into the future for forecasting.
-    :param unit: frequency of the timeseries, which must be a pandas offset alias.
-    :param num_folds: int number of cutoffs for cross validation.
-    :return: list of pd.Timestamp cutoffs for corss-validation.
-    """
-    period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
-    period = pd.to_timedelta(period, unit=unit)
-    horizon = pd.to_timedelta(horizon, unit=unit)
-
-    period_max = 0  # TODO: set period_max properly once different seasonalities are introduced
-    seasonality_timedelta = pd.Timedelta(str(period_max) + " days")
-
-    initial = max(3 * horizon, seasonality_timedelta)
-
-    # Last cutoff is "latest date in data - horizon" date
-    cutoff = df["ds"].max() - horizon
-    if cutoff < df["ds"].min():
-        raise ValueError("Less data than horizon.")
-    result = [cutoff]
-    while result[-1] >= min(df["ds"]) + initial and len(result) < num_folds:
-        cutoff -= period
-        # If data does not exist in data range (cutoff, cutoff + horizon]
-        if not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon)).any()):
-            # Next cutoff point is "last date before cutoff in data - horizon"
-            if cutoff > df["ds"].min():
-                closest_date = df[df["ds"] <= cutoff].max()["ds"]
-                cutoff = closest_date - horizon
-        # else no data left, leave cutoff as is, it will be dropped.
-        result.append(cutoff)
-    result = result[:-1]
-    if len(result) == 0:
-        raise ValueError(
-            "Less data than horizon after initial window. Make horizon shorter."
-        )
-    return list(reversed(result))
-
-
 def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoffs: List[pd.Timestamp]) -> pd.DataFrame:
     """
     Cross-Validation for time series forecasting.
