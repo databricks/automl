@@ -16,10 +16,10 @@
 
 import unittest
 import pickle
+import datetime
 
 import mlflow
 import pytest
-
 import pandas as pd
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE
@@ -59,6 +59,15 @@ class TestArimaModel(unittest.TestCase):
     def test_predict_success(self):
         test_df = pd.DataFrame({
             "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")]
+        })
+        expected_test_df = test_df.copy()
+        yhat = self.arima_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
+        pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
+
+    def test_predict_success_datetime_date(self):
+        test_df = pd.DataFrame({
+            "date": [datetime.date(2020, 10, 8), datetime.date(2020, 12, 10)]
         })
         expected_test_df = test_df.copy()
         yhat = self.arima_model.predict(None, test_df)

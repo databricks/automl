@@ -16,8 +16,9 @@
 
 import unittest
 import json
-import pandas as pd
 import datetime
+
+import pandas as pd
 from hyperopt import hp
 
 from databricks.automl_runtime.forecast.prophet.forecast import ProphetHyperoptEstimator
