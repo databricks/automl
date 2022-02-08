@@ -20,9 +20,7 @@ import mlflow
 import pandas as pd
 import prophet
 
-from mlflow.exceptions import MlflowException
-from mlflow.models.signature import infer_signature, ModelSignature
-from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
+from mlflow.models.signature import ModelSignature
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
