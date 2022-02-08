@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import pickle
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import List, Dict, Union
 
 import pandas as pd
