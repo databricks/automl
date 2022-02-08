@@ -35,5 +35,14 @@ jobs:
       working-directory: runtime
     - name: Test with pytest
       run: |
-        python -m pytest --cache-clear --cov=databricks tests/
+        python -m pytest --cache-clear --cov=databricks --cov-report=xml tests/
       working-directory: runtime
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        directory: runtime
+        env_vars: OS,PYTHON
+        fail_ci_if_error: true
+        flags: unittests
+        name: codecov-umbrella
+        verbose: true
