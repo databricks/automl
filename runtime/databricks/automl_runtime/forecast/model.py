@@ -28,8 +28,8 @@ class ForecastModel(ABC, mlflow.pyfunc.PythonModel):
     def __init__(self):
         super().__init__()
 
-    @abstractmethod
     @property
+    @abstractmethod
     def model_env(self):
         pass
 
