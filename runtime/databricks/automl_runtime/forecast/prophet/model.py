@@ -20,10 +20,13 @@ import mlflow
 import pandas as pd
 import prophet
 
-from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 from mlflow.exceptions import MlflowException
 from mlflow.models.signature import infer_signature, ModelSignature
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
+
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+
 
 PROPHET_CONDA_ENV = {
     "channels": ["conda-forge"],
@@ -40,7 +43,7 @@ PROPHET_CONDA_ENV = {
 }
 
 
-class ProphetModel(mlflow.pyfunc.PythonModel):
+class ProphetModel(ForecastModel):
     """
     Prophet mlflow model wrapper for univariate forecasting.
     """
@@ -61,17 +64,6 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         self._time_col = time_col
         super().__init__()
 
-    def _validate_cols(self, df: pd.DataFrame, required_cols: List[str]):
-        df_cols = set(df.columns)
-        required_cols_set = set(required_cols)
-        if not required_cols_set.issubset(df_cols):
-            raise MlflowException(
-                message=(
-                    f"Input data columns '{list(df_cols)}' do not contain the required columns '{required_cols}'"
-                ),
-                error_code=INVALID_PARAMETER_VALUE,
-            )
-
     def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
         """
         Loads artifacts from the specified :class:`~PythonModelContext` that can be used
@@ -80,6 +72,10 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         """
         from prophet import Prophet  # noqa: F401
         return
+
+    @property
+    def model_env(self):
+        return PROPHET_CONDA_ENV
 
     def model(self) -> prophet.forecaster.Prophet:
         """
@@ -132,8 +128,7 @@ class ProphetModel(mlflow.pyfunc.PythonModel):
         if sample_input is None:
             sample_input = self._make_future_dataframe(horizon=1)
             sample_input.rename(columns={"ds": self._time_col}, inplace=True)
-        signature = infer_signature(sample_input, self.predict(context=None, model_input=sample_input))
-        return signature
+        return super().infer_signature(sample_input)
 
 
 class MultiSeriesProphetModel(ProphetModel):
@@ -262,9 +257,4 @@ def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProph
     :param prophet_model: Prophet model wrapper
     :param sample_input: sample input Dataframes for model inference
     """
-    # log the model without signature if infer_signature is failed.
-    try:
-        signature = prophet_model.infer_signature(sample_input)
-    except Exception: # noqa
-        signature = None
-    mlflow.pyfunc.log_model("model", conda_env=PROPHET_CONDA_ENV, python_model=prophet_model, signature=signature)
+    mlflow_forecast_log_model(prophet_model, sample_input)
