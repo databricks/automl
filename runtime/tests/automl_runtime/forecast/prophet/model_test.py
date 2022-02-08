@@ -15,6 +15,7 @@
 #
 
 import unittest
+import datetime
 
 import pandas as pd
 import pytest
@@ -101,6 +102,16 @@ class TestProphetModel(unittest.TestCase):
                                              np.array([10.333333, 10.333333, 11.333333, 11.333333]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
+
+    def test_predict_success_datetime_date(self):
+        prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
+        test_df = pd.DataFrame({
+            "ds": [datetime.date(2020, 10, 8), datetime.date(2020, 12, 10)]
+        })
+        expected_test_df = test_df.copy()
+        yhat = prophet_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
+        pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
     def test_validate_predict_cols(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "time")

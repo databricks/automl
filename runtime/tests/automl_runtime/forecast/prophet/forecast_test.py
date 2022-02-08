@@ -16,6 +16,8 @@
 
 import unittest
 import json
+import datetime
+
 import pandas as pd
 from hyperopt import hp
 
@@ -25,10 +27,15 @@ from databricks.automl_runtime.forecast.prophet.forecast import ProphetHyperoptE
 class TestProphetHyperoptEstimator(unittest.TestCase):
 
     def setUp(self) -> None:
-        num_rows = 12
+        self.num_rows = 12
+        y_series =  pd.Series(range(self.num_rows), name="y")
         self.df = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{i+1}")),
-            pd.Series(range(num_rows), name="y")
+            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
+            y_series
+        ], axis=1)
+        self.df_datetime_date = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: datetime.date(2020, 7, i + 1)),
+            y_series
         ], axis=1)
         self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
 
@@ -44,15 +51,16 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                   random_state=0,
                                                   is_parallel=False)
 
-        results = hyperopt_estim.fit(self.df)
-        self.assertAlmostEqual(results["mse"][0], 0)
-        self.assertAlmostEqual(results["rmse"][0], 0)
-        self.assertAlmostEqual(results["mae"][0], 0)
-        self.assertAlmostEqual(results["mape"][0], 0)
-        self.assertAlmostEqual(results["mdape"][0], 0)
-        self.assertAlmostEqual(results["smape"][0], 0)
-        self.assertAlmostEqual(results["coverage"][0], 1)
-        # check the best result parameter is inside the search space
-        model_json = json.loads(results["model_json"][0])
-        self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
-        self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
+        for df in [self.df, self.df_datetime_date]:
+            results = hyperopt_estim.fit(df)
+            self.assertAlmostEqual(results["mse"][0], 0)
+            self.assertAlmostEqual(results["rmse"][0], 0)
+            self.assertAlmostEqual(results["mae"][0], 0)
+            self.assertAlmostEqual(results["mape"][0], 0)
+            self.assertAlmostEqual(results["mdape"][0], 0)
+            self.assertAlmostEqual(results["smape"][0], 0)
+            self.assertAlmostEqual(results["coverage"][0], 1)
+            # check the best result parameter is inside the search space
+            model_json = json.loads(results["model_json"][0])
+            self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
+            self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
