@@ -19,7 +19,11 @@ import unittest
 import pandas as pd
 import numpy as np
 
+from numpy.testing import assert_array_almost_equal
+
 from databricks.automl_runtime.sklearn.base_datetime_transformer import BaseDatetimeTransformer
+from databricks.automl_runtime.sklearn.date_transformer import DateTransformer
+from databricks.automl_runtime.sklearn.timestamp_transformer import TimestampTransformer
 
 
 class TestBaseDatetimeTransformer(unittest.TestCase):
@@ -62,3 +66,33 @@ class TestBaseDatetimeTransformer(unittest.TestCase):
         np.testing.assert_array_almost_equal(feature_generated, feature_expected, decimal=self.PRECISION,
                                              err_msg=f"Actual: {feature_generated}\nExpected: {feature_expected}\n"
                                                      f"Equality: {feature_generated == feature_expected}")
+
+    def test_impute(self):
+        def get_df(fill_value=None):
+            return pd.DataFrame({
+                "X": ["2021-01-01", fill_value, "2021-01-03", "2021-01-05", "2021-01-07", "2021-01-07"]})
+
+        assert_array_almost_equal(
+                DateTransformer("median").fit_transform(get_df()),
+                DateTransformer().transform(get_df("2021-01-05")),
+                err_msg="impute with median yield unexpected results")
+
+        assert_array_almost_equal(
+                DateTransformer("most_frequent").fit_transform(get_df()),
+                DateTransformer().transform(get_df("2021-01-07")),
+                err_msg="impute with most_frequent yield unexpected results")
+
+        assert_array_almost_equal(
+                DateTransformer().fit_transform(get_df()),
+                DateTransformer().transform(get_df("1970-01-01")),
+                err_msg="impute with default value yield unexpected results")
+
+        assert_array_almost_equal(
+                TimestampTransformer("mean").fit_transform(get_df()),
+                TimestampTransformer().transform(get_df("2021-01-04 14:24")),
+                err_msg="impute with mean yield unexpected results")
+
+        assert_array_almost_equal(
+                TimestampTransformer("2000-01-23").fit_transform(get_df()),
+                TimestampTransformer().transform(get_df("2000-01-23")),
+                err_msg="impute with custom value yield unexpected results")
