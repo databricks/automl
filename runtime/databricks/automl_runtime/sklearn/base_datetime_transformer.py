@@ -36,16 +36,57 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
     DAYS_IN_YEAR = 366  # Account for leap years
     WEEKEND_START = 5
 
+    def __init__(self, impute_method=EPOCH):
+        """Create a `BaseDatetimeTransformer`.
+
+        Parameters
+        ----------
+        impute_method: method used for imputation
+        """
+        self.impute_method = impute_method
+        if impute_method not in ("mean", "median", "most_frequent"):
+            self.impute_value = pd.to_datetime(self.impute_method)
+
+    def _to_datetime(self, X):
+        pass
+
+    def _include_timestamp(self):
+        pass
+
     def fit(self, X, y=None):
         """
         Do nothing and return the estimator unchanged.
         This method is just there to implement the usual API and hence work in pipelines.
         """
+        x = self._to_datetime(X.iloc[:, 0])
+        if self.impute_method == "mean":
+            self.impute_value = x.mean(skipna=True)
+        elif self.impute_method == "median":
+            self.impute_value = x.median(skipna=True)
+        elif self.impute_method == "most_frequent":
+            self.impute_value = x.mode(dropna=True)[0]
         return self
 
-    @abstractmethod
     def transform(self, X):
-        pass  # pragma: no cover
+        """
+        Transform timestamp data to datetime features.
+
+        Parameters
+        ----------
+        X : pd.DataFrame of shape (n_samples, 1)
+            The only column is either a timestamp column or string column with
+            datetime values encoded in ISO 8601 format.
+
+        Returns
+        -------
+        X_tr : pd.DataFrame of shape (n_samples, 13)
+            Transformed features.
+        """
+        # Convert column to datetime if data type is string and standardize to UTC
+        X.iloc[:, 0] = self._to_datetime(X.iloc[:, 0])
+        X = X.fillna(self.impute_value)
+
+        return self._generate_datetime_features(X, include_timestamp=self._include_timestamp())
 
     @staticmethod
     def _cyclic_transform(unit, period):

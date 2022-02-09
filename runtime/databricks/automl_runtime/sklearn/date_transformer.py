@@ -23,22 +23,11 @@ class DateTransformer(BaseDatetimeTransformer):
     """
     Generate features from date column.
     """
+    def __init__(self, impute_method=BaseDatetimeTransformer.EPOCH):
+        super().__init__(impute_method)
 
-    def transform(self, X):
-        """
-        Transform date data to datetime features.
+    def _to_datetime(self, X):
+        return X.apply(pd.to_datetime, errors="coerce")
 
-        Parameters
-        ----------
-        X : pd.DataFrame of shape (n_samples, 1)
-            The only column is a date column.
-
-        Returns
-        -------
-        X_tr : pd.DataFrame of shape (n_samples, 10)
-            Transformed features.
-        """
-        X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime, errors="coerce")
-        X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch
-
-        return self._generate_datetime_features(X, include_timestamp=False)
+    def _include_timestamp(self):
+        return False

@@ -26,23 +26,12 @@ class TimestampTransformer(BaseDatetimeTransformer):
 
     HOUR_COLUMN_INDEX = 10
 
-    def transform(self, X):
-        """
-        Transform timestamp data to datetime features.
+    def __init__(self, impute_method=BaseDatetimeTransformer.EPOCH):
+        super().__init__(impute_method)
 
-        Parameters
-        ----------
-        X : pd.DataFrame of shape (n_samples, 1)
-            The only column is either a timestamp column or string column with
-            datetime values encoded in ISO 8601 format.
-
-        Returns
-        -------
-        X_tr : pd.DataFrame of shape (n_samples, 13)
-            Transformed features.
-        """
+    def _to_datetime(self, X):
         # Convert column to datetime if data type is string and standardize to UTC
-        X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime, errors="coerce", utc=True).dt.tz_localize(None)
-        X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch
+        return X.apply(pd.to_datetime, errors="coerce", utc=True).dt.tz_localize(None)
 
-        return self._generate_datetime_features(X, include_timestamp=True)
+    def _include_timestamp(self):
+        return True
