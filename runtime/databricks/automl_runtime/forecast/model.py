@@ -31,7 +31,7 @@ class ForecastModel(ABC, mlflow.pyfunc.PythonModel):
     @property
     @abstractmethod
     def model_env(self):
-        pass
+        pass  # pragma: no cover
 
     @staticmethod
     def _validate_cols(df: pd.DataFrame, required_cols: List[str]):
