@@ -87,6 +87,11 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
         """
         Transform timestamp data to datetime features.
 
+        The transform consists of the following steps:
+        1. convert the input to datetime (using pandas.to_datetime method)
+        2. fill missing values according to `impute_method` passed into the constructor
+        3. generate features
+
         Parameters
         ----------
         X : pd.DataFrame of shape (n_samples, 1)
