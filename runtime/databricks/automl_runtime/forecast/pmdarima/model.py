@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import pickle
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import List, Dict, Union
 
 import pandas as pd
@@ -24,6 +24,8 @@ from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+
 
 ARIMA_CONDA_ENV = {
     "channels": ["conda-forge"],
@@ -40,7 +42,7 @@ ARIMA_CONDA_ENV = {
 }
 
 
-class AbstractArimaModel(ABC, mlflow.pyfunc.PythonModel):
+class AbstractArimaModel(ForecastModel):
     @abstractmethod
     def __init__(self):
         super().__init__()
@@ -57,17 +59,9 @@ class AbstractArimaModel(ABC, mlflow.pyfunc.PythonModel):
         """
         from pmdarima.arima import ARIMA  # noqa: F401
 
-    @staticmethod
-    def _validate_cols(df: pd.DataFrame, required_cols: List[str]):
-        df_cols = set(df.columns)
-        required_cols_set = set(required_cols)
-        if not required_cols_set.issubset(df_cols):
-            raise MlflowException(
-                message=(
-                    f"Input data columns '{list(df_cols)}' do not contain the required columns '{required_cols}'"
-                ),
-                error_code=INVALID_PARAMETER_VALUE,
-            )
+    @property
+    def model_env(self):
+        return ARIMA_CONDA_ENV
 
     @staticmethod
     def _get_ds_indices(start_ds: pd.Timestamp, periods: int, frequency: str) -> pd.DatetimeIndex:
@@ -297,9 +291,11 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         return df
 
 
-def mlflow_arima_log_model(arima_model: Union[ArimaModel, MultiSeriesArimaModel]) -> None:
+def mlflow_arima_log_model(arima_model: Union[ArimaModel, MultiSeriesArimaModel],
+                           sample_input: pd.DataFrame = None) -> None:
     """
     Log the model to mlflow.
     :param arima_model: ARIMA model wrapper
+    :param sample_input: sample input Dataframes for model inference
     """
-    mlflow.pyfunc.log_model("model", conda_env=ARIMA_CONDA_ENV, python_model=arima_model)
+    mlflow_forecast_log_model(arima_model, sample_input)
