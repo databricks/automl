@@ -26,7 +26,11 @@ from sklearn.base import TransformerMixin, BaseEstimator
 class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
     """
     Abstract transformer for datetime features.
-    Implements common functions to transform date and timestamp.
+
+    This class implements the main functionalities of the transformer, i.e.
+    `fit` and `transform`. It has two concrete subclasses, `DateTransformer`
+    and `TimestampTransformer`, which modifies the `fit` and `transform`
+    behaviors through abstract methods.
     """
 
     EPOCH = "1970-01-01"
@@ -41,20 +45,28 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        impute_method: method used for imputation
+        impute_method: method used for imputation, with the following options:
+            'mean', 'median', 'most_frequent', or a string that can be converted to
+            a date or timestamp by `pd.to_datetime` function.
+            If not specified, the default is "1970-01-01" (unix epoch).
         """
         if not impute_method:
             impute_method = self.EPOCH
         self.impute_method = impute_method
-        if impute_method not in ("mean", "median", "most_frequent"):
+        if impute_method in ("mean", "median", "most_frequent"):
+            # The `impute_value` will be determined by the `fit` function.
+            self.impute_value = None
+        else:
             self.impute_value = pd.to_datetime(self.impute_method)
 
     @abstractmethod
     def _to_datetime(self, X):
+        """Convert the input to datetime objects (essentially floating numbers)."""
         pass
 
     @abstractmethod
     def _include_timestamp(self):
+        """Whether the output should include timestamp features."""
         pass
 
     def fit(self, X, y=None):
@@ -83,14 +95,14 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
 
         Returns
         -------
-        X_tr : pd.DataFrame of shape (n_samples, 13)
+        X_tr : pd.DataFrame of shape (n_samples, N)
             Transformed features.
         """
-        # Convert column to datetime if data type is string and standardize to UTC
         X.iloc[:, 0] = self._to_datetime(X.iloc[:, 0])
         X = X.fillna(self.impute_value)
 
-        return self._generate_datetime_features(X, include_timestamp=self._include_timestamp())
+        return self._generate_datetime_features(
+                X, include_timestamp=self._include_timestamp())
 
     @staticmethod
     def _cyclic_transform(unit, period):
