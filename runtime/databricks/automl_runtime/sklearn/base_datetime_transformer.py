@@ -36,20 +36,24 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
     DAYS_IN_YEAR = 366  # Account for leap years
     WEEKEND_START = 5
 
-    def __init__(self, impute_method=EPOCH):
+    def __init__(self, impute_method=None):
         """Create a `BaseDatetimeTransformer`.
 
         Parameters
         ----------
         impute_method: method used for imputation
         """
+        if not impute_method:
+            impute_method = EPOCH
         self.impute_method = impute_method
         if impute_method not in ("mean", "median", "most_frequent"):
             self.impute_value = pd.to_datetime(self.impute_method)
 
+    @abstractmethod
     def _to_datetime(self, X):
         pass
 
+    @abstractmethod
     def _include_timestamp(self):
         pass
 

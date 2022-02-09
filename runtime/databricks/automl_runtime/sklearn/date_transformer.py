@@ -23,7 +23,7 @@ class DateTransformer(BaseDatetimeTransformer):
     """
     Generate features from date column.
     """
-    def __init__(self, impute_method=BaseDatetimeTransformer.EPOCH):
+    def __init__(self, impute_method=None):
         super().__init__(impute_method)
 
     def _to_datetime(self, X):
