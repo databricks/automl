@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import pickle
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import List, Dict, Union
 
 import pandas as pd
@@ -42,7 +42,7 @@ ARIMA_CONDA_ENV = {
 }
 
 
-class AbstractArimaModel(ForecastModel):
+class AbstractArimaModel(ABC, ForecastModel):
     @abstractmethod
     def __init__(self):
         super().__init__()
