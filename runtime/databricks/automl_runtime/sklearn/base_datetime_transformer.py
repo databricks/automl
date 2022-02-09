@@ -71,8 +71,8 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
 
     def fit(self, X, y=None):
         """
-        Do nothing and return the estimator unchanged.
-        This method is just there to implement the usual API and hence work in pipelines.
+        Find the `mean`, `median` or `most_frequent` values of the input data
+        if it is needed for imputation.
         """
         x = self._to_datetime(X.iloc[:, 0])
         if self.impute_method == "mean":
