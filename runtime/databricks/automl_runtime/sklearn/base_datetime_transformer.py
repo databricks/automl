@@ -44,7 +44,7 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
         impute_method: method used for imputation
         """
         if not impute_method:
-            impute_method = EPOCH
+            impute_method = self.EPOCH
         self.impute_method = impute_method
         if impute_method not in ("mean", "median", "most_frequent"):
             self.impute_value = pd.to_datetime(self.impute_method)
