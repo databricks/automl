@@ -62,12 +62,12 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
     @abstractmethod
     def _to_datetime(self, X):
         """Convert the input to datetime objects (essentially floating numbers)."""
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def _include_timestamp(self):
         """Whether the output should include timestamp features."""
-        pass
+        pass  # pragma: no cover
 
     def fit(self, X, y=None):
         """
