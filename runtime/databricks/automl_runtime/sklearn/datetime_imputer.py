@@ -68,10 +68,5 @@ class DatetimeImputer(TransformerMixin, BaseEstimator):
         ----------
         X: a pandas DataFrame whose values are date or timestamp.
         """
-        return pd.DataFrame({
-            col_name: pd.to_datetime(col_value, errors="coerce").fillna(
-                self.fill_values[col_name])
-            for col_name, col_value in X.iteritems()
-        })
-
+        return X.apply(pd.to_datetime).fillna(self.fill_values)
 
