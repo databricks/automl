@@ -53,3 +53,9 @@ class TestDatetimeImputer(unittest.TestCase):
         assert_frame_equal(
                 DatetimeImputer(strategy="constant", fill_value="1970-01-01").fit_transform(self.get_test_df()),
                 self.to_datetime(self.get_test_df("1970-01-01", "1970-01-01 00:00")))
+
+    def test_validate_input(self):
+        with self.assertRaises(ValueError):
+            DatetimeImputer(strategy='foo')
+        with self.assertRaises(ValueError):
+            DatetimeImputer(strategy='constant', fill_value=None)
