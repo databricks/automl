@@ -18,7 +18,17 @@ import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
 
 class DatetimeImputer(TransformerMixin, BaseEstimator):
+    """Imputer for date and timestamp data."""
+
     def __init__(self, strategy='median', fill_value=None):
+        """Create a `DatetimeImputer`.
+
+        Parameters
+        ----------
+        strategy: imputation strategy, one of 'mean', 'median', 'most_frequent' or 'constant'
+
+        fill_value: the value used when `strategy` is 'constant'
+        """
         if strategy not in ('mean', 'median', 'most_frequent', 'constant'):
             raise ValueError(f'Unknown strategy: {strategy}')
         if strategy == 'constant' and not fill_value:
@@ -27,6 +37,14 @@ class DatetimeImputer(TransformerMixin, BaseEstimator):
         self.fill_value = fill_value
 
     def fit(self, X, y=None):
+        """Find necessary values (e.g. mean, median, or most_frequent) of the input data.
+
+        Parameters
+        ----------
+        X: a pandas DataFrame whose values are date or timestamp.
+
+        y: not used
+        """
         self.fill_values = {}
         for col_name, col_value in X.iteritems():
             col_value = pd.to_datetime(col_value, errors="coerce")
@@ -39,11 +57,17 @@ class DatetimeImputer(TransformerMixin, BaseEstimator):
             elif self.strategy == 'constant':
                 self.fill_values[col_name] = pd.to_datetime(self.fill_value)
             else:
-                raise ValueError(f'Unknown strategy: {strategy}')  # pragma: no cover
+                raise ValueError(f'Unknown strategy: {self.strategy}')  # pragma: no cover
         return self
             
 
     def transform(self, X):
+        """Convert the input to datetime object and then impute the missing values.
+
+        Parameters
+        ----------
+        X: a pandas DataFrame whose values are date or timestamp.
+        """
         return pd.DataFrame({
             col_name: pd.to_datetime(col_value, errors="coerce").fillna(
                 self.fill_values[col_name])
