@@ -26,18 +26,18 @@ class TestDatetimeImputer(unittest.TestCase):
             "f1": ["2021-01-01", fill_value_1, "2021-01-03", "2021-01-05", "2021-01-07", "2021-01-07"],
             "f2": [f"2022-01-01 00:0{i}" for i in [1,3,5,7,7]] + [fill_value_2]})
 
-    def test_imputer_median(self):
+    def test_imputer_mean(self):
         assert_frame_equal(
                 DatetimeImputer().fit_transform(self.get_test_df()),
-                self.get_test_df("2021-01-05", "2022-01-01 00:05").apply(pd.to_datetime))
-        assert_frame_equal(
-                DatetimeImputer(strategy="median").fit_transform(self.get_test_df()),
-                self.get_test_df("2021-01-05", "2022-01-01 00:05").apply(pd.to_datetime))
-
-    def test_imputer_mean(self):
+                self.get_test_df("2021-01-04 14:24", "2022-01-01 00:04:36").apply(pd.to_datetime))
         assert_frame_equal(
                 DatetimeImputer(strategy="mean").fit_transform(self.get_test_df()),
                 self.get_test_df("2021-01-04 14:24", "2022-01-01 00:04:36").apply(pd.to_datetime))
+
+    def test_imputer_median(self):
+        assert_frame_equal(
+                DatetimeImputer(strategy="median").fit_transform(self.get_test_df()),
+                self.get_test_df("2021-01-05", "2022-01-01 00:05").apply(pd.to_datetime))
 
     def test_imputer_most_frequent(self):
         assert_frame_equal(

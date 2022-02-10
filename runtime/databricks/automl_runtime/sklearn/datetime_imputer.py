@@ -20,7 +20,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 class DatetimeImputer(TransformerMixin, BaseEstimator):
     """Imputer for date and timestamp data."""
 
-    def __init__(self, strategy='median', fill_value=None):
+    def __init__(self, strategy='mean', fill_value=None):
         """Create a `DatetimeImputer`.
 
         Parameters
