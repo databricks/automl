@@ -15,6 +15,7 @@
 #
 
 from databricks.automl_runtime.sklearn.date_transformer import DateTransformer
+from databricks.automl_runtime.sklearn.datetime_imputer import DatetimeImputer
 from databricks.automl_runtime.sklearn.timestamp_transformer import TimestampTransformer
 
-__all__ = ["DateTransformer", "TimestampTransformer"]
+__all__ = ["DateTransformer", "DatetimeImputer", "TimestampTransformer"]
