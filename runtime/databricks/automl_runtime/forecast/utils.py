@@ -20,13 +20,14 @@ import pandas as pd
 
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
-                     seasonal_period: int, num_folds: int) -> List[pd.Timestamp]:
+                     seasonal_period: int, seasonal_unit: str, num_folds: int) -> List[pd.Timestamp]:
     """
     Generate cutoff times for cross validation with the control of number of folds.
-    :param df: pd.DataFrame of the historical data
+    :param df: pd.DataFrame of the historical data.
     :param horizon: int number of time into the future for forecasting.
     :param unit: frequency of the timeseries, which must be a pandas offset alias.
-    :param seasonal_period: length of the seasonality period in days
+    :param seasonal_period: length of the seasonality period in days.
+    :param seasonal_unit: frequency unit of the seasonal period.
     :param num_folds: int number of cutoffs for cross validation.
     :return: list of pd.Timestamp cutoffs for corss-validation.
     """
@@ -34,7 +35,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     period_timedelta = pd.to_timedelta(period, unit=unit)
     horizon_timedelta = pd.to_timedelta(horizon, unit=unit)
 
-    seasonality_timedelta = pd.to_timedelta(seasonal_period, unit=unit)
+    seasonality_timedelta = pd.to_timedelta(seasonal_period, unit=seasonal_unit)
 
     initial = max(3 * horizon_timedelta, seasonality_timedelta)
 

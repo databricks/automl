@@ -29,11 +29,11 @@ class TestGenerateCutoffs(unittest.TestCase):
         ).rename_axis("y").reset_index()
 
     def test_generate_cutoffs_success(self):
-        cutoffs = generate_cutoffs(self.X, horizon=7, unit="d", seasonal_period=7, num_folds=3)
+        cutoffs = generate_cutoffs(self.X, horizon=7, unit="D", seasonal_period=7, seasonal_unit="D", num_folds=3)
         self.assertEqual([pd.Timestamp('2020-08-19 12:00:00'), pd.Timestamp('2020-08-23 00:00:00')], cutoffs)
 
     def test_generate_cutoffs_success_large_num_folds(self):
-        cutoffs = generate_cutoffs(self.X, horizon=7, unit="d", seasonal_period=1, num_folds=20)
+        cutoffs = generate_cutoffs(self.X, horizon=7, unit="D", seasonal_period=1, seasonal_unit="D", num_folds=20)
         self.assertEqual([pd.Timestamp('2020-07-22 12:00:00'),
                           pd.Timestamp('2020-07-26 00:00:00'),
                           pd.Timestamp('2020-07-29 12:00:00'),
@@ -49,7 +49,7 @@ class TestGenerateCutoffs(unittest.TestCase):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", periods=30, freq='3d'), columns=["ds"]
         ).rename_axis("y").reset_index()
-        cutoffs = generate_cutoffs(df, horizon=1, unit="d", seasonal_period=1, num_folds=5)
+        cutoffs = generate_cutoffs(df, horizon=1, unit="D", seasonal_period=1, seasonal_unit="D", num_folds=5)
         self.assertEqual([pd.Timestamp('2020-09-16 00:00:00'),
                           pd.Timestamp('2020-09-19 00:00:00'),
                           pd.Timestamp('2020-09-22 00:00:00'),
@@ -59,7 +59,7 @@ class TestGenerateCutoffs(unittest.TestCase):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", periods=168, freq='h'), columns=["ds"]
         ).rename_axis("y").reset_index()
-        cutoffs = generate_cutoffs(df, horizon=6, unit="h", seasonal_period=24, num_folds=5)
+        cutoffs = generate_cutoffs(df, horizon=6, unit="H", seasonal_period=24, seasonal_unit="H", num_folds=5)
         self.assertEqual([pd.Timestamp('2020-07-07 08:00:00'),
                           pd.Timestamp('2020-07-07 11:00:00'),
                           pd.Timestamp('2020-07-07 14:00:00'),
@@ -69,14 +69,14 @@ class TestGenerateCutoffs(unittest.TestCase):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", periods=52, freq='W'), columns=["ds"]
         ).rename_axis("y").reset_index()
-        cutoffs = generate_cutoffs(df, horizon=4, unit="W", seasonal_period=1, num_folds=3)
+        cutoffs = generate_cutoffs(df, horizon=4, unit="W", seasonal_period=1, seasonal_unit="W", num_folds=3)
         self.assertEqual([pd.Timestamp('2021-05-16 00:00:00'), pd.Timestamp('2021-05-30 00:00:00')], cutoffs)
 
     def test_generate_cutoffs_failure_horizon_too_large(self):
         with self.assertRaisesRegex(ValueError, "Less data than horizon after initial window. "
                                                 "Make horizon shorter."):
-            generate_cutoffs(self.X, horizon=20, unit="d", seasonal_period=1, num_folds=3)
+            generate_cutoffs(self.X, horizon=20, unit="D", seasonal_period=1, seasonal_unit="D", num_folds=3)
 
     def test_generate_cutoffs_less_data(self):
         with self.assertRaisesRegex(ValueError, "Less data than horizon."):
-            generate_cutoffs(self.X, horizon=100, unit="days", seasonal_period=1, num_folds=3)
+            generate_cutoffs(self.X, horizon=100, unit="D", seasonal_period=1, seasonal_unit="D", num_folds=3)

@@ -64,7 +64,7 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     # Evaluate Metrics
     seasonal_period_max = max([s["period"] for s in model.seasonalities.values()]) if model.seasonalities else 0
     cutoffs = generate_cutoffs(model.history.reset_index(drop=True), horizon=horizon, unit=frequency,
-                               seasonal_period=seasonal_period_max, num_folds=num_folds)
+                               seasonal_period=seasonal_period_max, seasonal_unit="D", num_folds=num_folds)
     horizon_timedelta = pd.to_timedelta(horizon, unit=frequency)
     df_cv = cross_validation(
         model, horizon=horizon_timedelta, cutoffs=cutoffs, disable_tqdm=True

@@ -33,7 +33,7 @@ class TestDiagnostics(unittest.TestCase):
         ], axis=1)
 
     def test_cross_validation_success(self):
-        cutoffs = generate_cutoffs(self.X, horizon=3, unit="d", seasonal_period=1, num_folds=3)
+        cutoffs = generate_cutoffs(self.X, horizon=3, unit="D", seasonal_period=1, seasonal_unit="D", num_folds=3)
         y_train = self.X[self.X["ds"] <= cutoffs[0]].set_index("ds")
         with StepwiseContext(max_steps=1):
             model = auto_arima(y=y_train, m=1)
