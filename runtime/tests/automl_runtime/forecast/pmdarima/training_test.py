@@ -18,6 +18,7 @@ import unittest
 import pytest
 
 import pandas as pd
+import numpy as np
 import pmdarima as pm
 
 from databricks.automl_runtime.forecast.pmdarima.training import ArimaEstimator
@@ -27,19 +28,32 @@ from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 class TestArimaEstimator(unittest.TestCase):
 
     def setUp(self) -> None:
-        num_rows = 12
+        self.num_rows = 12
         self.df = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
-            pd.Series(range(num_rows), name="y")
+            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
+            pd.Series(np.random.rand(self.num_rows), name="y")
         ], axis=1)
 
     def test_fit_success(self):
         arima_estimator = ArimaEstimator(horizon=1,
                                          frequency_unit="d",
                                          metric="smape",
-                                         seasonal_periods=[1],
+                                         seasonal_periods=[1, 7],
                                          num_folds=2)
 
+        results_pd = arima_estimator.fit(self.df)
+        self.assertIn("smape", results_pd)
+        self.assertIn("pickled_model", results_pd)
+
+    def test_fit_success_with_failed_seasonal_periods(self):
+        self.df["y"] = range(self.num_rows)  # make pm.auto_arima fail with m=7 because of singular matrices
+        # generate_cutoffs will fail with m=30 because of no enough data
+        # The fit method still succeeds because m=1 succeeds
+        arima_estimator = ArimaEstimator(horizon=1,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[1, 7, 30],
+                                         num_folds=2)
         results_pd = arima_estimator.fit(self.df)
         self.assertIn("smape", results_pd)
         self.assertIn("pickled_model", results_pd)
@@ -50,7 +64,16 @@ class TestArimaEstimator(unittest.TestCase):
                                          metric="smape",
                                          seasonal_periods=[1],
                                          num_folds=2)
-        with pytest.raises(ValueError, match="includes different frequency") as e:
+        with pytest.raises(ValueError, match="includes different frequency"):
+            arima_estimator.fit(self.df)
+
+    def test_fit_failure_no_succeeded_model(self):
+        arima_estimator = ArimaEstimator(horizon=1,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[30],
+                                         num_folds=2)
+        with pytest.raises(Exception, match="No model is successfully trained"):
             arima_estimator.fit(self.df)
 
     def test_fit_predict_success(self):
@@ -78,5 +101,5 @@ class TestArimaEstimator(unittest.TestCase):
         ArimaEstimator._validate_ds_freq(self.df, frequency='D')
 
     def test_validate_ds_freq_unmatched_frequency(self):
-        with pytest.raises(ValueError, match="includes different frequency") as e:
+        with pytest.raises(ValueError, match="includes different frequency"):
             ArimaEstimator._validate_ds_freq(self.df, frequency='W')
