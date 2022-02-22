@@ -26,7 +26,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     :param df: pd.DataFrame of the historical data.
     :param horizon: int number of time into the future for forecasting.
     :param unit: frequency of the timeseries, which must be a pandas offset alias.
-    :param seasonal_period: length of the seasonality period in days.
+    :param seasonal_period: length of the seasonality period in given frequency.
     :param seasonal_unit: frequency unit of the seasonal period.
     :param num_folds: int number of cutoffs for cross validation.
     :return: list of pd.Timestamp cutoffs for corss-validation.
