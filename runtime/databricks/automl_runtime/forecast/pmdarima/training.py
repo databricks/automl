@@ -65,19 +65,22 @@ class ArimaEstimator:
         # Impute missing time steps
         history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
 
-        # Generate cutoffs for cross validation
-        cutoffs = generate_cutoffs(history_pd, horizon=self._horizon, unit=self._frequency_unit,
-                                   seasonal_period=max(self._seasonal_periods), num_folds=self._num_folds)
-
         # Tune seasonal periods
         best_result = None
         best_metric = float("inf")
         for m in self._seasonal_periods:
-            result = self._fit_predict(history_pd, cutoffs, m, self._max_steps)
-            metric = result["metrics"]["smape"]
-            if metric < best_metric:
-                best_result = result
-                best_metric = metric
+            try:
+                cutoffs = generate_cutoffs(history_pd, horizon=self._horizon, unit=self._frequency_unit,
+                                           seasonal_period=m, num_folds=self._num_folds)
+                result = self._fit_predict(history_pd, cutoffs, m, self._max_steps)
+                metric = result["metrics"]["smape"]
+                if metric < best_metric:
+                    best_result = result
+                    best_metric = metric
+            except Exception as e:
+                print(f"Encountered an exception with seasonal_period={m}: {repr(e)}")
+        if not best_result:
+            raise Exception("No model is successfully trained.")
 
         results_pd = pd.DataFrame(best_result["metrics"], index=[0])
         results_pd["pickled_model"] = pickle.dumps(best_result["model"])
