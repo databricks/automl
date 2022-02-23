@@ -14,27 +14,30 @@
 # limitations under the License.
 #
 
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
-                     seasonal_period: int, seasonal_unit: str, num_folds: int) -> List[pd.Timestamp]:
+                     num_folds: int, seasonal_period: int, seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
     """
     Generate cutoff times for cross validation with the control of number of folds.
     :param df: pd.DataFrame of the historical data.
     :param horizon: int number of time into the future for forecasting.
-    :param unit: frequency of the timeseries, which must be a pandas offset alias.
-    :param seasonal_period: length of the seasonality period in given frequency.
-    :param seasonal_unit: frequency unit of the seasonal period.
+    :param unit: frequency unit of the time series, which must be a pandas offset alias.
     :param num_folds: int number of cutoffs for cross validation.
-    :return: list of pd.Timestamp cutoffs for corss-validation.
+    :param seasonal_period: length of the seasonality period.
+    :param seasonal_unit: Optional frequency unit for the seasonal period. If not specified, the function will use
+                          the same frequency unit as the time series.
+    :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
     period_timedelta = pd.to_timedelta(period, unit=unit)
     horizon_timedelta = pd.to_timedelta(horizon, unit=unit)
 
+    if not seasonal_unit:
+        seasonal_unit = unit
     seasonality_timedelta = pd.to_timedelta(seasonal_period, unit=seasonal_unit)
 
     initial = max(3 * horizon_timedelta, seasonality_timedelta)
