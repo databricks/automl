@@ -71,7 +71,7 @@ class ArimaEstimator:
         for m in self._seasonal_periods:
             try:
                 cutoffs = generate_cutoffs(history_pd, horizon=self._horizon, unit=self._frequency_unit,
-                                           seasonal_period=m, num_folds=self._num_folds)
+                                           num_folds=self._num_folds, seasonal_period=m)
                 result = self._fit_predict(history_pd, cutoffs, m, self._max_steps)
                 metric = result["metrics"]["smape"]
                 if metric < best_metric:
