@@ -111,16 +111,21 @@ class ArimaModel(AbstractArimaModel):
         """
         return pickle.loads(self._pickled_model)
 
-    def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
         :param horizon: int number of periods to forecast forward.
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
         horizon = horizon or self._horizon
         future_pd = self._forecast(horizon)
-        in_sample_pd = self._predict_in_sample()
-        return pd.concat([in_sample_pd, future_pd]).reset_index(drop=True)
+        if include_history:
+            in_sample_pd = self._predict_in_sample()
+            return pd.concat([in_sample_pd, future_pd]).reset_index(drop=True)
+        else:
+            return future_pd
 
     def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
@@ -235,21 +240,23 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         """
         return pickle.loads(self._pickled_models[id_])
 
-    def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
         :param horizon: Int number of periods to forecast forward.
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
         horizon = horizon or self._horizon
         ids = self._pickled_models.keys()
-        preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon), ids))
+        preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, include_history), ids))
         return pd.concat(preds_dfs).reset_index(drop=True)
 
-    def _predict_timeseries_single_id(self, id_: str, horizon: int) -> pd.DataFrame:
+    def _predict_timeseries_single_id(self, id_: str, horizon: int, include_history: bool = True) -> pd.DataFrame:
         arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency,
                                            self._starts[id_], self._ends[id_], self._time_col)
-        preds_df = arima_model_single_id.predict_timeseries(horizon)
+        preds_df = arima_model_single_id.predict_timeseries(horizon, include_history)
         preds_df["ts_id"] = id_
         return preds_df
 
