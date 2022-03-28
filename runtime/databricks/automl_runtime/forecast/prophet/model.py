@@ -83,31 +83,39 @@ class ProphetModel(ForecastModel):
         from prophet.serialize import model_from_json
         return model_from_json(self._model_json)
 
-    def _make_future_dataframe(self, horizon: int) -> pd.DataFrame:
+    def _make_future_dataframe(self, horizon: int, include_history: bool = True) -> pd.DataFrame:
         """
         Generate future dataframe by calling the API from prophet
         :param horizon: Int number of periods to forecast forward.
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :return: pd.Dataframe that extends forward from the end of self.history for the
         requested number of periods.
         """
-        return self.model().make_future_dataframe(periods=horizon, freq=OFFSET_ALIAS_MAP[self._frequency])
+        return self.model().make_future_dataframe(periods=horizon,
+                                                  freq=OFFSET_ALIAS_MAP[self._frequency],
+                                                  include_history=include_history)
 
-    def _predict_impl(self, horizon: int = None) -> pd.DataFrame:
+    def _predict_impl(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the API from prophet model.
         :param horizon: Int number of periods to forecast forward.
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
-        future_pd = self._make_future_dataframe(horizon=horizon or self._horizon)
+        future_pd = self._make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
         return self.model().predict(future_pd)
 
-    def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
-        return self._predict_impl(horizon)
+        return self._predict_impl(horizon, include_history)
 
     def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
@@ -162,16 +170,22 @@ class MultiSeriesProphetModel(ProphetModel):
         from prophet.serialize import model_from_json
         return model_from_json(self._model_json[id])
 
-    def _make_future_dataframe(self, id: str, horizon: int) -> pd.DataFrame:
+    def _make_future_dataframe(self, id: str, horizon: int, include_history: bool = True) -> pd.DataFrame:
         """
         Generate future dataframe for one model by calling the API from prophet
         :param id: identity for the Prophet model
         :param horizon: Int number of periods to forecast forward
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :return: pd.Dataframe that extends forward from the end of self.history for the
         requested number of periods.
         """
-        start_time = self._timeseries_starts[id]
         end_time = pd.Timestamp(self._timeseries_end)
+        if include_history:
+            start_time = self._timeseries_starts[id]
+        else:
+            start_time = end_time + pd.Timedelta(value=1, unit=self._frequency)
+
         date_rng = pd.date_range(
             start=start_time,
             end=end_time + pd.Timedelta(value=horizon, unit=self._frequency),
@@ -179,25 +193,30 @@ class MultiSeriesProphetModel(ProphetModel):
         )
         return pd.DataFrame(date_rng, columns=["ds"])
 
-    def _predict_impl(self, df: pd.DataFrame, horizon: int = None) -> pd.DataFrame:
+    def _predict_impl(self, df: pd.DataFrame, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the API from prophet model.
         :param df: input dataframe
         :param horizon: Int number of periods to forecast forward.
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
         col_id = str(df["ts_id"].iloc[0])
-        future_pd = self._make_future_dataframe(horizon=horizon or self._horizon, id=col_id)
+        future_pd = self._make_future_dataframe(horizon=horizon or self._horizon,
+                                                id=col_id, include_history=include_history)
         return self.model(col_id).predict(future_pd)
 
-    def predict_timeseries(self, horizon: int = None) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
         ids = pd.DataFrame(self._model_json.keys(), columns=["ts_id"])
-        return ids.groupby("ts_id").apply(lambda df: self._predict_impl(df, horizon)).reset_index()
+        return ids.groupby("ts_id").apply(lambda df: self._predict_impl(df, horizon, include_history)).reset_index()
 
     @staticmethod
     def get_reserved_cols() -> List[str]:

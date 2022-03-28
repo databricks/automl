@@ -61,6 +61,8 @@ class TestProphetModel(unittest.TestCase):
         prophet_model.predict(self.X)
         forecast_pd = prophet_model._model_impl.python_model.predict_timeseries()
         np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]), self.expected_y)
+        forecast_future_pd = prophet_model._model_impl.python_model.predict_timeseries(include_history=False)
+        self.assertEqual(len(forecast_future_pd), 1)
 
     def test_make_future_dataframe(self):
         for feq_unit in OFFSET_ALIAS_MAP:
@@ -93,6 +95,8 @@ class TestProphetModel(unittest.TestCase):
         # Check model_predict functions
         prophet_model._model_impl.python_model.model_predict(ids)
         prophet_model._model_impl.python_model.predict_timeseries()
+        forecast_future_pd = prophet_model._model_impl.python_model.predict_timeseries(include_history=False)
+        self.assertEqual(len(forecast_future_pd), 2)
 
         # Check predict API
 

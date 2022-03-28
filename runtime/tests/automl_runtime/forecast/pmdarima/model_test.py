@@ -55,6 +55,9 @@ class TestArimaModel(unittest.TestCase):
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(10, forecast_pd.shape[0])
         pd.testing.assert_series_equal(pd.Series(expected_ds, name='ds'), forecast_pd["ds"])
+        # Test forecast without history data
+        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False)
+        self.assertEqual(len(forecast_future_pd), self.horizon)
 
     def test_predict_success(self):
         test_df = pd.DataFrame({
@@ -123,6 +126,9 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(20, forecast_pd.shape[0])
+        # Test forecast without history data
+        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False)
+        self.assertEqual(len(forecast_future_pd), 2)
 
     def test_predict_success(self):
         test_df = pd.DataFrame({
