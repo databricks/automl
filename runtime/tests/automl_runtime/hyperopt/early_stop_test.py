@@ -19,7 +19,7 @@ from unittest import mock
 
 from hyperopt import STATUS_OK
 
-from databricks.automl_runtime.hyperopt.early_stop import early_stop_fn
+from databricks.automl_runtime.hyperopt.early_stop import get_early_stop_fn
 
 
 def mock_trial(tid, ok=False, loss=None):
@@ -38,6 +38,7 @@ def mock_trial(tid, ok=False, loss=None):
 class TestEarlyStopping(unittest.TestCase):
     # Used by unittest.TestCase, removes the limit on the size of the objects our assertions compare
     maxDiff = None
+    early_stop_fn = get_early_stop_fn(no_early_stop_threshold=40, no_progress_stop_threshold=20)
 
     def test_early_stop_no_early_stop_threshold(self):
         # don't early stop if NO_EARLY_STOP_THRESHOLD has not been reached
