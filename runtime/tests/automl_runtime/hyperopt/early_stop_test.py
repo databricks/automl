@@ -19,7 +19,10 @@ from unittest import mock
 
 from hyperopt import STATUS_OK
 
-from databricks.automl_runtime.hyperopt.early_stop import early_stop_fn
+from databricks.automl_runtime.hyperopt.early_stop import get_early_stop_fn
+
+
+early_stop_fn = get_early_stop_fn(no_early_stop_threshold=40, no_progress_stop_threshold=20)
 
 
 def mock_trial(tid, ok=False, loss=None):
