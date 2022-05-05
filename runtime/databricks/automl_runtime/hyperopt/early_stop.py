@@ -23,9 +23,9 @@ _logger_hyperopt = logging.getLogger("hyperopt-spark")
 _logger_hyperopt.setLevel(logging.ERROR)
 
 # minimum number of trials to run before early stopping is considered
-NO_EARLY_STOP_THRESHOLD = 40
+NO_EARLY_STOP_THRESHOLD = 200
 # hyperopt search will stop early if the loss doesn't improve after this number of iterations
-NO_PROGRESS_STOP_THRESHOLD = 20
+NO_PROGRESS_STOP_THRESHOLD = 100
 
 
 def early_stop_fn(trials, best_loss=None, no_progress_iters=0, completed_trial_ids=set()):
