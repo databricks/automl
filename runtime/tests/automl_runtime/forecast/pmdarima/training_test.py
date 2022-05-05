@@ -33,7 +33,7 @@ class TestArimaEstimator(unittest.TestCase):
             pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
             pd.Series(np.random.rand(self.num_rows), name="y")
         ], axis=1)
-        self.df_time_string = pd.concat([
+        self.df_string_time = pd.concat([
             pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}"),
             pd.Series(np.random.rand(self.num_rows), name="y")
         ], axis=1)
@@ -45,7 +45,7 @@ class TestArimaEstimator(unittest.TestCase):
                                          seasonal_periods=[1, 7],
                                          num_folds=2)
 
-        for df in [self.df, self.df_time_string]:
+        for df in [self.df, self.df_string_time]:
             results_pd = arima_estimator.fit(df)
             self.assertIn("smape", results_pd)
             self.assertIn("pickled_model", results_pd)
