@@ -54,13 +54,13 @@ class TestEarlyStopping(unittest.TestCase):
     def test_early_stop(self):
         # early stop if both conditions reached
         mock_trials = mock.MagicMock()
-        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=20, completed_trial_ids=set(range(40)))
+        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=100, completed_trial_ids=set(range(200)))
         self.assertTrue(stop)
         stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=200, completed_trial_ids=set(range(400)))
         self.assertTrue(stop)
 
-        mock_trials.__iter__.return_value = [mock_trial(39, ok=True, loss=100)]
-        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=19, completed_trial_ids=set(range(39)))
+        mock_trials.__iter__.return_value = [mock_trial(199, ok=True, loss=100)]
+        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=99, completed_trial_ids=set(range(199)))
         self.assertTrue(stop)
 
     def test_early_stop_one_trial(self):
