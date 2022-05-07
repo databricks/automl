@@ -18,6 +18,25 @@ from typing import List, Optional
 
 import pandas as pd
 
+INITAL_NUM_HORIZONS = 3
+
+def get_training_horizon(df: pd.DataFrame, horizon: int, unit: str, seasonal_period: int, seasonal_unit: Optional[str] = None) -> int:
+    """
+    Return training_horizon < horizon, if the horizon is too long
+    """
+    df_timedelta = df["ds"].max() - df["ds"].min()
+    horizon_timedelta = pd.to_timedelta(horizon, unit=unit)
+    if not seasonal_unit:
+        seasonal_unit = unit
+    seasonality_timedelta = pd.to_timedelta(seasonal_period, unit=seasonal_unit)
+
+    initial_timedelta = max(INITAL_NUM_HORIZONS * horizon_timedelta, seasonality_timedelta)
+    if df_timedelta >= initial_timedelta + horizon_timedelta:
+        return horizon
+    else:
+        horizon_timedelta = df_timedelta / (INITAL_NUM_HORIZONS + 1)
+        return horizon_timedelta // pd.to_timedelta(1, unit=unit)
+
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
                      num_folds: int, seasonal_period: int, seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
@@ -40,7 +59,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
         seasonal_unit = unit
     seasonality_timedelta = pd.to_timedelta(seasonal_period, unit=seasonal_unit)
 
-    initial = max(3 * horizon_timedelta, seasonality_timedelta)
+    initial = max(INITAL_NUM_HORIZONS * horizon_timedelta, seasonality_timedelta)
 
     # Last cutoff is "latest date in data - horizon_timedelta" date
     cutoff = df["ds"].max() - horizon_timedelta

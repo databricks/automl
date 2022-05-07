@@ -26,7 +26,7 @@ from prophet.diagnostics import cross_validation, performance_metrics
 from prophet.serialize import model_to_json
 from hyperopt import fmin, Trials, SparkTrials
 
-from databricks.automl_runtime.forecast.utils import generate_cutoffs
+from databricks.automl_runtime.forecast.utils import generate_cutoffs, get_training_horizon
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 
 
@@ -64,13 +64,21 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     # Evaluate Metrics
     seasonal_period_max = max([s["period"] for s in model.seasonalities.values()]) if model.seasonalities else 0
     print(f"SEASONALITIES: {model.seasonalities}")
-    print(f"MAX SEASONALITY: {seasonal_period_max}")
-    cutoffs = generate_cutoffs(model.history.reset_index(drop=True), horizon=horizon, unit=frequency,
+    print(f"seasonal_period_max: {seasonal_period_max}")
+
+    history_df = model.history.reset_index(drop=True)
+
+    training_horizon = get_training_horizon(history_df, horizon, frequency, seasonal_period_max, seasonal_unit="D")
+    cutoffs = generate_cutoffs(history_df, horizon=training_horizon, unit=frequency,
                                num_folds=num_folds, seasonal_period=seasonal_period_max, seasonal_unit="D")
-    print(f"CUTOFFS: {cutoffs}")
-    horizon_timedelta = pd.to_timedelta(horizon, unit=frequency)
+    training_horizon_timedelta = pd.to_timedelta(training_horizon, unit=frequency)
+
+    print(f"training_horizon: {training_horizon}")
+    print(f"training_horizon_timedelta: {training_horizon_timedelta}")
+    print(f"cutoffs: {cutoffs}")
+
     df_cv = cross_validation(
-        model, horizon=horizon_timedelta, cutoffs=cutoffs, disable_tqdm=True
+        model, horizon=training_horizon_timedelta, cutoffs=cutoffs, disable_tqdm=True
     )  # disable tqdm to make it work with ipykernel and reduce the output size
     df_metrics = performance_metrics(df_cv)
 
