@@ -153,6 +153,17 @@ class TestProphetModel(unittest.TestCase):
         self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
+    def test_predict_success_string(self):
+        prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
+        test_df = pd.DataFrame({
+            "ds": ["2020-10-08", "2020-12-10"]
+        })
+        expected_test_df = test_df.copy()
+        yhat = prophet_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
+        pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
+
+
     def test_validate_predict_cols(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "time")
         test_df = pd.DataFrame({
