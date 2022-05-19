@@ -24,8 +24,7 @@ from pmdarima.arima import StepwiseContext
 from prophet.diagnostics import performance_metrics
 
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import cross_validation
-from databricks.automl_runtime.forecast.utils import generate_cutoffs
-from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP
 
 
 class ArimaEstimator:
@@ -39,7 +38,7 @@ class ArimaEstimator:
         :param horizon: Number of periods to forecast forward
         :param frequency_unit: Frequency of the time series
         :param metric: Metric that will be optimized across trials
-        :param seasonal_periods: A list of seasonal periods for tuning.
+        :param seasonal_periods: A list of seasonal periods for tuning. Units are frequency_unit.
         :param num_folds: Number of folds for cross validation
         :param max_steps: Max steps for stepwise auto_arima
         """
@@ -50,7 +49,7 @@ class ArimaEstimator:
         self._num_folds = num_folds
         self._max_steps = max_steps
 
-    def fit(self, df: pd.DataFrame) -> pd.DataFrame:
+    def fit(self, df: pd.DataFrame, cutoffs: Optional[List[pd.Timestamp]] = None) -> pd.DataFrame:
         """
         Fit the ARIMA model with tuning of seasonal period m and with pmdarima.auto_arima.
         :param df: A pd.DataFrame containing the history data. Must have columns ds and y.
@@ -65,13 +64,32 @@ class ArimaEstimator:
         # Impute missing time steps
         history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
 
+        history_timedelta = history_pd['ds'].max() - history_pd['ds'].min()
+        timedeltas = self.history['ds'].diff()
+        min_timedelta = timedeltas.iloc[timedeltas.values.nonzero()[0]].min()
+
         # Tune seasonal periods
         best_result = None
         best_metric = float("inf")
         for m in self._seasonal_periods:
             try:
-                cutoffs = generate_cutoffs(history_pd, horizon=self._horizon, unit=self._frequency_unit,
-                                           num_folds=self._num_folds, seasonal_period=m)
+                # this check mirrors the the default behavior by prophet
+                seasonality_timedelta = pd.to_timedelta(m, unit=self._frequency_unit)
+                if history_timedelta < 2 * seasonality_timedelta or min_timedelta >= seasonality_timedelta:
+                    print(f"Skipping seasonal_period={m} ({seasonality_timedelta}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_timedelta}")
+                    continue
+
+                if cutoffs is None:
+                    validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency_unit)
+                    cutoffs = utils.generate_cutoffs(
+                        history_pd,
+                        horizon=validation_horizon,
+                        unit=self._frequency_unit,
+                        num_folds=self._num_folds,
+                    )
+                else:
+                    validation_horizon = self._horizon
+
                 result = self._fit_predict(history_pd, cutoffs, m, self._max_steps)
                 metric = result["metrics"]["smape"]
                 if metric < best_metric:

@@ -18,9 +18,27 @@ from typing import List, Optional
 
 import pandas as pd
 
+def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
+    """
+    Return validation_horizon, which is the lesser of `horizon` and one quarter of the dataframe's timedelta
+    Since the seasonality period is never more than half of the dataframe's timedelta,
+    there is no case where seasonality would affect the validation horizon. (This is prophet's default seasonality
+    behavior, and we enforce it for ARIMA.)
+    :return: horizon used for validation, in terms of the input `unit`
+    """
+    MIN_HORIZONS = 4 # minimum number of horizons in the dataframe
+    df_timedelta = df["ds"].max() - df["ds"].min()
+    horizon_timedelta = pd.to_timedelta(horizon, unit=unit)
+
+    if MIN_HORIZONS * horizon_timedelta <= df_timedelta:
+        return horizon
+    else:
+        validation_horizon_timedelta = df_timedelta / MIN_HORIZONS
+        validation_horizon = validation_horizon_timedelta // pd.to_timedelta(1, unit=unit)
+        return validation_horizon
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
-                     num_folds: int, seasonal_period: int, seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
+                     num_folds: int, seasonal_period: int = 0, seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
     """
     Generate cutoff times for cross validation with the control of number of folds.
     :param df: pd.DataFrame of the historical data.
