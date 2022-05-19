@@ -112,7 +112,7 @@ class ProphetHyperoptEstimator(ABC):
         self._timeout = trial_timeout
         self._is_parallel = is_parallel
 
-    def fit(self, df: pd.DataFrame, cutoffs: Optional[List[pd.Timestamp]] = None) -> pd.DataFrame:
+    def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Fit the Prophet model with hyperparameter tunings
         :param df: pd.DataFrame containing the history. Must have columns ds (date
@@ -123,16 +123,13 @@ class ProphetHyperoptEstimator(ABC):
 
         seasonality_mode = ["additive", "multiplicative"]
 
-        if cutoffs is None:
-            validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency_unit)
-            cutoffs = utils.generate_cutoffs(
-                df.reset_index(drop=True),
-                horizon=validation_horizon,
-                unit=self._frequency_unit,
-                num_folds=self._num_folds,
-            )
-        else:
-            validation_horizon = self._horizon
+        validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency_unit)
+        cutoffs = utils.generate_cutoffs(
+            df.reset_index(drop=True),
+            horizon=validation_horizon,
+            unit=self._frequency_unit,
+            num_folds=self._num_folds,
+        )
 
         train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=validation_horizon,
                            frequency=self._frequency_unit, cutoffs=cutoffs,
@@ -176,5 +173,7 @@ class ProphetHyperoptEstimator(ABC):
             else:
                 results_pd[metric] = np.nan
         results_pd["prophet_params"] = str(best_result)
+        results_pd._validation_horizon = validation_horizon
+        results_pd._cutoffs = cutoffs
 
         return results_pd

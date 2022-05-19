@@ -27,7 +27,7 @@ from databricks.automl_runtime.forecast.prophet.forecast import ProphetHyperoptE
 class TestProphetHyperoptEstimator(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.num_rows = 12
+        self.num_rows = 21
         y_series =  pd.Series(range(self.num_rows), name="y")
         self.df = pd.concat([
             pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
@@ -44,7 +44,40 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
 
     def test_sequential_training(self):
-        hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
+        horizon = 1
+        num_folds = 5
+        hyperopt_estim = ProphetHyperoptEstimator(horizon=horizon,
+                                                  frequency_unit="d",
+                                                  metric="smape",
+                                                  interval_width=0.8,
+                                                  country_holidays="US",
+                                                  search_space=self.search_space,
+                                                  num_folds=num_folds,
+                                                  trial_timeout=1000,
+                                                  random_state=0,
+                                                  is_parallel=False)
+
+        for df in [self.df, self.df_datetime_date, self.df_string_time]:
+            results = hyperopt_estim.fit(df)
+            self.assertAlmostEqual(results["mse"][0], 0, places=1)
+            self.assertAlmostEqual(results["rmse"][0], 0, places=1)
+            self.assertAlmostEqual(results["mae"][0], 0, places=1)
+            self.assertAlmostEqual(results["mape"][0], 0, places=1)
+            self.assertAlmostEqual(results["mdape"][0], 0, places=1)
+            self.assertAlmostEqual(results["smape"][0], 0, places=1)
+            self.assertAlmostEqual(results["coverage"][0], 1, places=1)
+            # check the best result parameter is inside the search space
+            model_json = json.loads(results["model_json"][0])
+            self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
+            self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
+
+            self.assertEqual(results._validation_horizon, horizon)
+            self.assertEqual(len(results._cutoffs), num_folds)
+
+    def test_horizon_truncation(self):
+        import logging
+        logging.getLogger("prophet").setLevel(logging.WARNING)
+        hyperopt_estim = ProphetHyperoptEstimator(horizon=100,
                                                   frequency_unit="d",
                                                   metric="smape",
                                                   interval_width=0.8,
@@ -55,16 +88,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                   random_state=0,
                                                   is_parallel=False)
 
-        for df in [self.df, self.df_datetime_date, self.df_string_time]:
-            results = hyperopt_estim.fit(df)
-            self.assertAlmostEqual(results["mse"][0], 0)
-            self.assertAlmostEqual(results["rmse"][0], 0)
-            self.assertAlmostEqual(results["mae"][0], 0)
-            self.assertAlmostEqual(results["mape"][0], 0)
-            self.assertAlmostEqual(results["mdape"][0], 0)
-            self.assertAlmostEqual(results["smape"][0], 0)
-            self.assertAlmostEqual(results["coverage"][0], 1)
-            # check the best result parameter is inside the search space
-            model_json = json.loads(results["model_json"][0])
-            self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
-            self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
+        results = hyperopt_estim.fit(self.df)
+        # the dataframe has 21 timestamps, which means the timedelta is 20. So 20/4=5 for validation horizon
+        self.assertEqual(results._validation_horizon, 5)
+        self.assertEqual(len(results._cutoffs), 1)

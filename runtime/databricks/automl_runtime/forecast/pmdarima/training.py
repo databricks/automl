@@ -50,7 +50,7 @@ class ArimaEstimator:
         self._num_folds = num_folds
         self._max_steps = max_steps
 
-    def fit(self, df: pd.DataFrame, cutoffs: Optional[List[pd.Timestamp]] = None) -> pd.DataFrame:
+    def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Fit the ARIMA model with tuning of seasonal period m and with pmdarima.auto_arima.
         :param df: A pd.DataFrame containing the history data. Must have columns ds and y.
@@ -72,6 +72,8 @@ class ArimaEstimator:
         # Tune seasonal periods
         best_result = None
         best_metric = float("inf")
+        validation_horizons = dict()
+        cutoffs = dict()
         for m in self._seasonal_periods:
             try:
                 # this check mirrors the the default behavior by prophet
@@ -83,16 +85,15 @@ class ArimaEstimator:
                     print(f"Skipping seasonal_period={m} ({seasonality_timedelta}). Seasonality timedelta is less than the shortest timedelta in the dataframe, {min_timedelta}.")
                     continue
 
-                if cutoffs is None:
-                    validation_horizon = utils.get_validation_horizon(history_pd, self._horizon, self._frequency_unit)
-                    cutoffs = utils.generate_cutoffs(
-                        history_pd,
-                        horizon=validation_horizon,
-                        unit=self._frequency_unit,
-                        num_folds=self._num_folds,
-                    )
-                else:
-                    validation_horizon = self._horizon
+                validation_horizon = utils.get_validation_horizon(history_pd, self._horizon, self._frequency_unit)
+                cutoffs = utils.generate_cutoffs(
+                    history_pd,
+                    horizon=validation_horizon,
+                    unit=self._frequency_unit,
+                    num_folds=self._num_folds,
+                )
+                validation_horizons[m] = validation_horizon
+                cutoffs[m] = cutoffs
 
                 result = self._fit_predict(history_pd, cutoffs, m, self._max_steps)
                 metric = result["metrics"]["smape"]
@@ -107,6 +108,8 @@ class ArimaEstimator:
 
         results_pd = pd.DataFrame(best_result["metrics"], index=[0])
         results_pd["pickled_model"] = pickle.dumps(best_result["model"])
+        results_pd["validation_horizons"] = validation_horizons
+        results_pd["cutoffs"] = cutoffs
 
         return results_pd
 
