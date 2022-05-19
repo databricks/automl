@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-import version.__version__
+import datapricks.automl_runtime.version import __version__
