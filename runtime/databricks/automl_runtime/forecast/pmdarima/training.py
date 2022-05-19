@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-from typing import List
+import traceback
+from typing import List, Optional
 
 import pandas as pd
 import pickle
@@ -65,7 +66,7 @@ class ArimaEstimator:
         history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
 
         history_timedelta = history_pd['ds'].max() - history_pd['ds'].min()
-        timedeltas = self.history['ds'].diff()
+        timedeltas = history_pd['ds'].diff()
         min_timedelta = timedeltas.iloc[timedeltas.values.nonzero()[0]].min()
 
         # Tune seasonal periods
@@ -75,12 +76,15 @@ class ArimaEstimator:
             try:
                 # this check mirrors the the default behavior by prophet
                 seasonality_timedelta = pd.to_timedelta(m, unit=self._frequency_unit)
-                if history_timedelta < 2 * seasonality_timedelta or min_timedelta >= seasonality_timedelta:
+                if history_timedelta < 2 * seasonality_timedelta:
                     print(f"Skipping seasonal_period={m} ({seasonality_timedelta}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_timedelta}")
+                    continue
+                if seasonality_timedelta < min_timedelta:
+                    print(f"Skipping seasonal_period={m} ({seasonality_timedelta}). Seasonality timedelta is less than the shortest timedelta in the dataframe, {min_timedelta}.")
                     continue
 
                 if cutoffs is None:
-                    validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency_unit)
+                    validation_horizon = utils.get_validation_horizon(history_pd, self._horizon, self._frequency_unit)
                     cutoffs = utils.generate_cutoffs(
                         history_pd,
                         horizon=validation_horizon,
@@ -97,6 +101,7 @@ class ArimaEstimator:
                     best_metric = metric
             except Exception as e:
                 print(f"Encountered an exception with seasonal_period={m}: {repr(e)}")
+                traceback.print_exc()
         if not best_result:
             raise Exception("No model is successfully trained.")
 
