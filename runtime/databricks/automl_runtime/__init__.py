@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-from databricks.automl_runtime.version import __version__
+from databricks.automl_runtime.version import __version__  # pylint: disable=unused-import
