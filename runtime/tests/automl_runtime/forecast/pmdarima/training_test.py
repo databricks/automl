@@ -50,6 +50,34 @@ class TestArimaEstimator(unittest.TestCase):
             self.assertIn("smape", results_pd)
             self.assertIn("pickled_model", results_pd)
 
+    def test_fit_skip_too_long_seasonality(self):
+        arima_estimator = ArimaEstimator(horizon=1,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[3, 14],
+                                         num_folds=2)
+        with self.assertLogs(logger="databricks.automl_runtime.forecast.pmdarima.training", level="WARNING") as cm:
+            results_pd = arima_estimator.fit(self.df)
+            self.assertIn("Skipping seasonal_period=14 (14 days 00:00:00). Dataframe timestamps must span at least two seasonality periods", cm.output[0])
+
+        self.assertEqual(len(results_pd._validation_horizons), 1)
+        self.assertEqual(len(results_pd._cutoffs), 1)
+        self.assertIn(3, results_pd._validation_horizons)
+        self.assertIn(3, results_pd._cutoffs)
+
+    def test_fit_horizon_truncation(self):
+        period = 2
+        arima_estimator = ArimaEstimator(horizon=100,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[period],
+                                         num_folds=2)
+        results_pd = arima_estimator.fit(self.df)
+
+        # self.df spans 22 days, so the valididation_horizon is floor(22/4)=5 days, and only one cutoff is produced
+        self.assertEqual(results_pd._validation_horizons[period], 5)
+        self.assertEqual(len(results_pd._cutoffs[period]), 1)
+
     def test_fit_success_with_failed_seasonal_periods(self):
         self.df["y"] = range(self.num_rows)  # make pm.auto_arima fail with m=7 because of singular matrices
         # generate_cutoffs will fail with m=30 because of no enough data

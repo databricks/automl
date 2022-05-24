@@ -29,7 +29,6 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     MIN_HORIZONS = 4 # minimum number of horizons in the dataframe
     df_timedelta = df["ds"].max() - df["ds"].min()
     horizon_timedelta = pd.to_timedelta(horizon, unit=unit)
-    print(df_timedelta)
 
     if MIN_HORIZONS * horizon_timedelta <= df_timedelta:
         return horizon
@@ -60,8 +59,6 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     seasonality_timedelta = pd.to_timedelta(seasonal_period, unit=seasonal_unit)
 
     initial = max(3 * horizon_timedelta, seasonality_timedelta)
-
-    print(f"{initial}, {horizon}, {unit}, {num_folds}")
 
     # Last cutoff is "latest date in data - horizon_timedelta" date
     cutoff = df["ds"].max() - horizon_timedelta

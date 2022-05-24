@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import logging
 import traceback
-from typing import List, Optional
+from typing import List
 
 import pandas as pd
 import pickle
@@ -27,6 +27,7 @@ from prophet.diagnostics import performance_metrics
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import cross_validation
 from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP
 
+_logger = logging.getLogger(__name__)
 
 class ArimaEstimator:
     """
@@ -72,18 +73,18 @@ class ArimaEstimator:
         # Tune seasonal periods
         best_result = None
         best_metric = float("inf")
-        validation_horizons = dict()
-        cutoffs = dict()
+        all_validation_horizons = dict()
+        all_cutoffs = dict()
         for m in self._seasonal_periods:
             try:
                 # this check mirrors the the default behavior by prophet
                 seasonality_timedelta = pd.to_timedelta(m, unit=self._frequency_unit)
                 if history_timedelta < 2 * seasonality_timedelta:
-                    print(f"Skipping seasonal_period={m} ({seasonality_timedelta}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_timedelta}")
+                    _logger.warning(f"Skipping seasonal_period={m} ({seasonality_timedelta}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_timedelta}")
                     continue
-                if seasonality_timedelta < min_timedelta:
-                    print(f"Skipping seasonal_period={m} ({seasonality_timedelta}). Seasonality timedelta is less than the shortest timedelta in the dataframe, {min_timedelta}.")
-                    continue
+                # Prophet also rejects the seasonality periods if the seasonality period timedelta is less than the shortest timedelta in the dataframe.
+                # However, this cannot happen in ARIMA because _fill_missing_time_steps imputes values for each _frequency_unit,
+                # so the minimum valid seasonality period is always 1
 
                 validation_horizon = utils.get_validation_horizon(history_pd, self._horizon, self._frequency_unit)
                 cutoffs = utils.generate_cutoffs(
@@ -92,8 +93,8 @@ class ArimaEstimator:
                     unit=self._frequency_unit,
                     num_folds=self._num_folds,
                 )
-                validation_horizons[m] = validation_horizon
-                cutoffs[m] = cutoffs
+                all_validation_horizons[m] = validation_horizon
+                all_cutoffs[m] = cutoffs
 
                 result = self._fit_predict(history_pd, cutoffs, m, self._max_steps)
                 metric = result["metrics"]["smape"]
@@ -101,15 +102,15 @@ class ArimaEstimator:
                     best_result = result
                     best_metric = metric
             except Exception as e:
-                print(f"Encountered an exception with seasonal_period={m}: {repr(e)}")
+                _logger.warning(f"Encountered an exception with seasonal_period={m}: {repr(e)}")
                 traceback.print_exc()
         if not best_result:
             raise Exception("No model is successfully trained.")
 
         results_pd = pd.DataFrame(best_result["metrics"], index=[0])
         results_pd["pickled_model"] = pickle.dumps(best_result["model"])
-        results_pd["validation_horizons"] = validation_horizons
-        results_pd["cutoffs"] = cutoffs
+        results_pd._validation_horizons = all_validation_horizons
+        results_pd._cutoffs = all_cutoffs
 
         return results_pd
 
