@@ -23,7 +23,7 @@ from databricks.automl_runtime.forecast.utils import generate_cutoffs, get_valid
 
 class TestGetValidationHorizon(unittest.TestCase):
 
-    def test_get_validation_horizon_no_truncate(self):
+    def test_no_truncate(self):
         # 5 day horizon is OK for dataframe with 30 days of data
         df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-30", freq="D"), columns=["ds"])
         validation_horizon = get_validation_horizon(df, 5, "D")
@@ -34,7 +34,7 @@ class TestGetValidationHorizon(unittest.TestCase):
         validation_horizon = get_validation_horizon(df, 2, "W")
         self.assertEqual(validation_horizon, 2)
 
-    def test_get_validation_horizon_truncate(self):
+    def test_truncate(self):
         # for dataframe with 19 days of data, maximum horizon is 4 days
         df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-20", freq="D"), columns=["ds"])
         validation_horizon = get_validation_horizon(df, 10, "D")
@@ -54,6 +54,12 @@ class TestGetValidationHorizon(unittest.TestCase):
         df = pd.DataFrame(pd.date_range(start="2020-01-01", end="2020-12-31", freq="W"), columns=["ds"])
         validation_horizon = get_validation_horizon(df, 20, "W")
         self.assertEqual(validation_horizon, 12)
+
+    def test_truncate_logs(self):
+        with self.assertLogs(logger="databricks.automl_runtime.forecast", level="INFO") as cm:
+            df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-20", freq="D"), columns=["ds"])
+            validation_horizon = get_validation_horizon(df, 10, "D")
+            self.assertIn("too long relative to dataframe's timedelta. Validation horizon will be reduced to", cm.output[0])
 
 
 class TestGenerateCutoffs(unittest.TestCase):

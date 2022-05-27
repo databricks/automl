@@ -67,8 +67,6 @@ class ArimaEstimator:
         history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
 
         history_timedelta = history_pd['ds'].max() - history_pd['ds'].min()
-        timedeltas = history_pd['ds'].diff()
-        min_timedelta = timedeltas.iloc[timedeltas.values.nonzero()[0]].min()
 
         # Tune seasonal periods
         best_result = None

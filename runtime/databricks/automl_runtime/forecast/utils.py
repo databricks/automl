@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import logging
 from typing import List, Optional
 
 import pandas as pd
+
+_logger = logging.getLogger(__name__)
 
 def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     """
@@ -24,6 +26,9 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     Since the seasonality period is never more than half of the dataframe's timedelta,
     there is no case where seasonality would affect the validation horizon. (This is prophet's default seasonality
     behavior, and we enforce it for ARIMA.)
+    :param df: pd.DataFrame of the historical data
+    :param horizon: int number of time into the future for forecasting
+    :param unit: frequency unit of the time series, which must be a pandas offset alias
     :return: horizon used for validation, in terms of the input `unit`
     """
     MIN_HORIZONS = 4 # minimum number of horizons in the dataframe
@@ -35,6 +40,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     else:
         validation_horizon_timedelta = df_timedelta / MIN_HORIZONS
         validation_horizon = validation_horizon_timedelta // pd.to_timedelta(1, unit=unit)
+        _logger.info(f"Horizon {horizon_timedelta} too long relative to dataframe's timedelta. Validation horizon will be reduced to {validation_horizon_timedelta}.")
         return validation_horizon
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
