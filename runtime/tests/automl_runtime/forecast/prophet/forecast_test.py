@@ -69,7 +69,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             self.assertLess(results["mape"][0], 1)
             self.assertLess(results["mdape"][0], 1)
             self.assertLess(results["smape"][0], 1)
-            self.assertGreater(results["coverage"][0], 0)
+            self.assertGreaterEqual(results["coverage"][0], 0)
             # check the best result parameter is inside the search space
             model_json = json.loads(results["model_json"][0])
             self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
