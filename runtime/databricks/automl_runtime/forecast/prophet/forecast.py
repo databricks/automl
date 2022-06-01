@@ -173,7 +173,5 @@ class ProphetHyperoptEstimator(ABC):
             else:
                 results_pd[metric] = np.nan
         results_pd["prophet_params"] = str(best_result)
-        results_pd._validation_horizon = validation_horizon
-        results_pd._cutoffs = cutoffs
 
         return results_pd

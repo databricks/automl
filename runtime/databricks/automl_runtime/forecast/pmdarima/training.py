@@ -71,8 +71,6 @@ class ArimaEstimator:
         # Tune seasonal periods
         best_result = None
         best_metric = float("inf")
-        all_validation_horizons = dict()
-        all_cutoffs = dict()
         for m in self._seasonal_periods:
             try:
                 # this check mirrors the the default behavior by prophet
@@ -91,10 +89,8 @@ class ArimaEstimator:
                     unit=self._frequency_unit,
                     num_folds=self._num_folds,
                 )
-                all_validation_horizons[m] = validation_horizon
-                all_cutoffs[m] = cutoffs
 
-                result = self._fit_predict(history_pd, cutoffs, m, self._max_steps)
+                result = self._fit_predict(history_pd, cutoffs=cutoffs, seasonal_period=m, max_steps=self._max_steps)
                 metric = result["metrics"]["smape"]
                 if metric < best_metric:
                     best_result = result
@@ -107,9 +103,6 @@ class ArimaEstimator:
 
         results_pd = pd.DataFrame(best_result["metrics"], index=[0])
         results_pd["pickled_model"] = pickle.dumps(best_result["model"])
-        results_pd._validation_horizons = all_validation_horizons
-        results_pd._cutoffs = all_cutoffs
-
         return results_pd
 
     @staticmethod
