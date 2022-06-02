@@ -16,6 +16,7 @@
 
 import unittest
 import pytest
+from unittest.mock import patch
 
 import pandas as pd
 import numpy as np
@@ -49,6 +50,50 @@ class TestArimaEstimator(unittest.TestCase):
             results_pd = arima_estimator.fit(df)
             self.assertIn("smape", results_pd)
             self.assertIn("pickled_model", results_pd)
+
+    def test_fit_skip_too_long_seasonality(self):
+        arima_estimator = ArimaEstimator(horizon=1,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[3, 14],
+                                         num_folds=2)
+        with self.assertLogs(logger="databricks.automl_runtime.forecast.pmdarima.training", level="WARNING") as cm:
+            results_pd = arima_estimator.fit(self.df)
+            self.assertIn("Skipping seasonal_period=14 (14 days 00:00:00). Dataframe timestamps must span at least two seasonality periods", cm.output[0])
+
+    @patch("databricks.automl_runtime.forecast.prophet.forecast.utils.generate_cutoffs")
+    def test_fit_horizon_truncation(self, mock_generate_cutoffs):
+        period = 2
+        arima_estimator = ArimaEstimator(horizon=100,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[period],
+                                         num_folds=2)
+        try:
+            results_pd = arima_estimator.fit(self.df)
+        except Exception:
+            # expected to throw exception because generate_cutoffs is mocked
+            pass
+
+        # self.df spans 22 days, so the valididation_horizon is floor(22/4)=5 days, and only one cutoff is produced
+        self.assertEqual(mock_generate_cutoffs.call_args_list[0].kwargs["horizon"], 5)
+
+    @patch.object(ArimaEstimator, "_fit_predict")
+    def test_fit_horizon_truncation_one_cutoff(self, mock_fit_predict):
+        period = 2
+        arima_estimator = ArimaEstimator(horizon=100,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[period],
+                                         num_folds=2)
+        try:
+            results_pd = arima_estimator.fit(self.df)
+        except Exception:
+            # expected to throw exception because generate_cutoffs is mocked
+            pass
+
+        # self.df spans 22 days, so the valididation_horizon is floor(22/4)=5 days, and only one cutoff is produced
+        self.assertEqual(len(mock_fit_predict.call_args_list[0].kwargs["cutoffs"]), 1)
 
     def test_fit_success_with_failed_seasonal_periods(self):
         self.df["y"] = range(self.num_rows)  # make pm.auto_arima fail with m=7 because of singular matrices

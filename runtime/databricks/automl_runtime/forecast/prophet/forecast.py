@@ -16,7 +16,7 @@
 from abc import ABC
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import hyperopt
 import numpy as np
@@ -26,8 +26,7 @@ from prophet.diagnostics import cross_validation, performance_metrics
 from prophet.serialize import model_to_json
 from hyperopt import fmin, Trials, SparkTrials
 
-from databricks.automl_runtime.forecast.utils import generate_cutoffs
-from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP
 
 
 class ProphetHyperParams(Enum):
@@ -38,7 +37,7 @@ class ProphetHyperParams(Enum):
 
 
 def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
-                         horizon: int, frequency: str, num_folds: int,
+                         horizon: int, frequency: str, cutoffs: List[pd.Timestamp],
                          interval_width: int, primary_metric: str,
                          country_holidays: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -62,9 +61,6 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     model.fit(history_pd, iter=200)
 
     # Evaluate Metrics
-    seasonal_period_max = max([s["period"] for s in model.seasonalities.values()]) if model.seasonalities else 0
-    cutoffs = generate_cutoffs(model.history.reset_index(drop=True), horizon=horizon, unit=frequency,
-                               num_folds=num_folds, seasonal_period=seasonal_period_max, seasonal_unit="D")
     horizon_timedelta = pd.to_timedelta(horizon, unit=frequency)
     df_cv = cross_validation(
         model, horizon=horizon_timedelta, cutoffs=cutoffs, disable_tqdm=True
@@ -126,11 +122,17 @@ class ProphetHyperoptEstimator(ABC):
         df["ds"] = pd.to_datetime(df["ds"])
 
         seasonality_mode = ["additive", "multiplicative"]
-        search_space = self._search_space
-        algo = self._algo
 
-        train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=self._horizon,
-                           frequency=self._frequency_unit, num_folds=self._num_folds,
+        validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency_unit)
+        cutoffs = utils.generate_cutoffs(
+            df.reset_index(drop=True),
+            horizon=validation_horizon,
+            unit=self._frequency_unit,
+            num_folds=self._num_folds,
+        )
+
+        train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=validation_horizon,
+                           frequency=self._frequency_unit, cutoffs=cutoffs,
                            interval_width=self._interval_width,
                            primary_metric=self._metric, country_holidays=self._country_holidays)
 
@@ -141,8 +143,8 @@ class ProphetHyperoptEstimator(ABC):
 
         best_result = fmin(
             fn=train_fn,
-            space=search_space,
-            algo=algo,
+            space=self._search_space,
+            algo=self._algo,
             max_evals=self._max_eval,
             trials=trials,
             timeout=self._timeout,

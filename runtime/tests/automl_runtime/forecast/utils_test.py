@@ -18,7 +18,48 @@ import unittest
 
 import pandas as pd
 
-from databricks.automl_runtime.forecast.utils import generate_cutoffs
+from databricks.automl_runtime.forecast.utils import generate_cutoffs, get_validation_horizon
+
+
+class TestGetValidationHorizon(unittest.TestCase):
+
+    def test_no_truncate(self):
+        # 5 day horizon is OK for dataframe with 30 days of data
+        df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-30", freq="D"), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 5, "D")
+        self.assertEqual(validation_horizon, 5)
+
+        # 2 week horizon is OK for dataframe with ~12 weeks of data
+        df = pd.DataFrame(pd.date_range(start="2020-01-01", end="2020-04-01", freq="W"), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 2, "W")
+        self.assertEqual(validation_horizon, 2)
+
+    def test_truncate(self):
+        # for dataframe with 19 days of data, maximum horizon is 4 days
+        df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-20", freq="D"), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 10, "D")
+        self.assertEqual(validation_horizon, 4)
+
+        # for dataframe with 20 days of data, maximum horizon is 5 days
+        df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-21", freq="D"), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 10, "D")
+        self.assertEqual(validation_horizon, 5)
+
+        # for dataframe with 21 days of data, maximum horizon is 5 days
+        df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-22", freq="D"), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 10, "D")
+        self.assertEqual(validation_horizon, 5)
+
+        # for dataframe with just under one year of data, maximum horizon is 12 weeks
+        df = pd.DataFrame(pd.date_range(start="2020-01-01", end="2020-12-31", freq="W"), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 20, "W")
+        self.assertEqual(validation_horizon, 12)
+
+    def test_truncate_logs(self):
+        with self.assertLogs(logger="databricks.automl_runtime.forecast", level="INFO") as cm:
+            df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-20", freq="D"), columns=["ds"])
+            validation_horizon = get_validation_horizon(df, 10, "D")
+            self.assertIn("too long relative to dataframe's timedelta. Validation horizon will be reduced to", cm.output[0])
 
 
 class TestGenerateCutoffs(unittest.TestCase):
@@ -30,7 +71,7 @@ class TestGenerateCutoffs(unittest.TestCase):
 
     def test_generate_cutoffs_success(self):
         cutoffs = generate_cutoffs(self.X, horizon=7, unit="D", num_folds=3, seasonal_period=7)
-        self.assertEqual([pd.Timestamp('2020-08-19 12:00:00'), pd.Timestamp('2020-08-23 00:00:00')], cutoffs)
+        self.assertEqual([pd.Timestamp('2020-08-16 00:00:00'), pd.Timestamp('2020-08-19 12:00:00'), pd.Timestamp('2020-08-23 00:00:00')], cutoffs)
 
     def test_generate_cutoffs_success_large_num_folds(self):
         cutoffs = generate_cutoffs(self.X, horizon=7, unit="D", num_folds=20, seasonal_period=1)
@@ -50,7 +91,8 @@ class TestGenerateCutoffs(unittest.TestCase):
             pd.date_range(start="2020-07-01", periods=30, freq='3d'), columns=["ds"]
         ).rename_axis("y").reset_index()
         cutoffs = generate_cutoffs(df, horizon=1, unit="D", num_folds=5, seasonal_period=1)
-        self.assertEqual([pd.Timestamp('2020-09-16 00:00:00'),
+        self.assertEqual([pd.Timestamp('2020-09-13 00:00:00'),
+                          pd.Timestamp('2020-09-16 00:00:00'),
                           pd.Timestamp('2020-09-19 00:00:00'),
                           pd.Timestamp('2020-09-22 00:00:00'),
                           pd.Timestamp('2020-09-25 00:00:00')], cutoffs)
@@ -59,7 +101,8 @@ class TestGenerateCutoffs(unittest.TestCase):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", periods=168, freq='h'), columns=["ds"]
         ).rename_axis("y").reset_index()
-        expected_cutoffs = [pd.Timestamp('2020-07-07 08:00:00'),
+        expected_cutoffs = [pd.Timestamp('2020-07-07 05:00:00'),
+                            pd.Timestamp('2020-07-07 08:00:00'),
                             pd.Timestamp('2020-07-07 11:00:00'),
                             pd.Timestamp('2020-07-07 14:00:00'),
                             pd.Timestamp('2020-07-07 17:00:00')]
@@ -75,7 +118,7 @@ class TestGenerateCutoffs(unittest.TestCase):
             pd.date_range(start="2020-07-01", periods=52, freq='W'), columns=["ds"]
         ).rename_axis("y").reset_index()
         cutoffs = generate_cutoffs(df, horizon=4, unit="W", num_folds=3, seasonal_period=1)
-        self.assertEqual([pd.Timestamp('2021-05-16 00:00:00'), pd.Timestamp('2021-05-30 00:00:00')], cutoffs)
+        self.assertEqual([pd.Timestamp('2021-05-02 00:00:00'), pd.Timestamp('2021-05-16 00:00:00'), pd.Timestamp('2021-05-30 00:00:00')], cutoffs)
 
     def test_generate_cutoffs_failure_horizon_too_large(self):
         with self.assertRaisesRegex(ValueError, "Less data than horizon after initial window. "
