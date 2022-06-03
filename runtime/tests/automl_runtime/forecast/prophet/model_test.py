@@ -114,7 +114,8 @@ class TestProphetModel(unittest.TestCase):
                                                 "2020-07-25", 1, "days", "time", ["id1", "id2"])
         test_df = pd.DataFrame({
             "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-01"),
-                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04"),
+                     pd.to_datetime("2020-11-04")],
             "id1": ["1", "2", "1", "2"],
             "id2": ["1", "1", "1", "1"],
         })

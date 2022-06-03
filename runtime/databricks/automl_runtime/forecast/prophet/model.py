@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import cloudpickle
 import mlflow
@@ -161,14 +161,16 @@ class MultiSeriesProphetModel(ProphetModel):
         self._timeseries_starts = timeseries_starts
         self._id_cols = id_cols
 
-    def model(self, id: str) -> prophet.forecaster.Prophet:
+    def model(self, id: str) -> Optional[prophet.forecaster.Prophet]:
         """
         Deserialize one Prophet model from json string based on the id
         :param id: identity for the Prophet model
         :return: Prophet model
         """
         from prophet.serialize import model_from_json
-        return model_from_json(self._model_json[id])
+        if id in self._model_json:
+            return model_from_json(self._model_json[id])
+        return None
 
     def _make_future_dataframe(self, id: str, horizon: int, include_history: bool = True) -> pd.DataFrame:
         """
@@ -262,7 +264,12 @@ class MultiSeriesProphetModel(ProphetModel):
         test_df = model_input.copy()
         test_df["ts_id"] = test_df[self._id_cols].astype(str).agg('-'.join, axis=1)
         test_df.rename(columns={self._time_col: "ds"}, inplace=True)
-        predict_df = test_df.groupby("ts_id").apply(lambda df: self.model(df.name).predict(df)).reset_index()
+
+        def model_prediction(df):
+            model = self.model(df.name)
+            if model:
+                return model.predict(df)
+        predict_df = test_df.groupby("ts_id").apply(lambda df: model_prediction(df)).reset_index()
         return_df = test_df.merge(predict_df, how="left", on=["ts_id", "ds"])
         return return_df["yhat"]
 
