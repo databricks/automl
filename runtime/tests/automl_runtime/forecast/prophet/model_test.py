@@ -112,11 +112,12 @@ class TestProphetModel(unittest.TestCase):
         multi_series_start = {"1-1": pd.Timestamp("2020-07-01"), "2-1": pd.Timestamp("2020-07-01")}
         prophet_model = MultiSeriesProphetModel(multi_series_model_json, multi_series_start,
                                                 "2020-07-25", 1, "days", "time", ["id1", "id2"])
+        # The id of the last row does not match to any saved model. It should return nan.
         test_df = pd.DataFrame({
             "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-01"),
                      pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
-            "id1": ["1", "2", "1", "2"],
-            "id2": ["1", "1", "1", "1"],
+            "id1": ["1", "2", "1", "1"],
+            "id2": ["1", "1", "1", "2"],
         })
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model, sample_input=test_df)
@@ -138,7 +139,7 @@ class TestProphetModel(unittest.TestCase):
         expected_test_df = test_df.copy()
         forecast_y = prophet_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
-                                             np.array([10.333333, 10.333333, 11.333333, 11.333333]))
+                                             np.array([10.333333, 10.333333, 11.333333, np.nan]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
 

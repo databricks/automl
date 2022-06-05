@@ -24,6 +24,7 @@ from mlflow.models.signature import ModelSignature
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+from databricks.automl_runtime import version
 
 
 PROPHET_CONDA_ENV = {
@@ -33,7 +34,7 @@ PROPHET_CONDA_ENV = {
             "pip": [
                 f"prophet=={prophet.__version__}",
                 f"cloudpickle=={cloudpickle.__version__}",
-                f"databricks-automl-runtime==0.2.8",
+                f"databricks-automl-runtime=={version.__version__}",
             ]
         }
     ],
