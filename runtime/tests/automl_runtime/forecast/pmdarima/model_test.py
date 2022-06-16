@@ -275,3 +275,6 @@ class TestLogModel(unittest.TestCase):
             "id": ["1", "2", "1", "2"],
         })
         loaded_model.predict(test_df)
+
+        # Make sure can make forecasts for one-row dataframe
+        loaded_model.predict(test_df[0:1])

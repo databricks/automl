@@ -269,8 +269,10 @@ class MultiSeriesProphetModel(ProphetModel):
         def model_prediction(df):
             model = self.model(df.name)
             if model:
-                return model.predict(df)
-        predict_df = test_df.groupby("ts_id").apply(lambda df: model_prediction(df)).reset_index()
+                predicts = model.predict(df)
+                predicts["ts_id"] = df.name
+                return predicts
+        predict_df = test_df.groupby("ts_id").apply(lambda df: model_prediction(df)).reset_index(drop=True)
         return_df = test_df.merge(predict_df, how="left", on=["ts_id", "ds"])
         return return_df["yhat"]
 

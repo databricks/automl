@@ -99,13 +99,16 @@ class TestProphetModel(unittest.TestCase):
         self.assertEqual(len(forecast_future_pd), 2)
 
         # Check predict API
-
         expected_test_df = test_df.copy()
         forecast_y = prophet_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
                                              np.array([10.333333, 10.333333, 11.333333, 11.333333]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
+
+        # Check predict API works with one-row dataframe
+        test_df_one_row = test_df[0:1].copy()
+        prophet_model.predict(test_df_one_row)
 
     def test_model_save_and_load_multi_series_multi_ids(self):
         multi_series_model_json = {"1-1": self.model_json, "2-1": self.model_json}
@@ -135,7 +138,6 @@ class TestProphetModel(unittest.TestCase):
         self.assertEqual(len(forecast_future_pd), 2)
 
         # Check predict API
-
         expected_test_df = test_df.copy()
         forecast_y = prophet_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
