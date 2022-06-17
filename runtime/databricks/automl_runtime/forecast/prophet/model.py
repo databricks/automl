@@ -262,7 +262,18 @@ class MultiSeriesProphetModel(ProphetModel):
         test_df = model_input.copy()
         test_df["ts_id"] = test_df[self._id_cols].astype(str).agg('-'.join, axis=1)
         test_df.rename(columns={self._time_col: "ds"}, inplace=True)
-        predict_df = test_df.groupby("ts_id").apply(lambda df: self.model(df.name[0]).predict(df)).reset_index()
+
+        def model_prediction(df):
+            model = self.model(df.name)
+            if model:
+                predicts = model.predict(df)
+                # We have to explicitly assign the ts_id to avoid KeyError when model_input
+                # only has one row. For multi-rows model_input, the ts_id will be kept as index
+                # after groupby("ts_id").apply(...) and we can retrieve it by reset_index, but
+                # for one-row model_input the ts_id is missing from index.
+                predicts["ts_id"] = df.name
+                return predicts
+        predict_df = test_df.groupby("ts_id").apply(model_prediction).reset_index(drop=True)
         return_df = test_df.merge(predict_df, how="left", on=["ts_id", "ds"])
         return return_df["yhat"]
 
