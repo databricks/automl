@@ -88,27 +88,26 @@ class TestProphetModel(unittest.TestCase):
 
         # Load the saved model from mlflow
         run_id = run.info.run_id
-        prophet_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
         # Check the prediction with the saved model
         ids = pd.DataFrame(multi_series_model_json.keys(), columns=["ts_id"])
         # Check model_predict functions
-        prophet_model._model_impl.python_model.model_predict(ids)
-        prophet_model._model_impl.python_model.predict_timeseries()
-        forecast_future_pd = prophet_model._model_impl.python_model.predict_timeseries(include_history=False)
+        loaded_model._model_impl.python_model.model_predict(ids)
+        loaded_model._model_impl.python_model.predict_timeseries()
+        forecast_future_pd = loaded_model._model_impl.python_model.predict_timeseries(include_history=False)
         self.assertEqual(len(forecast_future_pd), 2)
 
         # Check predict API
         expected_test_df = test_df.copy()
-        forecast_y = prophet_model.predict(test_df)
+        forecast_y = loaded_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
                                              np.array([10.333333, 10.333333, 11.333333, 11.333333]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
 
         # Check predict API works with one-row dataframe
-        test_df_one_row = test_df[0:1].copy()
-        prophet_model.predict(test_df_one_row)
+        loaded_model.predict(test_df[0:1])
 
     def test_model_save_and_load_multi_series_multi_ids(self):
         multi_series_model_json = {"1-1": self.model_json, "2-1": self.model_json}
@@ -127,23 +126,34 @@ class TestProphetModel(unittest.TestCase):
 
         # Load the saved model from mlflow
         run_id = run.info.run_id
-        prophet_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
         # Check the prediction with the saved model
         ids = pd.DataFrame(multi_series_model_json.keys(), columns=["ts_id"])
         # Check model_predict functions
-        prophet_model._model_impl.python_model.model_predict(ids)
-        prophet_model._model_impl.python_model.predict_timeseries()
-        forecast_future_pd = prophet_model._model_impl.python_model.predict_timeseries(include_history=False)
+        loaded_model._model_impl.python_model.model_predict(ids)
+        loaded_model._model_impl.python_model.predict_timeseries()
+        forecast_future_pd = loaded_model._model_impl.python_model.predict_timeseries(include_history=False)
         self.assertEqual(len(forecast_future_pd), 2)
 
         # Check predict API
         expected_test_df = test_df.copy()
-        forecast_y = prophet_model.predict(test_df)
+        forecast_y = loaded_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
                                              np.array([10.333333, 10.333333, 11.333333, np.nan]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
+
+    def test_predict_success_multi_series_one_row(self):
+        multi_series_model_json = {"1": self.model_json, "2": self.model_json}
+        multi_series_start = {"1": pd.Timestamp("2020-07-01"), "2": pd.Timestamp("2020-07-01")}
+        prophet_model = MultiSeriesProphetModel(multi_series_model_json, multi_series_start,
+                                                "2020-07-25", 1, "days", "time", ["id"])
+        test_df = pd.DataFrame({
+            "time": [pd.to_datetime("2020-11-01")], "id": ["1"]
+        })
+        yhat = prophet_model.predict(None, test_df)
+        self.assertEqual(1, len(yhat))
 
     def test_predict_success_datetime_date(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
