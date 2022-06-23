@@ -76,16 +76,13 @@ class ProphetModel(ForecastModel):
     def model_env(self):
         return PROPHET_CONDA_ENV
 
-    def model(self, id: str) -> Optional[prophet.forecaster.Prophet]:
+    def model(self) -> prophet.forecaster.Prophet:
         """
-        Deserialize one Prophet model from json string based on the id
-        :param id: identity for the Prophet model
+        Deserialize a Prophet model from json string
         :return: Prophet model
         """
         from prophet.serialize import model_from_json
-        if id in self._model_json:
-            return model_from_json(self._model_json[id])
-        return None
+        return model_from_json(self._model_json)
 
     def _make_future_dataframe(self, horizon: int, include_history: bool = True) -> pd.DataFrame:
         """
@@ -165,14 +162,16 @@ class MultiSeriesProphetModel(ProphetModel):
         self._timeseries_starts = timeseries_starts
         self._id_cols = id_cols
 
-    def model(self, id: str) -> prophet.forecaster.Prophet:
+    def model(self, id: str) -> Optional[prophet.forecaster.Prophet]:
         """
         Deserialize one Prophet model from json string based on the id
         :param id: identity for the Prophet model
         :return: Prophet model
         """
         from prophet.serialize import model_from_json
-        return model_from_json(self._model_json[id])
+        if id in self._model_json:
+            return model_from_json(self._model_json[id])
+        return None
 
     def _make_future_dataframe(self, id: str, horizon: int, include_history: bool = True) -> pd.DataFrame:
         """
