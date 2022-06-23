@@ -150,6 +150,11 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         self.assertEqual(4, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
+    def test_predict_success_one_row(self):
+        test_df = pd.DataFrame({"date": [pd.to_datetime("2020-11-01")], "id": ["1"]})
+        yhat = self.arima_model.predict(None, test_df)
+        self.assertEqual(1, len(yhat))
+
     def test_predict_fail_unseen_id(self):
         test_df = pd.DataFrame({
             "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-10-05"),
@@ -275,3 +280,6 @@ class TestLogModel(unittest.TestCase):
             "id": ["1", "2", "1", "2"],
         })
         loaded_model.predict(test_df)
+
+        # Make sure can make forecasts for one-row dataframe
+        loaded_model.predict(test_df[0:1])
