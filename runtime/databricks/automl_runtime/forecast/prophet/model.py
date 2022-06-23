@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 import cloudpickle
 import mlflow
@@ -24,6 +24,7 @@ from mlflow.models.signature import ModelSignature
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+from databricks.automl_runtime import version
 
 
 PROPHET_CONDA_ENV = {
@@ -33,7 +34,7 @@ PROPHET_CONDA_ENV = {
             "pip": [
                 f"prophet=={prophet.__version__}",
                 f"cloudpickle=={cloudpickle.__version__}",
-                f"databricks-automl-runtime==0.2.5",
+                f"databricks-automl-runtime=={version.__version__}",
             ]
         }
     ],
@@ -75,13 +76,16 @@ class ProphetModel(ForecastModel):
     def model_env(self):
         return PROPHET_CONDA_ENV
 
-    def model(self) -> prophet.forecaster.Prophet:
+    def model(self, id: str) -> Optional[prophet.forecaster.Prophet]:
         """
-        Deserialize a Prophet model from json string
+        Deserialize one Prophet model from json string based on the id
+        :param id: identity for the Prophet model
         :return: Prophet model
         """
         from prophet.serialize import model_from_json
-        return model_from_json(self._model_json)
+        if id in self._model_json:
+            return model_from_json(self._model_json[id])
+        return None
 
     def _make_future_dataframe(self, horizon: int, include_history: bool = True) -> pd.DataFrame:
         """
