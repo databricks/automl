@@ -74,6 +74,15 @@ class TestArimaModel(unittest.TestCase):
         self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
+    def test_predict_success_string(self):
+        test_df = pd.DataFrame({
+            "date": ["2020-10-08", "2020-12-10"]
+        })
+        expected_test_df = test_df.copy()
+        yhat = self.arima_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
+        pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
+
     def test_predict_failure_unmatched_frequency(self):
         test_df = pd.DataFrame({
             "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10"), pd.to_datetime("2020-11-06")]
