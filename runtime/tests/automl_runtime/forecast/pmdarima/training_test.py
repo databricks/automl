@@ -34,8 +34,8 @@ class TestArimaEstimator(unittest.TestCase):
             pd.Series(range(num_rows), name="y")
         ], axis=1)
         self.df_string_time = pd.concat([
-            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}"),
-            pd.Series(np.random.rand(self.num_rows), name="y")
+            pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}"),
+            pd.Series(np.random.rand(num_rows), name="y")
         ], axis=1)
 
     def test_fit_success(self):
