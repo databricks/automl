@@ -32,6 +32,10 @@ class TestArimaEstimator(unittest.TestCase):
             pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
+        self.df_string_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}"),
+            pd.Series(np.random.rand(self.num_rows), name="y")
+        ], axis=1)
 
     def test_fit_success(self):
         arima_estimator = ArimaEstimator(horizon=1,
@@ -40,9 +44,10 @@ class TestArimaEstimator(unittest.TestCase):
                                          seasonal_periods=[1],
                                          num_folds=2)
 
-        results_pd = arima_estimator.fit(self.df)
-        self.assertIn("smape", results_pd)
-        self.assertIn("pickled_model", results_pd)
+        for df in [self.df, self.df_string_time]:
+            results_pd = arima_estimator.fit(df)
+            self.assertIn("smape", results_pd)
+            self.assertIn("pickled_model", results_pd)
 
     def test_fit_failure_inconsistent_frequency(self):
         arima_estimator = ArimaEstimator(horizon=1,
