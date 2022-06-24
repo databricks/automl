@@ -59,7 +59,7 @@ class ArimaEstimator:
         history_pd["ds"] = pd.to_datetime(history_pd["ds"])
 
         # Check if the time has consistent frequency
-        self._validate_ds_freq(df, self._frequency_unit)
+        self._validate_ds_freq(history_pd, self._frequency_unit)
 
         # Impute missing time steps
         history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
