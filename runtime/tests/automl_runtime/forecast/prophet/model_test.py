@@ -127,8 +127,6 @@ class TestProphetModel(unittest.TestCase):
         # Check model_predict functions
         prophet_model._model_impl.python_model.model_predict(ids)
         prophet_model._model_impl.python_model.predict_timeseries()
-        forecast_future_pd = prophet_model._model_impl.python_model.predict_timeseries(include_history=False)
-        self.assertEqual(len(forecast_future_pd), 2)
 
         # Check predict API
 
