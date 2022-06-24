@@ -123,6 +123,7 @@ class ProphetHyperoptEstimator(ABC):
             type) and y
         :return: DataFrame with model json and metrics in cross validation
         """
+        df["ds"] = pd.to_datetime(df["ds"])
 
         seasonality_mode = ["additive", "multiplicative"]
         search_space = self._search_space

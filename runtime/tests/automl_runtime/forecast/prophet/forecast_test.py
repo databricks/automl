@@ -37,6 +37,10 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             pd.Series(range(self.num_rows), name="ds").apply(lambda i: datetime.date(2020, 7, i + 1)),
             y_series
         ], axis=1)
+        self.df_string_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}"),
+            y_series
+        ], axis=1)
         self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
 
     def test_sequential_training(self):
@@ -51,7 +55,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                   random_state=0,
                                                   is_parallel=False)
 
-        for df in [self.df, self.df_datetime_date]:
+        for df in [self.df, self.df_datetime_date, self.df_string_time]:
             results = hyperopt_estim.fit(df)
             self.assertAlmostEqual(results["mse"][0], 0)
             self.assertAlmostEqual(results["rmse"][0], 0)
