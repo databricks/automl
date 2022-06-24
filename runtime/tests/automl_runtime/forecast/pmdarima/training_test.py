@@ -18,6 +18,7 @@ import unittest
 import pytest
 
 import pandas as pd
+import numpy as np
 import pmdarima as pm
 
 from databricks.automl_runtime.forecast.pmdarima.training import ArimaEstimator
