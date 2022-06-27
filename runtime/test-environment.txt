@@ -3,4 +3,4 @@
 # * Keep dependencies sorted.
 pytest~=6.2.1
 pytest-cov~=2.11.1
-testfixtures~=6.17.1
+flake8~=4.0.1

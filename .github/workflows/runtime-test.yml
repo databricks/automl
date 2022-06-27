@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -23,15 +23,17 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest pytest-cov
+        # install packages to setup the environment
         if [ -f environment.txt ]; then pip install -r environment.txt; fi
+        # install packages to setup the test environment
+        if [ -f dev-environment.txt ]; then pip install -r test-environment.txt; fi
       working-directory: runtime
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E901,E999,F821,F822,F823,F401,F405 --show-source --statistics
+        python -m flake8 . --count --select=E901,E999,F821,F822,F823,F401,F405 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-line-length=100 --statistics
+        python -m flake8 . --count --exit-zero --max-line-length=100 --statistics
       working-directory: runtime
     - name: Test with pytest
       run: |
