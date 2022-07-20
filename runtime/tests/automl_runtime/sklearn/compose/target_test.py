@@ -39,7 +39,7 @@ class TestTransformedTargetClassifier(unittest.TestCase):
         le = LabelEncoder()
         y_encoded = le.fit_transform(self.y)
         np.testing.assert_array_almost_equal(y_encoded, y_trans)
-        np.testing.assert_array_almost_equal(self.y, y_trans_inversed)
+        self.assertTrue((self.y == y_trans_inversed).all())
 
     def test_predict(self):
         model = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())

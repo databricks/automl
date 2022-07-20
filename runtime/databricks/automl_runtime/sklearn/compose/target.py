@@ -101,8 +101,3 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
         pred_trans = self.transformer_.inverse_transform(pred)
 
         return pred_trans
-
-
-
-
-
