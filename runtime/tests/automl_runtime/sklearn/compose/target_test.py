@@ -52,3 +52,9 @@ class TestTransformedTargetClassifier(unittest.TestCase):
         lr.fit(self.X, y_encoded)
         y_pred_lr = lr.predict(self.X)
         self.assertTrue((y_pred == le.inverse_transform(y_pred_lr)).all())
+
+    def test_identity_transformation_when_no_given_transformer(self):
+        model = TransformedTargetClassifier(classifier=LogisticRegression())
+        model.fit(self.X, self.y)
+        y_trans = model.transformer_.transform(self.y)
+        self.assertTrue((self.y == y_trans).all())
