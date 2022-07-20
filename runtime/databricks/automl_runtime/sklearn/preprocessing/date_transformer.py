@@ -16,33 +16,29 @@
 
 import pandas as pd
 
-from databricks.automl_runtime.sklearn.base_datetime_transformer import BaseDatetimeTransformer
+from databricks.automl_runtime.sklearn.preprocessing.base_datetime_transformer import BaseDatetimeTransformer
 
 
-class TimestampTransformer(BaseDatetimeTransformer):
+class DateTransformer(BaseDatetimeTransformer):
     """
-    Generate features from timestamp or datetime-like string column.
+    Generate features from date column.
     """
-
-    HOUR_COLUMN_INDEX = 10
 
     def transform(self, X):
         """
-        Transform timestamp data to datetime features.
+        Transform date data to datetime features.
 
         Parameters
         ----------
         X : pd.DataFrame of shape (n_samples, 1)
-            The only column is either a timestamp column or string column with
-            datetime values encoded in ISO 8601 format.
+            The only column is a date column.
 
         Returns
         -------
-        X_tr : pd.DataFrame of shape (n_samples, 13)
+        X_tr : pd.DataFrame of shape (n_samples, 10)
             Transformed features.
         """
-        # Convert column to datetime if data type is string and standardize to UTC
-        X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime, errors="coerce", utc=True).dt.tz_localize(None)
+        X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime, errors="coerce")
         X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch
 
-        return self._generate_datetime_features(X, include_timestamp=True)
+        return self._generate_datetime_features(X, include_timestamp=False)

@@ -14,4 +14,6 @@
 # limitations under the License.
 #
 
-__all__ = ["compose", "feature_selection", "impute", "preprocessing"]
+from .column_selector import ColumnSelector
+
+__all__ = ["ColumnSelector"]

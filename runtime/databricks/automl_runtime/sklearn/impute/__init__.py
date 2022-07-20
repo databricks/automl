@@ -14,4 +14,6 @@
 # limitations under the License.
 #
 
-__all__ = ["compose", "feature_selection", "impute", "preprocessing"]
+from .datetime_imputer import DatetimeImputer
+
+__all__ = ["DatetimeImputer"]

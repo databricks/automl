@@ -24,7 +24,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
-from databricks.automl_runtime.sklearn.column_selector import ColumnSelector
+from databricks.automl_runtime.sklearn.feature_selection import ColumnSelector
 
 
 class TestColumnSelector(unittest.TestCase):
