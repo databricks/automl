@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Databricks, Inc.
+# Copyright (C) 2022 Databricks, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-from .date_transformer import DateTransformer
-from .datetime_imputer import DatetimeImputer
-from .timestamp_transformer import TimestampTransformer
+from .target import TransformedTargetClassifier
 
-__all__ = ["DateTransformer", "DatetimeImputer", "TimestampTransformer"]
+__all__ = ["TransformedTargetClassifier"]
