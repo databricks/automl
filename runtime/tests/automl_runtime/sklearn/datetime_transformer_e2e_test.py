@@ -23,7 +23,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from databricks.automl_runtime.sklearn.preprocessing import DateTransformer, TimestampTransformer
+from databricks.automl_runtime.sklearn import DateTransformer
+from databricks.automl_runtime.sklearn import TimestampTransformer
 
 
 class TestDatetimeTransformer(unittest.TestCase):

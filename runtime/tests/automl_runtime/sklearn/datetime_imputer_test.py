@@ -18,8 +18,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 import unittest
 
-from databricks.automl_runtime.sklearn.impute import DatetimeImputer
-
+from databricks.automl_runtime.sklearn.datetime_imputer import DatetimeImputer
 
 class TestDatetimeImputer(unittest.TestCase):
     def get_test_df(self, fill_value_1=None, fill_value_2=None):

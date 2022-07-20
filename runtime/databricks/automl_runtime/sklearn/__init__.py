@@ -14,4 +14,8 @@
 # limitations under the License.
 #
 
-__all__ = ["compose", "feature_selection", "impute", "preprocessing"]
+from .date_transformer import DateTransformer
+from .datetime_imputer import DatetimeImputer
+from .timestamp_transformer import TimestampTransformer
+
+__all__ = ["DateTransformer", "DatetimeImputer", "TimestampTransformer"]

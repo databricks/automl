@@ -20,7 +20,7 @@ import pandas as pd
 import numpy as np
 from sklearn.pipeline import Pipeline
 
-from databricks.automl_runtime.sklearn.preprocessing import DateTransformer
+from databricks.automl_runtime.sklearn import DateTransformer
 
 
 class TestDateTransformer(unittest.TestCase):

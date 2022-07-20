@@ -19,7 +19,7 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from databricks.automl_runtime.sklearn.preprocessing.base_datetime_transformer import BaseDatetimeTransformer
+from databricks.automl_runtime.sklearn.base_datetime_transformer import BaseDatetimeTransformer
 
 
 class TestBaseDatetimeTransformer(unittest.TestCase):
