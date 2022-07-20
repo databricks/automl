@@ -20,7 +20,7 @@ from sklearn import datasets
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 
-from databricks.automl_runtime.sklearn.compose import TransformedTargetClassifier
+from databricks.automl_runtime.sklearn import TransformedTargetClassifier
 
 
 class TestTransformedTargetClassifier(unittest.TestCase):
