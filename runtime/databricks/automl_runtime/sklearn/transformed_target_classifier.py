@@ -40,6 +40,17 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
         transformer. Note that the transformer will be cloned during fitting.
         Notice that the transformer should work for the specific `y` to be
         passed in `fit`, otherwise the `fit` call can fail.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from sklearn.linear_model import LogisticRegression
+    >>> from sklearn.preprocessing import LabelEncoder
+    >>> from databricks.automl_runtime.sklearn import TransformedTargetClassifier
+    >>> tt = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())
+    >>> X = np.arange(4).reshape(-1, 1)
+    >>> y = ["A", "C", "B", "C"]
+    >>> tt.fit(X, y)
     """
 
     def __init__(self, classifier, *, transformer=None):
