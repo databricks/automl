@@ -24,11 +24,10 @@ from databricks.automl_runtime.sklearn import TransformedTargetClassifier
 
 
 class TestTransformedTargetClassifier(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         iris = datasets.load_iris(as_frame=True)
-        cls.X = iris.data
-        cls.y = iris.target.apply(lambda x: iris.target_names[x])
+        self.X = iris.data
+        self.y = iris.target.apply(lambda x: iris.target_names[x])
 
     def test_fit(self):
         model = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())
