@@ -54,14 +54,8 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
     """
 
     def __init__(self, classifier, *, transformer=None):
-        self.classifier = classifier
-        self.transformer = transformer
-
-    def _fit_transformer(self, y):
-        if self.transformer is None:
-            self.transformer = FunctionTransformer()  # identity transformer
-        self.transformer_ = clone(self.transformer)
-        self.transformer_.fit(y)
+        self.classifier_ = clone(classifier)
+        self.transformer_ = FunctionTransformer() if transformer is None else clone(transformer)
 
     def fit(self, X, y, **fit_params):
         """Transform the target values and then fit the model with given training data.
@@ -82,10 +76,8 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
         self : object
             Fitted estimator.
         """
-        self._fit_transformer(y)
-        y_trans = self.transformer_.transform(y)
+        y_trans = self.transformer_.fit_transform(y)
 
-        self.classifier_ = clone(self.classifier)
         self.classifier_.fit(X, y_trans, **fit_params)
         return self
 
