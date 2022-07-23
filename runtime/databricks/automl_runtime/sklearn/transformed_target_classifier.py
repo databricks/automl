@@ -118,7 +118,8 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
     def predict_proba(self, X, **predict_params):
         """Predict class probabilities using the base classifier.
 
-        If the base classifier does not implement a `predict_prob` method, throw `NotImplementedError`.
+        If the base classifier does not implement a `predict_prob` method,
+        throw `NotImplementedError`.
 
         Parameters
         ----------
@@ -136,13 +137,16 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
             classes corresponds to that in the attribute classes_.
         """
         if not hasattr(self.classifier_, "predict_proba"):
-            raise NotImplementedError(f"`predict_proba` is not implemented in {self.classifier_.__name__},")
+            raise NotImplementedError(
+                f"`predict_proba` is not implemented in {self.classifier_.__class__.__name__}"
+            )
         return self.classifier_.predict_proba(X, **predict_params)
 
     def decision_function(self, X, **additional_params):
         """Compute the decision function of X using the base classifier.
 
-        If the base classifier does not implement a `decision_function` method, throw `NotImplementedError`.
+        If the base classifier does not implement a `decision_function` method,
+        throw `NotImplementedError`.
 
         Parameters
         ----------
@@ -159,5 +163,7 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
             by the `decision_function` of the underlying classifier.
         """
         if not hasattr(self.classifier_, "decision_function"):
-            raise NotImplementedError(f"`decision_function` is not implemented in {self.classifier_.__name__},")
+            raise NotImplementedError(
+                f"`decision_function` is not implemented in {self.classifier_.__class__.__name__}"
+            )
         return self.classifier_.decision_function(X, **additional_params)
