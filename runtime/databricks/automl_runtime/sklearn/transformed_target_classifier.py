@@ -57,6 +57,14 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
         self.classifier_ = clone(classifier)
         self.transformer_ = FunctionTransformer() if transformer is None else clone(transformer)
 
+    @property
+    def classifier(self):
+        return self.classifier_
+
+    @property
+    def transformer(self):
+        return self.transformer_
+
     def fit(self, X, y, **fit_params):
         """Transform the target values and then fit the model with given training data.
 
