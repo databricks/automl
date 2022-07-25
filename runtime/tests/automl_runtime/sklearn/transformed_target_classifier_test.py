@@ -18,6 +18,8 @@ import numpy as np
 import unittest
 from sklearn import datasets
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import LinearSVC
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
 
 from databricks.automl_runtime.sklearn import TransformedTargetClassifier
@@ -57,3 +59,39 @@ class TestTransformedTargetClassifier(unittest.TestCase):
         model.fit(self.X, self.y)
         y_trans = model.transformer_.transform(self.y)
         self.assertTrue((self.y == y_trans).all())
+
+    def test_predict_prob(self):
+        model = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())
+        model.fit(self.X, self.y)
+        proba = model.predict_proba(self.X)
+
+        lr = LogisticRegression()
+        le = LabelEncoder()
+        y_encoded = le.fit_transform(self.y)
+        lr.fit(self.X, y_encoded)
+        proba_lr = lr.predict_proba(self.X)
+        np.testing.assert_array_almost_equal(proba, proba_lr)
+
+    def test_predict_prob_not_implemented_error(self):
+        model = TransformedTargetClassifier(classifier=LinearSVC(), transformer=LabelEncoder())
+        model.fit(self.X, self.y)
+        with self.assertRaises(NotImplementedError):
+            model.predict_proba(self.X)
+
+    def test_decision_function(self):
+        model = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())
+        model.fit(self.X, self.y)
+        decision_function = model.decision_function(self.X)
+
+        lr = LogisticRegression()
+        le = LabelEncoder()
+        y_encoded = le.fit_transform(self.y)
+        lr.fit(self.X, y_encoded)
+        decision_function_lr = lr.decision_function(self.X)
+        np.testing.assert_array_almost_equal(decision_function, decision_function_lr)
+
+    def test_decision_function_not_implemented_error(self):
+        model = TransformedTargetClassifier(classifier=DecisionTreeClassifier(), transformer=LabelEncoder())
+        model.fit(self.X, self.y)
+        with self.assertRaises(NotImplementedError):
+            model.decision_function(self.X)
