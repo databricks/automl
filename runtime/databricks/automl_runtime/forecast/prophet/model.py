@@ -19,6 +19,7 @@ import cloudpickle
 import mlflow
 import pandas as pd
 import prophet
+import pystan
 
 from mlflow.models.signature import ModelSignature
 
@@ -33,6 +34,7 @@ PROPHET_CONDA_ENV = {
         {
             "pip": [
                 f"prophet=={prophet.__version__}",
+                f"pystan=={pystan.__version__}",
                 f"cloudpickle=={cloudpickle.__version__}",
                 f"databricks-automl-runtime=={version.__version__}",
             ]
