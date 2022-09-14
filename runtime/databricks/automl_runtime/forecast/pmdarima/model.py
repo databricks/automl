@@ -100,8 +100,8 @@ class ArimaModel(AbstractArimaModel):
         self._pickled_model = pickled_model
         self._horizon = horizon
         self._frequency = OFFSET_ALIAS_MAP[frequency]
-        self._start_ds = start_ds
-        self._end_ds = end_ds
+        self._start_ds = pd.to_datetime(start_ds)
+        self._end_ds = pd.to_datetime(end_ds)
         self._time_col = time_col
 
     def model(self) -> pmdarima.arima.ARIMA:
