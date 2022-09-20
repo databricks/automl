@@ -112,14 +112,15 @@ class TestArimaModel(unittest.TestCase):
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
 
-class TestArimaModel(unittest.TestCase):
+class TestArimaModelDate(unittest.TestCase):
 
     def setUp(self) -> None:
         self.num_rows = 9
         self.start_ds = datetime.date(2020, 10, 1)
         self.horizon = 1
         self.freq = 'W'
-        dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency=self.freq)
+        dates = AbstractArimaModel._get_ds_indices(
+            pd.to_datetime(self.start_ds), periods=self.num_rows, frequency=self.freq)
         self.X = pd.concat([
             pd.Series(dates, name='date'),
             pd.Series(range(self.num_rows), name="y")
