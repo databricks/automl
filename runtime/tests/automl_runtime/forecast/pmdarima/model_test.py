@@ -112,6 +112,36 @@ class TestArimaModel(unittest.TestCase):
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
 
+class TestArimaModelDate(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.num_rows = 9
+        self.start_ds = datetime.date(2020, 10, 1)
+        self.horizon = 1
+        self.freq = 'W'
+        dates = AbstractArimaModel._get_ds_indices(
+            pd.to_datetime(self.start_ds), periods=self.num_rows, frequency=self.freq)
+        self.X = pd.concat([
+            pd.Series(dates, name='date'),
+            pd.Series(range(self.num_rows), name="y")
+        ], axis=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(self.X.set_index("date"))
+        pickled_model = pickle.dumps(model)
+        self.arima_model = ArimaModel(pickled_model, horizon=self.horizon, frequency=self.freq,
+                                      start_ds=self.start_ds, end_ds=pd.Timestamp("2020-11-26"),
+                                      time_col="date")
+
+    def test_predict_success(self):
+        test_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")]
+        })
+        expected_test_df = test_df.copy()
+        yhat = self.arima_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
+        pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
+
+
 class TestMultiSeriesArimaModel(unittest.TestCase):
 
     def setUp(self) -> None:
