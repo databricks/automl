@@ -116,7 +116,7 @@ class TestArimaModel(unittest.TestCase):
 
     def setUp(self) -> None:
         self.num_rows = 9
-        self.start_ds = datetime.date("2020-10-01")
+        self.start_ds = datetime.date(2020, 10, 1)
         self.horizon = 1
         self.freq = 'W'
         dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency=self.freq)
