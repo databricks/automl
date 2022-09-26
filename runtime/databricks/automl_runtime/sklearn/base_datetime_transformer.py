@@ -117,5 +117,8 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
 
         for holiday_calendar in [holidays.UnitedStates(), holidays.EuropeanCentralBank()]:
             features.append(X[col].apply(lambda datetime: datetime in holiday_calendar))
-
-        return pd.concat(features, axis=1)
+        ans = pd.concat(features, axis=1)
+        # Give non-string column names to avoid duplicated feature names, sklearn 1.0 does not work on duplicated
+        # feature nanmes.
+        ans.columns = range(len(ans.columns))
+        return ans
