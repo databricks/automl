@@ -145,7 +145,7 @@ class ArimaModel(AbstractArimaModel):
 
     def _predict_impl(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.rename(columns={self._time_col: "ds"})
-        df["ds"] = pd.to_datetime(df["ds"])
+        df["ds"] = pd.to_datetime(df["ds"], infer_datetime_format=True)
         # Check if the time has correct frequency
         diff = (df["ds"] - self._start_ds) / pd.Timedelta(1, unit=self._frequency)
         if not diff.apply(float.is_integer).all():
