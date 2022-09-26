@@ -81,3 +81,33 @@ class TestDatetimeTransformer(unittest.TestCase):
         np.testing.assert_array_almost_equal(X_transformed, X_expected, decimal=self.PRECISION,
                                              err_msg=f"Actual: {X_transformed}\nExpected: {X_expected}\n"
                                                      f"Equality: {X_transformed == X_expected}")
+
+    def test_with_pipeline_transform(self):
+        # This set up makes sure that output of timestamp transformer does not generate duplicate column names
+        # seen by one hot encoder.
+        timestamp_transformer = TimestampTransformer()
+        ohe_transformer = ColumnTransformer(
+            [("ohe", OneHotEncoder(sparse=False), [timestamp_transformer.HOUR_COLUMN_INDEX])], remainder="passthrough")
+        timestamp_preprocessor = Pipeline([
+            ("extractor", timestamp_transformer),
+            ("onehot_encoder", ohe_transformer)
+        ])
+        timestamp_preprocessor.fit(self.X)
+        X_expected = np.array([
+            [1.0, 0, False, 0.43388373911755823, -0.900968867902419, 0.20129852008866006,
+            0.9795299412524945, 0.01716632975470737, 0.9998526477050269, 0.0, 1.0, True, 
+            True],
+            [1.0, 0, False, 0.43388373911755823, -0.900968867902419, 0.20129852008866006,
+            0.9795299412524945, 0.01716632975470737, 0.9998526477050269, 0.0, 1.0, True,
+            True],
+            [1.0, 0, False, 0.43388373911755823, -0.900968867902419, 0.20129852008866006,
+            0.9795299412524945, 0.01716632975470737, 0.9998526477050269, 0.0, 1.0, True,
+            True],
+            [1.0, 0, False, 0.43388373911755823, -0.900968867902419, 0.20129852008866006,
+            0.9795299412524945, 0.01716632975470737, 0.9998526477050269, 0.0, 1.0, True,
+            True],
+        ])
+        X_transformed = timestamp_preprocessor.transform(self.X)
+        np.testing.assert_array_almost_equal(X_transformed, X_expected, decimal=self.PRECISION,
+                                             err_msg=f"Actual: {X_transformed}\nExpected: {X_expected}\n"
+                                                     f"Equality: {X_transformed == X_expected}")
