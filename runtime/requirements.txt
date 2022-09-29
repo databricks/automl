@@ -1,6 +1,7 @@
 # Instructions:
 # * Keep dependencies sorted.
 
+category_encoders
 holidays
 hyperopt
 mlflow
