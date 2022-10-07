@@ -1,6 +1,7 @@
 # Instructions:
 # * Keep dependencies sorted.
 
+category_encoders==2.5.0
 holidays==0.14.2
 hyperopt==0.2.7
 mlflow==1.26.1

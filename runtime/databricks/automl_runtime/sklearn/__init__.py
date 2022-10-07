@@ -18,5 +18,6 @@ from databricks.automl_runtime.sklearn.date_transformer import DateTransformer
 from databricks.automl_runtime.sklearn.datetime_imputer import DatetimeImputer
 from databricks.automl_runtime.sklearn.timestamp_transformer import TimestampTransformer
 from databricks.automl_runtime.sklearn.transformed_target_classifier import TransformedTargetClassifier
+from databricks.automl_runtime.sklearn.one_hot_encoder import OneHotEncoder
 
-__all__ = ["DateTransformer", "DatetimeImputer", "TimestampTransformer", "TransformedTargetClassifier"]
+__all__ = ["DateTransformer", "DatetimeImputer", "TimestampTransformer", "TransformedTargetClassifier", "OneHotEncoder"]
