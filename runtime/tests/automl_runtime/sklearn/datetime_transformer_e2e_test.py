@@ -25,7 +25,7 @@ from sklearn.pipeline import Pipeline
 from databricks.automl_runtime.sklearn import DateTransformer
 from databricks.automl_runtime.sklearn import TimestampTransformer
 
-from databricks.automl_runtime.sklearn.one_hot_transformer import OneHotEncoder
+from databricks.automl_runtime.sklearn.one_hot_encoder import OneHotEncoder
 
 class TestDatetimeTransformer(unittest.TestCase):
     PRECISION = 5
