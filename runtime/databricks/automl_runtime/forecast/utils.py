@@ -15,6 +15,7 @@
 #
 import logging
 from typing import List, Optional
+from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP
 
 import pandas as pd
 
@@ -31,17 +32,27 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     :param unit: frequency unit of the time series, which must be a pandas offset alias
     :return: horizon used for validation, in terms of the input `unit`
     """
-    MIN_HORIZONS = 4 # minimum number of horizons in the dataframe
-    df_timedelta = df["ds"].max() - df["ds"].min()
-    horizon_timedelta = pd.to_timedelta(horizon, unit=unit)
+    MIN_HORIZONS = 4 # minimum number of horizons in the datafram
+    horizon_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : horizon}))
+    if unit == 'QS':
+        horizon_dateoffset = horizon_dateoffset*3
 
-    if MIN_HORIZONS * horizon_timedelta <= df_timedelta:
+    if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
         return horizon
     else:
-        validation_horizon_timedelta = df_timedelta / MIN_HORIZONS
-        validation_horizon = validation_horizon_timedelta // pd.to_timedelta(1, unit=unit)
-        _logger.info(f"Horizon {horizon_timedelta} too long relative to dataframe's timedelta. Validation horizon will be reduced to {validation_horizon_timedelta}.")
-        return validation_horizon
+        # In order to calculate the validation horizon, we incremental add offset to the start time to
+        # the quater of total timedelta.
+        unit_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : 1}))
+        if unit == 'QS':
+            unit_dateoffset = unit_dateoffset*3
+        max_horizon = 0
+        cur_timestamp = df["ds"].min()
+        while cur_timestamp + unit_dateoffset <= df["ds"].max():
+            cur_timestamp += unit_dateoffset
+            max_horizon += 1
+        _logger.info(f"Horizon {horizon_dateoffset} too long relative to dataframe's "
+        f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*unit_dateoffset}.")
+        return max_horizon // MIN_HORIZONS
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
                      num_folds: int, seasonal_period: int = 0, seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
@@ -57,28 +68,38 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
-    period_timedelta = pd.to_timedelta(period, unit=unit)
-    horizon_timedelta = pd.to_timedelta(horizon, unit=unit)
+
+    period_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : period}))
+    horizon_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : horizon}))
 
     if not seasonal_unit:
         seasonal_unit = unit
-    seasonality_timedelta = pd.to_timedelta(seasonal_period, unit=seasonal_unit)
 
-    initial = max(3 * horizon_timedelta, seasonality_timedelta)
+    seasonality_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : seasonal_period}))
 
-    # Last cutoff is "latest date in data - horizon_timedelta" date
-    cutoff = df["ds"].max() - horizon_timedelta
+    if unit == 'QS':
+        horizon_dateoffset = horizon_dateoffset*3
+        period_dateoffset = period_dateoffset*3
+        seasonality_dateoffset = seasonality_dateoffset*3
+
+    # We can not compare DateOffset directly, so we add to start time and compare.
+    initial = seasonality_dateoffset
+    if df["ds"].min() + 3 * horizon_dateoffset > df["ds"].min() + seasonality_dateoffset:
+        initial = 3 * horizon_dateoffset
+
+    # Last cutoff is "latest date in data - horizon_dateoffset" date
+    cutoff = df["ds"].max() - horizon_dateoffset
     if cutoff < df["ds"].min():
         raise ValueError("Less data than horizon.")
     result = [cutoff]
     while result[-1] >= min(df["ds"]) + initial and len(result) <= num_folds:
-        cutoff -= period_timedelta
-        # If data does not exist in data range (cutoff, cutoff + horizon_timedelta]
-        if not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon_timedelta)).any()):
-            # Next cutoff point is "last date before cutoff in data - horizon_timedelta"
+        cutoff -= period_dateoffset
+        # If data does not exist in data range (cutoff, cutoff + horizon_dateoffset]
+        if not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon_dateoffset)).any()):
+            # Next cutoff point is "last date before cutoff in data - horizon_dateoffset"
             if cutoff > df["ds"].min():
                 closest_date = df[df["ds"] <= cutoff].max()["ds"]
-                cutoff = closest_date - horizon_timedelta
+                cutoff = closest_date - horizon_dateoffset
         # else no data left, leave cutoff as is, it will be dropped.
         result.append(cutoff)
     result = result[:-1]

@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+# Offset Alias reference: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
 OFFSET_ALIAS_MAP = {
     "W": "W",
     "d": "D",
@@ -33,5 +34,28 @@ OFFSET_ALIAS_MAP = {
     "S": "S",
     "seconds": "S",
     "sec": "S",
-    "second": "S"
+    "second": "S",
+    'M': 'MS',
+    'MS': 'MS',
+    'months': 'MS',
+    'month': 'MS',
+    'Q': 'QS',
+    'QS': 'QS',
+    'quaters': 'QS',
+    'quater': 'QS',
+    'Y': 'YS',
+    'YS': 'YS',
+    'years': 'YS',
+    'year': 'YS',
+}
+
+DATE_OFFSET_KEYWORD_MAP = {
+    'YS': 'years',
+    'QS': 'months',
+    'MS': 'months',
+    'W': 'weeks',
+    'D': 'days',
+    'H': 'hours',
+    'min': 'minutes',
+    'S': 'seconds',
 }
