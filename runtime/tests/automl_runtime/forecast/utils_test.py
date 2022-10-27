@@ -26,13 +26,13 @@ class TestGetValidationHorizon(unittest.TestCase):
     def test_no_truncate(self):
         # 5 day horizon is OK for dataframe with 30 days of data
         df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-30", freq="D"), columns=["ds"])
-        # validation_horizon = get_validation_horizon(df, 5, "D")
-        # self.assertEqual(validation_horizon, 5)
+        validation_horizon = get_validation_horizon(df, 5, "D")
+        self.assertEqual(validation_horizon, 5)
 
-        # # 2 week horizon is OK for dataframe with ~12 weeks of data
-        # df = pd.DataFrame(pd.date_range(start="2020-01-01", end="2020-04-01", freq="W"), columns=["ds"])
-        # validation_horizon = get_validation_horizon(df, 2, "W")
-        # self.assertEqual(validation_horizon, 2)
+        # 2 week horizon is OK for dataframe with ~12 weeks of data
+        df = pd.DataFrame(pd.date_range(start="2020-01-01", end="2020-04-01", freq="W"), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 2, "W")
+        self.assertEqual(validation_horizon, 2)
 
     def test_truncate(self):
         # for dataframe with 19 days of data, maximum horizon is 4 days
