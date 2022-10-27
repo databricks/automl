@@ -59,3 +59,7 @@ DATE_OFFSET_KEYWORD_MAP = {
     'min': 'minutes',
     'S': 'seconds',
 }
+
+QUATERLY_OFFSET_ALIAS = [
+    'Q', 'QS', 'BQ', 'BQS'
+]

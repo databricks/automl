@@ -46,6 +46,18 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             pd.to_datetime(pd.Series(range(21), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
             y_series
         ], axis=1)
+        self.df_string_monthly_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i + 1:02d}-15"),
+            y_series
+        ], axis=1)
+        self.df_string_quaterly_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}"),
+            y_series
+        ], axis=1)
+        self.df_string_annually_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}"),
+            y_series
+        ], axis=1)
         self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
 
     def test_sequential_training(self):

@@ -15,7 +15,7 @@
 #
 import logging
 from typing import List, Optional
-from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP
+from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP, QUATERLY_OFFSET_ALIAS
 
 import pandas as pd
 
@@ -108,3 +108,6 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
             "Less data than horizon after initial window. Make horizon shorter."
         )
     return list(reversed(result))
+
+def is_quaterly_alias(freq: str):
+    return freq in QUATERLY_OFFSET_ALIAS
