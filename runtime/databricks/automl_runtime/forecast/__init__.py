@@ -42,7 +42,7 @@ OFFSET_ALIAS_MAP = {
     'Q': 'QS',
     'QS': 'QS',
     'quarters': 'QS',
-    'quater': 'QS',
+    'quarter': 'QS',
     'Y': 'YS',
     'YS': 'YS',
     'years': 'YS',
