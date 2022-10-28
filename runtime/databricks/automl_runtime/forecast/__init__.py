@@ -41,7 +41,7 @@ OFFSET_ALIAS_MAP = {
     'month': 'MS',
     'Q': 'QS',
     'QS': 'QS',
-    'quaters': 'QS',
+    'quarters': 'QS',
     'quater': 'QS',
     'Y': 'YS',
     'YS': 'YS',
