@@ -25,23 +25,41 @@ from databricks.automl_runtime.forecast.prophet.diagnostics import cross_validat
 
 
 class TestDiagnostics(unittest.TestCase):
-
     def setUp(self) -> None:
         num_rows = 15
-        self.X = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"{2020+i//12:04d}-{i%12+1:02d}-15")),
-            pd.Series(range(num_rows), name="y")
-        ], axis=1)
+        self.X = pd.concat(
+            [
+                pd.to_datetime(
+                    pd.Series(range(num_rows), name="ds").apply(
+                        lambda i: f"{2020+i//12:04d}-{i%12+1:02d}-15"
+                    )
+                ),
+                pd.Series(range(num_rows), name="y"),
+            ],
+            axis=1,
+        )
 
     def test_cross_validation_success(self):
-        cutoffs = generate_cutoffs(self.X, horizon=3, unit="MS", seasonal_period=1, seasonal_unit="D", num_folds=3)
+        cutoffs = generate_cutoffs(
+            self.X,
+            horizon=3,
+            unit="MS",
+            seasonal_period=1,
+            seasonal_unit="D",
+            num_folds=3,
+        )
         model = Prophet()
         model.fit(self.X)
 
         horizon = pd.DateOffset(months=3)
-        expected_ds = pd.concat([self.X[(self.X["ds"] > cutoff) & \
-                (self.X["ds"] <= cutoff + horizon)]["ds"]
-                for cutoff in cutoffs])
+        expected_ds = pd.concat(
+            [
+                self.X[(self.X["ds"] > cutoff) & (self.X["ds"] <= cutoff + horizon)][
+                    "ds"
+                ]
+                for cutoff in cutoffs
+            ]
+        )
         expected_cols = ["ds", "y", "cutoff", "yhat", "yhat_lower", "yhat_upper"]
         df_cv = cross_validation(model, horizon=horizon, cutoffs=cutoffs)
         self.assertEqual(df_cv["ds"].tolist(), expected_ds.tolist())
