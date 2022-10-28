@@ -67,7 +67,11 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
                           the same frequency unit as the time series.
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
-    period = max(horizon // 2, 1)  # avoid empty cutoff buckets
+    period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
+
+    # avoid non-integer months, quaters ands years
+    if unit == 'MS' or unit == 'QS' or unit == 'YS':
+        period = int(period)
 
     period_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : period}))
     horizon_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : horizon}))
