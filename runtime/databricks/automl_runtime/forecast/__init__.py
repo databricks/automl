@@ -41,23 +41,15 @@ OFFSET_ALIAS_MAP = {
     'month': 'MS',
     'Q': 'QS',
     'QS': 'QS',
-<<<<<<< HEAD
     'quarters': 'QS',
     'quarter': 'QS',
-=======
-    'quaters': 'QS',
-    'quater': 'QS',
->>>>>>> 3a0460e (Use DateOffset in foreast utils to support calculation based on months quaters and years.)
     'Y': 'YS',
     'YS': 'YS',
     'years': 'YS',
     'year': 'YS',
 }
 
-<<<<<<< HEAD
 # Reference: https://pandas.pydata.org/docs/reference/api/pandas.tseries.offsets.DateOffset.html
-=======
->>>>>>> 3a0460e (Use DateOffset in foreast utils to support calculation based on months quaters and years.)
 DATE_OFFSET_KEYWORD_MAP = {
     'YS': 'years',
     'QS': 'months',
