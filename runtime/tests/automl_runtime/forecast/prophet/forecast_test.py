@@ -103,12 +103,12 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                     random_state=0,
                                                     is_parallel=False)
             results = hyperopt_estim.fit(df)
-            self.assertAlmostEqual(results["mse"][0], 0, delta=0.1)
-            self.assertAlmostEqual(results["rmse"][0], 0, delta=0.1)
-            self.assertAlmostEqual(results["mae"][0], 0, delta=0.1)
-            self.assertAlmostEqual(results["mape"][0], 0, delta=0.1)
-            self.assertAlmostEqual(results["mdape"][0], 0, delta=0.1)
-            self.assertAlmostEqual(results["smape"][0], 0, delta=0.1)
+            self.assertAlmostEqual(results["mse"][0], 0, delta=0.0002)
+            self.assertAlmostEqual(results["rmse"][0], 0, delta=0.02)
+            self.assertAlmostEqual(results["mae"][0], 0, delta=0.02)
+            self.assertAlmostEqual(results["mape"][0], 0, delta=0.002)
+            self.assertAlmostEqual(results["mdape"][0], 0, delta=0.002)
+            self.assertAlmostEqual(results["smape"][0], 0, delta=0.002)
             self.assertAlmostEqual(results["coverage"][0], 1)
             # check the best result parameter is inside the search space
             model_json = json.loads(results["model_json"][0])
