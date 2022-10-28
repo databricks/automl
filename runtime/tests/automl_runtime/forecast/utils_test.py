@@ -58,17 +58,17 @@ class TestGetValidationHorizon(unittest.TestCase):
         # for dataframe with just one year of data, maximum horizon is 3 months
         df = pd.DataFrame(pd.date_range(start="2020-01-14", periods=13, 
             freq=pd.DateOffset(months=1)), columns=["ds"])
-        validation_horizon = get_validation_horizon(df, 20, "MS")
+        validation_horizon = get_validation_horizon(df, 17, "MS")
         self.assertEqual(validation_horizon, 3)
 
         # for dataframe with 8 year of data, maximum horizon is 2 years
         df = pd.DataFrame(pd.date_range(start="2012-01-14", periods=9, freq=pd.DateOffset(years=1)), columns=["ds"])
-        validation_horizon = get_validation_horizon(df, 20, "YS")
+        validation_horizon = get_validation_horizon(df, 17, "YS")
         self.assertEqual(validation_horizon, 2)
 
         # for dataframe with 12 quaters of data, maximum horizon is 3 quaters.
         df = pd.DataFrame(pd.date_range(start="2012-01-14", periods=13, freq=pd.DateOffset(months=3)), columns=["ds"])
-        validation_horizon = get_validation_horizon(df, 20, "QS")
+        validation_horizon = get_validation_horizon(df, 17, "QS")
         self.assertEqual(validation_horizon, 3)
 
     def test_truncate_logs(self):
