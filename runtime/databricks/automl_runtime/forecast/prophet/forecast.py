@@ -59,7 +59,6 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     if country_holidays:
         model.add_country_holidays(country_name=country_holidays)
     model.fit(history_pd, iter=200)
-
     # Horizon timedelta is only used for validation, so we calculate based on end
     # time.
     offset_kwarg = {DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]: horizon}
