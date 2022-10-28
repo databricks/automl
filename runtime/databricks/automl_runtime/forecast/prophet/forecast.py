@@ -61,6 +61,8 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     model.fit(history_pd, iter=200)
     # Horizon timedelta is only used for validation, so we calculate based on end
     # time.
+    if utils.is_quaterly_alias(OFFSET_ALIAS_MAP[frequency]):
+        horizon = horizon*3
     offset_kwarg = {DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]: horizon}
     horizon_offset = pd.DateOffset(**offset_kwarg)
     # Evaluate Metrics
