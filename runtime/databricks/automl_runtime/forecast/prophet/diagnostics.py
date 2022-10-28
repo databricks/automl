@@ -19,10 +19,8 @@ from prophet.diagnostics import single_cutoff_forecast
 
 import logging
 from tqdm.auto import tqdm
-from copy import deepcopy
 import concurrent.futures
 
-import numpy as np
 import pandas as pd
 
 
