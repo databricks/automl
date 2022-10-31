@@ -91,7 +91,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             results = hyperopt_estim.fit(df)
             self.assertAlmostEqual(results["mse"][0], 0)
             self.assertAlmostEqual(results["rmse"][0], 0, delta=1e-6)
-            self.assertAlmostEqual(results["mae"][0], 0)
+            self.assertAlmostEqual(results["mae"][0], delta=1e-7)
             self.assertAlmostEqual(results["mape"][0], 0)
             self.assertAlmostEqual(results["mdape"][0], 0)
             self.assertAlmostEqual(results["smape"][0], 0)
