@@ -45,7 +45,7 @@ class TestProphetModel(unittest.TestCase):
         cls.model.fit(cls.X)
         cls.expected_y = np.array([0,  1.00000000e+00,  2.00000000e+00,  3.00000000e+00,
                                    4.00000000e+00,  5.00000000e+00,  6.00000000e+00,
-                                   7.00000000e+00, 8.00000000e+00,  8.333333e+00])
+                                   7.00000000e+00, 8.00000000e+00,  8.794770e+00])
         cls.model_json = model_to_json(cls.model)
 
     def test_model_save_and_load(self):
@@ -102,7 +102,7 @@ class TestProphetModel(unittest.TestCase):
         expected_test_df = test_df.copy()
         forecast_y = loaded_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
-                                             np.array([10.333333, 10.333333, 11.333333, 11.333333]))
+                                             np.array([10.794768, 10.794768, 12.656296, 12.656296]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
 
@@ -140,7 +140,7 @@ class TestProphetModel(unittest.TestCase):
         expected_test_df = test_df.copy()
         forecast_y = loaded_model.predict(test_df)
         np.testing.assert_array_almost_equal(np.array(forecast_y),
-                                             np.array([10.333333, 10.333333, 11.333333, np.nan]))
+                                             np.array([10.794768, 10.794768, 12.656296, np.nan]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
 
