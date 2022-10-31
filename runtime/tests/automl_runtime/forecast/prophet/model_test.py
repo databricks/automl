@@ -22,8 +22,7 @@ import pytest
 import mlflow
 import numpy as np
 from pandas._testing import assert_frame_equal
-from prophet import Prophet
-from prophet.serialize import model_to_json, model_from_json
+from prophet.serialize import model_from_json
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import ErrorCode, INTERNAL_ERROR
 
