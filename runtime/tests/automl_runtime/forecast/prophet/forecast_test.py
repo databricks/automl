@@ -72,6 +72,33 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                 "changepoint_prior_scale", -2.3, -0.7
             )
         }
+        self.df_string_monthly_time = pd.concat(
+            [
+                pd.Series(range(self.num_rows), name="ds").apply(
+                    lambda i: f"2020-{i + 1:02d}-15"
+                ),
+                y_series,
+            ],
+            axis=1,
+        )
+        self.df_string_quarterly_time = pd.concat(
+            [
+                pd.Series(range(self.num_rows), name="ds").apply(
+                    lambda i: f"{2020+i//4:04d}-{(i*3)%12 + 1:02d}-15"
+                ),
+                y_series,
+            ],
+            axis=1,
+        )
+        self.df_string_annually_time = pd.concat(
+            [
+                pd.Series(range(self.num_rows), name="ds").apply(
+                    lambda i: f"{2012+i:04d}-01-15"
+                ),
+                y_series,
+            ],
+            axis=1,
+        )
 
     def test_sequential_training(self):
         hyperopt_estim = ProphetHyperoptEstimator(
@@ -102,21 +129,27 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
 
     def test_monthly_sequential_training(self):
-        search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
+        search_space = {
+            "changepoint_prior_scale": hp.loguniform(
+                "changepoint_prior_scale", -2.3, -0.7
+            )
+        }
         search_space["seasonality_mode"] = hp.choice(
-            'seasonality_mode', ['additive', 'multiplicative']
+            "seasonality_mode", ["additive", "multiplicative"]
         )
-        for freq, df in [['MS', self.df_string_monthly_time]]:
-            hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
-                                                    frequency_unit=freq,
-                                                    metric="smape",
-                                                    interval_width=0.8,
-                                                    country_holidays="US",
-                                                    search_space=search_space,
-                                                    num_folds=2,
-                                                    trial_timeout=1000,
-                                                    random_state=0,
-                                                    is_parallel=False)
+        for freq, df in [["MS", self.df_string_monthly_time]]:
+            hyperopt_estim = ProphetHyperoptEstimator(
+                horizon=1,
+                frequency_unit=freq,
+                metric="smape",
+                interval_width=0.8,
+                country_holidays="US",
+                search_space=search_space,
+                num_folds=2,
+                trial_timeout=1000,
+                random_state=0,
+                is_parallel=False,
+            )
             results = hyperopt_estim.fit(df)
             self.assertAlmostEqual(results["mse"][0], 0, delta=0.0002)
             self.assertAlmostEqual(results["rmse"][0], 0, delta=0.02)

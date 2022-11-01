@@ -31,7 +31,7 @@ from databricks.automl_runtime.forecast.prophet.model import (
     MultiSeriesProphetModel,
     ProphetModel,
     OFFSET_ALIAS_MAP,
-    DATE_OFFSET_KEYWORD_MAP
+    DATE_OFFSET_KEYWORD_MAP,
 )
 
 
@@ -95,9 +95,12 @@ class TestProphetModel(unittest.TestCase):
             if prophet_model._is_quaterly:
                 offset_kw_arg = {DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[feq_unit]]: 3}
             expected_time = pd.Timestamp("2020-10-25") + pd.DateOffset(**offset_kw_arg)
-            self.assertEqual(future_df.iloc[-1]["ds"], expected_time,
-                             f"Wrong future dataframe generated with frequency {feq_unit}:"
-                             f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
+            self.assertEqual(
+                future_df.iloc[-1]["ds"],
+                expected_time,
+                f"Wrong future dataframe generated with frequency {feq_unit}:"
+                f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}",
+            )
 
     def test_model_save_and_load_multi_series(self):
         multi_series_model_json = {"1": self.model_json, "2": self.model_json}
