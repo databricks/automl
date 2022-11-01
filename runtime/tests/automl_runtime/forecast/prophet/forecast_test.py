@@ -26,57 +26,72 @@ from databricks.automl_runtime.forecast.prophet.forecast import ProphetHyperoptE
 
 
 class TestProphetHyperoptEstimator(unittest.TestCase):
-
     def setUp(self) -> None:
         self.num_rows = 12
-        y_series =  pd.Series(range(self.num_rows), name="y")
-        self.df = pd.concat([
-            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
-            y_series
-        ], axis=1)
-        self.df_datetime_date = pd.concat([
-            pd.Series(range(self.num_rows), name="ds").apply(lambda i: datetime.date(2020, 7, i + 1)),
-            y_series
-        ], axis=1)
-        self.df_string_time = pd.concat([
-            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}"),
-            y_series
-        ], axis=1)
-        self.df_horizon_truncation = pd.concat([
-            pd.to_datetime(pd.Series(range(21), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
-            y_series
-        ], axis=1)
-        self.df_string_monthly_time = pd.concat([
-            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i + 1:02d}-15"),
-            y_series
-        ], axis=1)
-        self.df_string_quarterly_time = pd.concat([
-            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"{2020+i//4:04d}-{(i*3)%12 + 1:02d}-15"),
-            y_series
-        ], axis=1)
-        self.df_string_annually_time = pd.concat([
-            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"{2012+i:04d}-01-15"),
-            y_series
-        ], axis=1)
-        self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
+        y_series = pd.Series(range(self.num_rows), name="y")
+        self.df = pd.concat(
+            [
+                pd.to_datetime(
+                    pd.Series(range(self.num_rows), name="ds").apply(
+                        lambda i: f"2020-07-{i + 1}"
+                    )
+                ),
+                y_series,
+            ],
+            axis=1,
+        )
+        self.df_datetime_date = pd.concat(
+            [
+                pd.Series(range(self.num_rows), name="ds").apply(
+                    lambda i: datetime.date(2020, 7, i + 1)
+                ),
+                y_series,
+            ],
+            axis=1,
+        )
+        self.df_string_time = pd.concat(
+            [
+                pd.Series(range(self.num_rows), name="ds").apply(
+                    lambda i: f"2020-07-{i + 1}"
+                ),
+                y_series,
+            ],
+            axis=1,
+        )
+        self.df_horizon_truncation = pd.concat(
+            [
+                pd.to_datetime(
+                    pd.Series(range(21), name="ds").apply(lambda i: f"2020-07-{i + 1}")
+                ),
+                y_series,
+            ],
+            axis=1,
+        )
+        self.search_space = {
+            "changepoint_prior_scale": hp.loguniform(
+                "changepoint_prior_scale", -2.3, -0.7
+            )
+        }
 
     def test_sequential_training(self):
-        hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
-                                                  frequency_unit="d",
-                                                  metric="smape",
-                                                  interval_width=0.8,
-                                                  country_holidays="US",
-                                                  search_space=self.search_space,
-                                                  num_folds=2,
-                                                  trial_timeout=1000,
-                                                  random_state=0,
-                                                  is_parallel=False)
+        hyperopt_estim = ProphetHyperoptEstimator(
+            horizon=1,
+            frequency_unit="d",
+            metric="smape",
+            interval_width=0.8,
+            country_holidays="US",
+            search_space=self.search_space,
+            num_folds=2,
+            trial_timeout=1000,
+            random_state=0,
+            is_parallel=False,
+        )
 
         for df in [self.df, self.df_datetime_date, self.df_string_time]:
             results = hyperopt_estim.fit(df)
             self.assertAlmostEqual(results["mse"][0], 0)
-            self.assertAlmostEqual(results["rmse"][0], 0)
-            self.assertAlmostEqual(results["mae"][0], 0)
+            self.assertAlmostEqual(results["rmse"][0], 0, delta=1e-6)
+            self.assertAlmostEqual(results["mae"][0], 0, delta=1e-6)
             self.assertAlmostEqual(results["mape"][0], 0)
             self.assertAlmostEqual(results["mdape"][0], 0)
             self.assertAlmostEqual(results["smape"][0], 0)
@@ -119,16 +134,18 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
     @patch("databricks.automl_runtime.forecast.prophet.forecast.Trials")
     @patch("databricks.automl_runtime.forecast.prophet.forecast.partial")
     def test_horizon_truncation(self, mock_partial, mock_trials, mock_fmin):
-        hyperopt_estim = ProphetHyperoptEstimator(horizon=100,
-                                                  frequency_unit="d",
-                                                  metric="smape",
-                                                  interval_width=0.8,
-                                                  country_holidays="US",
-                                                  search_space=self.search_space,
-                                                  num_folds=2,
-                                                  trial_timeout=1000,
-                                                  random_state=0,
-                                                  is_parallel=False)
+        hyperopt_estim = ProphetHyperoptEstimator(
+            horizon=100,
+            frequency_unit="d",
+            metric="smape",
+            interval_width=0.8,
+            country_holidays="US",
+            search_space=self.search_space,
+            num_folds=2,
+            trial_timeout=1000,
+            random_state=0,
+            is_parallel=False,
+        )
 
         results = hyperopt_estim.fit(self.df_horizon_truncation)
         # the dataframe has 21 timestamps, which means the timedelta is 20. So validation horizon is at most 20/4=5
@@ -142,16 +159,18 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
     def test_no_horizon_truncation(self, mock_partial, mock_trials, mock_fmin):
         horizon = 4
         num_folds = 2
-        hyperopt_estim = ProphetHyperoptEstimator(horizon=horizon,
-                                                  frequency_unit="d",
-                                                  metric="smape",
-                                                  interval_width=0.8,
-                                                  country_holidays="US",
-                                                  search_space=self.search_space,
-                                                  num_folds=num_folds,
-                                                  trial_timeout=1000,
-                                                  random_state=0,
-                                                  is_parallel=False)
+        hyperopt_estim = ProphetHyperoptEstimator(
+            horizon=horizon,
+            frequency_unit="d",
+            metric="smape",
+            interval_width=0.8,
+            country_holidays="US",
+            search_space=self.search_space,
+            num_folds=num_folds,
+            trial_timeout=1000,
+            random_state=0,
+            is_parallel=False,
+        )
 
         results = hyperopt_estim.fit(self.df_horizon_truncation)
         # the dataframe has 21 timestamps, which means the timedelta is 20. So validation horizon is at most 20/4=5
