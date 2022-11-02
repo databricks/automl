@@ -33,7 +33,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     :return: horizon used for validation, in terms of the input `unit`
     """
     MIN_HORIZONS = 4 # minimum number of horizons in the datafram
-    horizon_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : horizon}))
+    horizon_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : horizon})
     if unit == 'QS':
         horizon_dateoffset = horizon_dateoffset*3
 
@@ -42,7 +42,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     else:
         # In order to calculate the validation horizon, we incremental add offset to the start time to
         # the quater of total timedelta.
-        unit_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : 1}))
+        unit_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : 1})
         if unit == 'QS':
             unit_dateoffset = unit_dateoffset*3
         max_horizon = 0
@@ -73,13 +73,13 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     if unit == 'MS' or unit == 'QS' or unit == 'YS':
         period = int(period)
 
-    period_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : period}))
-    horizon_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : horizon}))
+    period_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : period})
+    horizon_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : horizon})
 
     if not seasonal_unit:
         seasonal_unit = unit
 
-    seasonality_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : seasonal_period}))
+    seasonality_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : seasonal_period})
 
     if unit == 'QS':
         horizon_dateoffset = horizon_dateoffset*3

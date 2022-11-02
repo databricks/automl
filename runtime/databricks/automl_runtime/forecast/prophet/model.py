@@ -192,9 +192,9 @@ class MultiSeriesProphetModel(ProphetModel):
         requested number of periods.
         """
         offset_freq = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
-        unit_offset = pd.DateOffset(**dict({offset_freq: 1}))
+        unit_offset = pd.DateOffset(**{offset_freq: 1})
         if self._is_quaterly:
-            unit_offset = pd.DateOffset(**dict({offset_freq: 3}))
+            unit_offset = pd.DateOffset(**{offset_freq: 3})
         end_time = pd.Timestamp(self._timeseries_end)
         if include_history:
             start_time = self._timeseries_starts[id]
