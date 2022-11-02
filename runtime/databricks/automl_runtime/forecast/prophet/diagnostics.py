@@ -29,6 +29,12 @@ logger = logging.getLogger('prophet')
 def cross_validation(model, horizon, period=None, initial=None, parallel=None, cutoffs=None, disable_tqdm=False):
     """Cross-Validation for time series.
 
+    This function is same as prophet's native function
+    https://github.com/facebook/prophet/blob/main/python/prophet/diagnostics.py#L61
+    except that we support user to pass in horizon as pandas.DateOffset
+    object directly, this would support the non-daily horizon forecast,
+    e.g. monthly, quarterly and annually.
+
     Computes forecasts from historical cutoff points, which user can input.
     If not provided, begins from (end - horizon) and works backwards, making
     cutoffs with a spacing of period until initial is reached.
