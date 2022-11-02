@@ -49,6 +49,7 @@ OFFSET_ALIAS_MAP = {
     'year': 'YS',
 }
 
+# Reference: https://pandas.pydata.org/docs/reference/api/pandas.tseries.offsets.DateOffset.html
 DATE_OFFSET_KEYWORD_MAP = {
     'YS': 'years',
     'QS': 'months',
