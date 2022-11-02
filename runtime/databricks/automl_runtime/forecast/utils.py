@@ -40,7 +40,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
         return horizon
     else:
-        # In order to calculate the validation horizon, we incremental add offset to the start time to
+        # In order to calculate the validation horizon, we incrementally add offset to the start time to
         # the quater of total timedelta.
         unit_dateoffset = pd.DateOffset(**dict({DATE_OFFSET_KEYWORD_MAP[unit] : 1}))
         if unit == 'QS':
