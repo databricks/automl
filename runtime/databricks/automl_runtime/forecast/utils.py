@@ -40,9 +40,14 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
         return horizon
     else:
+<<<<<<< HEAD
         # In order to calculate the validation horizon, we incrementally add offset
         # to the start time to the quater of total timedelta. We did this since
         # pd.DateOffset does not support divide by operation.
+=======
+        # In order to calculate the validation horizon, we incremental add offset to the start time to
+        # the quater of total timedelta.
+>>>>>>> bc32c0f (Fix according to comments)
         unit_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : 1})
         if unit == 'QS':
             unit_dateoffset = unit_dateoffset*3
@@ -69,10 +74,6 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
-
-    # avoid non-integer months, quaters ands years
-    if unit == 'MS' or unit == 'QS' or unit == 'YS':
-        period = int(period)
 
     # avoid non-integer months, quaters ands years
     if unit == 'MS' or unit == 'QS' or unit == 'YS':
