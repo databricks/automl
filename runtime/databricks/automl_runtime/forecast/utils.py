@@ -74,10 +74,6 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     if unit == 'MS' or unit == 'QS' or unit == 'YS':
         period = int(period)
 
-    # avoid non-integer months, quaters ands years
-    if unit == 'MS' or unit == 'QS' or unit == 'YS':
-        period = int(period)
-
     period_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : period})
     horizon_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : horizon})
 
