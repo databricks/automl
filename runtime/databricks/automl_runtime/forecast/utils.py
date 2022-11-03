@@ -15,7 +15,8 @@
 #
 import logging
 from typing import List, Optional
-from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP, QUATERLY_OFFSET_ALIAS
+from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP,\
+    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS
 
 import pandas as pd
 
@@ -66,22 +67,20 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     """
     period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
 
-    # avoid non-integer months, quaters ands years
-    if unit == 'MS' or unit == 'QS' or unit == 'YS':
+    # avoid non-integer months, quaters ands years.
+    if unit in NON_DAILY_OFFSET_ALIAS:
         period = int(period)
+        period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
+    else:
+        offset_kwarg = {list(DATE_OFFSET_KEYWORD_MAP[unit])[0]: period}
+        period_dateoffset = pd.DateOffset(offset_kwarg)
 
-    period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
 
     if not seasonal_unit:
         seasonal_unit = unit
 
     seasonality_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*seasonal_period
-
-    if unit == 'QS':
-        horizon_dateoffset = horizon_dateoffset*3
-        period_dateoffset = period_dateoffset*3
-        seasonality_dateoffset = seasonality_dateoffset*3
 
     # We can not compare DateOffset directly, so we add to start time and compare.
     initial = seasonality_dateoffset
