@@ -73,7 +73,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
         period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
     else:
         offset_kwarg = {list(DATE_OFFSET_KEYWORD_MAP[unit])[0]: period}
-        period_dateoffset = pd.DateOffset(offset_kwarg)
+        period_dateoffset = pd.DateOffset(**offset_kwarg)
 
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
 
