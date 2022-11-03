@@ -33,7 +33,7 @@ def cross_validation(model, horizon, period=None, initial=None, parallel=None, c
     https://github.com/facebook/prophet/blob/main/python/prophet/diagnostics.py#L61
     except that we support user to pass in horizon as pandas.DateOffset
     object directly, this would support the monthly/quarterly/annually horizon
-    forecast.
+    forecast since pd.TimeDelta does not support those types.
 
     Computes forecasts from historical cutoff points, which user can input.
     If not provided, begins from (end - horizon) and works backwards, making
