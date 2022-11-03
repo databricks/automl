@@ -72,9 +72,7 @@ class TestProphetModel(unittest.TestCase):
                 continue
             prophet_model = ProphetModel(self.model_json, 1, feq_unit, "ds")
             future_df = prophet_model._make_future_dataframe(1)
-            offset_kw_arg = {DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[feq_unit]]: 1}
-            if prophet_model._is_quaterly:
-                offset_kw_arg = {DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[feq_unit]]: 3}
+            offset_kw_arg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[feq_unit]]
             expected_time = pd.Timestamp("2020-10-25") + pd.DateOffset(**offset_kw_arg)
             self.assertEqual(future_df.iloc[-1]["ds"], expected_time,
                              f"Wrong future dataframe generated with frequency {feq_unit}:"

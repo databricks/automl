@@ -51,14 +51,30 @@ OFFSET_ALIAS_MAP = {
 
 # Reference: https://pandas.pydata.org/docs/reference/api/pandas.tseries.offsets.DateOffset.html
 DATE_OFFSET_KEYWORD_MAP = {
-    'YS': 'years',
-    'QS': 'months',
-    'MS': 'months',
-    'W': 'weeks',
-    'D': 'days',
-    'H': 'hours',
-    'min': 'minutes',
-    'S': 'seconds',
+    'YS': {
+        'years': 1
+    },
+    'QS': {
+        'months': 3
+    },
+    'MS': {
+        'months': 1
+    },
+    'W': {
+        'weeks': 1
+    },
+    'D': {
+        'days': 1
+    },
+    'H': {
+        'hours': 1
+    },
+    'min': {
+        'minutes': 1
+    },
+    'S': {
+        'seconds': 1
+    }
 }
 
 QUATERLY_OFFSET_ALIAS = [

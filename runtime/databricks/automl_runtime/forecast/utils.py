@@ -33,9 +33,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     :return: horizon used for validation, in terms of the input `unit`
     """
     MIN_HORIZONS = 4 # minimum number of horizons in the datafram
-    horizon_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : horizon})
-    if unit == 'QS':
-        horizon_dateoffset = horizon_dateoffset*3
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])* horizon
 
     if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
         return horizon
@@ -43,9 +41,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
         # In order to calculate the validation horizon, we incrementally add offset
         # to the start time to the quater of total timedelta. We did this since
         # pd.DateOffset does not support divide by operation.
-        unit_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : 1})
-        if unit == 'QS':
-            unit_dateoffset = unit_dateoffset*3
+        unit_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])
         max_horizon = 0
         cur_timestamp = df["ds"].min()
         while cur_timestamp + unit_dateoffset <= df["ds"].max():
@@ -74,13 +70,13 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     if unit == 'MS' or unit == 'QS' or unit == 'YS':
         period = int(period)
 
-    period_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : period})
-    horizon_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : horizon})
+    period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
 
     if not seasonal_unit:
         seasonal_unit = unit
 
-    seasonality_dateoffset = pd.DateOffset(**{DATE_OFFSET_KEYWORD_MAP[unit] : seasonal_period})
+    seasonality_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*seasonal_period
 
     if unit == 'QS':
         horizon_dateoffset = horizon_dateoffset*3
