@@ -46,6 +46,18 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             pd.to_datetime(pd.Series(range(21), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
             y_series
         ], axis=1)
+        self.df_string_monthly_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i + 1:02d}-15"),
+            y_series
+        ], axis=1)
+        self.df_string_quarterly_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"{2020+i//4:04d}-{(i*3)%12 + 1:02d}-15"),
+            y_series
+        ], axis=1)
+        self.df_string_annually_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"{2012+i:04d}-01-15"),
+            y_series
+        ], axis=1)
         self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
 
     def test_sequential_training(self):
@@ -69,6 +81,35 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             self.assertAlmostEqual(results["mdape"][0], 0)
             self.assertAlmostEqual(results["smape"][0], 0)
             self.assertAlmostEqual(results["coverage"][0], 1)
+            # check the best result parameter is inside the search space
+            model_json = json.loads(results["model_json"][0])
+            self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
+            self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
+
+    def test_monthly_sequential_training(self):
+        search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
+        search_space["seasonality_mode"] = hp.choice(
+            'seasonality_mode', ['additive', 'multiplicative']
+        )
+        for freq, df in [['MS', self.df_string_monthly_time]]:
+            hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
+                                                    frequency_unit=freq,
+                                                    metric="smape",
+                                                    interval_width=0.8,
+                                                    country_holidays="US",
+                                                    search_space=search_space,
+                                                    num_folds=2,
+                                                    trial_timeout=1000,
+                                                    random_state=0,
+                                                    is_parallel=False)
+            results = hyperopt_estim.fit(df)
+            self.assertAlmostEqual(results["mse"][0], 0, delta=0.0002)
+            self.assertAlmostEqual(results["rmse"][0], 0, delta=0.02)
+            self.assertAlmostEqual(results["mae"][0], 0, delta=0.02)
+            self.assertAlmostEqual(results["mape"][0], 0, delta=0.002)
+            self.assertAlmostEqual(results["mdape"][0], 0, delta=0.002)
+            self.assertAlmostEqual(results["smape"][0], 0, delta=0.002)
+            self.assertGreaterEqual(results["coverage"][0], 0.5)
             # check the best result parameter is inside the search space
             model_json = json.loads(results["model_json"][0])
             self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
