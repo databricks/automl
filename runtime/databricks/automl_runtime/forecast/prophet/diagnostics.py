@@ -32,8 +32,8 @@ def cross_validation(model, horizon, period=None, initial=None, parallel=None, c
     This function is same as prophet's native function
     https://github.com/facebook/prophet/blob/main/python/prophet/diagnostics.py#L61
     except that we support user to pass in horizon as pandas.DateOffset
-    object directly, this would support the non-daily horizon forecast,
-    e.g. monthly, quarterly and annually.
+    object directly, this would support the monthly/quarterly/annually horizon
+    forecast.
 
     Computes forecasts from historical cutoff points, which user can input.
     If not provided, begins from (end - horizon) and works backwards, making
@@ -45,8 +45,8 @@ def cross_validation(model, horizon, period=None, initial=None, parallel=None, c
     Parameters
     ----------
     model: Prophet class object. Fitted Prophet model.
-    horizon: string with pd.Timedelta compatible style, e.g., '5 days',
-        '3 hours', '10 seconds'.
+    horizon: Can be a pd.DateOffset object or a string with pd.Timedelta
+        compatible style, e.g., '5 days', '3 hours', '10 seconds'.
     period: string with pd.Timedelta compatible style. Simulated forecast will
         be done at every this period. If not provided, 0.5 * horizon is used.
     initial: string with pd.Timedelta compatible style. The first training
