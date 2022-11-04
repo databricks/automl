@@ -97,10 +97,7 @@ class ProphetModel(ForecastModel):
         :return: pd.Dataframe that extends forward from the end of self.history for the
         requested number of periods.
         """
-        offset_freq = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
-        offset_kwarg = {offset_freq: 1}
-        if self._is_quaterly:
-            offset_kwarg = {offset_freq: 3}
+        offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
         return self.model().make_future_dataframe(periods=horizon,
                                                   freq=pd.DateOffset(**offset_kwarg),
                                                   include_history=include_history)
@@ -192,9 +189,7 @@ class MultiSeriesProphetModel(ProphetModel):
         requested number of periods.
         """
         offset_freq = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
-        unit_offset = pd.DateOffset(**{offset_freq: 1})
-        if self._is_quaterly:
-            unit_offset = pd.DateOffset(**{offset_freq: 3})
+        unit_offset = pd.DateOffset(**offset_freq)
         end_time = pd.Timestamp(self._timeseries_end)
         if include_history:
             start_time = self._timeseries_starts[id]

@@ -59,10 +59,8 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     if country_holidays:
         model.add_country_holidays(country_name=country_holidays)
     model.fit(history_pd, iter=200)
-    if utils.is_quaterly_alias(OFFSET_ALIAS_MAP[frequency]):
-        horizon = horizon*3
-    offset_kwarg = {DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]: horizon}
-    horizon_offset = pd.DateOffset(**offset_kwarg)
+    offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
+    horizon_offset = pd.DateOffset(**offset_kwarg)*horizon
     # Evaluate Metrics
     df_cv = cross_validation(
         model, horizon=horizon_offset, cutoffs=cutoffs, disable_tqdm=True
