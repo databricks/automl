@@ -31,6 +31,7 @@ from databricks.automl_runtime.forecast.prophet.model import (
     MultiSeriesProphetModel,
     ProphetModel,
     OFFSET_ALIAS_MAP,
+    DATE_OFFSET_KEYWORD_MAP,
 )
 
 
