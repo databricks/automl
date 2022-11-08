@@ -55,6 +55,22 @@ class TestGetValidationHorizon(unittest.TestCase):
         validation_horizon = get_validation_horizon(df, 20, "W")
         self.assertEqual(validation_horizon, 12)
 
+        # for dataframe with just one year of data, maximum horizon is 3 months
+        df = pd.DataFrame(pd.date_range(start="2020-01-14", periods=13, 
+            freq=pd.DateOffset(months=1)), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 17, "MS")
+        self.assertEqual(validation_horizon, 3)
+
+        # for dataframe with 8 year of data, maximum horizon is 2 years
+        df = pd.DataFrame(pd.date_range(start="2012-01-14", periods=9, freq=pd.DateOffset(years=1)), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 17, "YS")
+        self.assertEqual(validation_horizon, 2)
+
+        # for dataframe with 12 quaters of data, maximum horizon is 3 quaters.
+        df = pd.DataFrame(pd.date_range(start="2012-01-14", periods=13, freq=pd.DateOffset(months=3)), columns=["ds"])
+        validation_horizon = get_validation_horizon(df, 17, "QS")
+        self.assertEqual(validation_horizon, 3)
+
     def test_truncate_logs(self):
         with self.assertLogs(logger="databricks.automl_runtime.forecast", level="INFO") as cm:
             df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-20", freq="D"), columns=["ds"])
@@ -128,3 +144,24 @@ class TestGenerateCutoffs(unittest.TestCase):
     def test_generate_cutoffs_less_data(self):
         with self.assertRaisesRegex(ValueError, "Less data than horizon."):
             generate_cutoffs(self.X, horizon=100, unit="D", num_folds=3, seasonal_period=1)
+
+    def test_generate_cutoffs_success_monthly(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-01-12", periods=24, freq=pd.DateOffset(months=1)), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_cutoffs(df, horizon=2, unit="MS", num_folds=3, seasonal_period=1)
+        self.assertEqual([pd.Timestamp('2021-08-12 00:00:00'), pd.Timestamp('2021-9-12 00:00:00'), pd.Timestamp('2021-10-12 00:00:00')], cutoffs)
+
+    def test_generate_cutoffs_success_quaterly(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-12", periods=9, freq=pd.DateOffset(months=3)), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_cutoffs(df, horizon=1, unit="QS", num_folds=3, seasonal_period=1)
+        self.assertEqual([pd.Timestamp('2021-10-12 00:00:00'), pd.Timestamp('2022-01-12 00:00:00'), pd.Timestamp('2022-04-12 00:00:00')], cutoffs)
+
+    def test_generate_cutoffs_success_annualy(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2012-07-14", periods=10, freq=pd.DateOffset(years=1)), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_cutoffs(df, horizon=1, unit="YS", num_folds=3, seasonal_period=1)
+        self.assertEqual([pd.Timestamp('2018-07-14 00:00:00'), pd.Timestamp('2019-07-14 00:00:00'), pd.Timestamp('2020-07-14 00:00:00')], cutoffs)

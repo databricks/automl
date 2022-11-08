@@ -22,11 +22,12 @@ import hyperopt
 import numpy as np
 import pandas as pd
 from prophet import Prophet
-from prophet.diagnostics import cross_validation, performance_metrics
+from prophet.diagnostics import performance_metrics
 from prophet.serialize import model_to_json
 from hyperopt import fmin, Trials, SparkTrials
 
-from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast.prophet.diagnostics import cross_validation
+from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 
 
 class ProphetHyperParams(Enum):
@@ -54,16 +55,15 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     :param country_holidays: Built-in holidays for the specified country
     :return: Dictionary as the format for hyperopt
     """
-
     model = Prophet(interval_width=interval_width, **params)
     if country_holidays:
         model.add_country_holidays(country_name=country_holidays)
     model.fit(history_pd, iter=200)
-
+    offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
+    horizon_offset = pd.DateOffset(**offset_kwarg)*horizon
     # Evaluate Metrics
-    horizon_timedelta = pd.to_timedelta(horizon, unit=frequency)
     df_cv = cross_validation(
-        model, horizon=horizon_timedelta, cutoffs=cutoffs, disable_tqdm=True
+        model, horizon=horizon_offset, cutoffs=cutoffs, disable_tqdm=True
     )  # disable tqdm to make it work with ipykernel and reduce the output size
     df_metrics = performance_metrics(df_cv)
 

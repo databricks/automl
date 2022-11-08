@@ -22,9 +22,10 @@ import prophet
 
 from mlflow.models.signature import ModelSignature
 
-from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime import version
+from databricks.automl_runtime.forecast.utils import is_quaterly_alias
 
 
 PROPHET_CONDA_ENV = {
@@ -61,6 +62,7 @@ class ProphetModel(ForecastModel):
         self._horizon = horizon
         self._frequency = frequency
         self._time_col = time_col
+        self._is_quaterly = is_quaterly_alias(frequency)
         super().__init__()
 
     def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
@@ -93,8 +95,9 @@ class ProphetModel(ForecastModel):
         :return: pd.Dataframe that extends forward from the end of self.history for the
         requested number of periods.
         """
+        offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
         return self.model().make_future_dataframe(periods=horizon,
-                                                  freq=OFFSET_ALIAS_MAP[self._frequency],
+                                                  freq=pd.DateOffset(**offset_kwarg),
                                                   include_history=include_history)
 
     def _predict_impl(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
@@ -183,16 +186,18 @@ class MultiSeriesProphetModel(ProphetModel):
         :return: pd.Dataframe that extends forward from the end of self.history for the
         requested number of periods.
         """
+        offset_freq = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
+        unit_offset = pd.DateOffset(**offset_freq)
         end_time = pd.Timestamp(self._timeseries_end)
         if include_history:
             start_time = self._timeseries_starts[id]
         else:
-            start_time = end_time + pd.Timedelta(value=1, unit=self._frequency)
+            start_time = end_time + unit_offset
 
         date_rng = pd.date_range(
             start=start_time,
-            end=end_time + pd.Timedelta(value=horizon, unit=self._frequency),
-            freq=OFFSET_ALIAS_MAP[self._frequency]
+            end=end_time + unit_offset*horizon,
+            freq=unit_offset
         )
         return pd.DataFrame(date_rng, columns=["ds"])
 

@@ -88,15 +88,17 @@ class TestProphetModel(unittest.TestCase):
 
     def test_make_future_dataframe(self):
         for feq_unit in OFFSET_ALIAS_MAP:
+            # Temporally disable the year, month and quater since we
+            # don't have full support yet.
+            if OFFSET_ALIAS_MAP[feq_unit] in ['YS', 'MS', 'QS']:
+                continue
             prophet_model = ProphetModel(self.model_json, 1, feq_unit, "ds")
             future_df = prophet_model._make_future_dataframe(1)
-            expected_time = pd.Timestamp("2020-10-25") + pd.Timedelta(1, feq_unit)
-            self.assertEqual(
-                future_df.iloc[-1]["ds"],
-                expected_time,
-                f"Wrong future dataframe generated with frequency {feq_unit}:"
-                f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}",
-            )
+            offset_kw_arg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[feq_unit]]
+            expected_time = pd.Timestamp("2020-10-25") + pd.DateOffset(**offset_kw_arg)
+            self.assertEqual(future_df.iloc[-1]["ds"], expected_time,
+                             f"Wrong future dataframe generated with frequency {feq_unit}:"
+                             f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
 
     def test_model_save_and_load_multi_series(self):
         multi_series_model_json = {"1": self.model_json, "2": self.model_json}
