@@ -109,7 +109,7 @@ class ArimaEstimator:
     def _fit_predict(df: pd.DataFrame, cutoffs: List[pd.Timestamp], seasonal_period: int, max_steps: int = 150):
         train_df = df[df['ds'] <= cutoffs[0]]
         y_train = train_df[["ds", "y"]].set_index("ds")
-        X_train = train_df.drop(["ds", "y"], axis=1)
+        X_train = train_df.drop(["y"], axis=1).set_index("ds")
 
         # Train with the initial interval
         with StepwiseContext(max_steps=max_steps):
