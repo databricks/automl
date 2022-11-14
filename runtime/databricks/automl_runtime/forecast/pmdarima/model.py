@@ -23,7 +23,7 @@ import pmdarima
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
-from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 
 
@@ -147,6 +147,7 @@ class ArimaModel(AbstractArimaModel):
         df = input_df.rename(columns={self._time_col: "ds"})
         df["ds"] = pd.to_datetime(df["ds"], infer_datetime_format=True)
         # Check if the time has correct frequency
+        pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[self._frequency])
         diff = (df["ds"] - self._start_ds) / pd.Timedelta(1, unit=self._frequency)
         if not diff.apply(float.is_integer).all():
             raise MlflowException(

@@ -111,3 +111,8 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
 
 def is_quaterly_alias(freq: str):
     return freq in QUATERLY_OFFSET_ALIAS
+
+def calculate_dateoffset_period(start_time: pd.Datetime, end_time, freq:str):
+    while start
+
+def calculate_
