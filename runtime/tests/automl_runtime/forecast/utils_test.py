@@ -18,7 +18,8 @@ import unittest
 
 import pandas as pd
 
-from databricks.automl_runtime.forecast.utils import generate_cutoffs, get_validation_horizon
+from databricks.automl_runtime.forecast.utils import \
+    generate_cutoffs, get_validation_horizon, calculate_periods
 
 
 class TestGetValidationHorizon(unittest.TestCase):
@@ -165,3 +166,33 @@ class TestGenerateCutoffs(unittest.TestCase):
         ).rename_axis("y").reset_index()
         cutoffs = generate_cutoffs(df, horizon=1, unit="YS", num_folds=3, seasonal_period=1)
         self.assertEqual([pd.Timestamp('2018-07-14 00:00:00'), pd.Timestamp('2019-07-14 00:00:00'), pd.Timestamp('2020-07-14 00:00:00')], cutoffs)
+
+class TestCalculatePeriods(unittest.TestCase):
+    def setUp(self) -> None:
+        return super().setUp()
+    
+    def test_calculate_periods_evenly(self):
+        start_time = pd.Series(
+            ['2021-01-14', '2021-02-14', '2021-03-14']
+        )
+        end_time = pd.Series(
+            ['2021-05-14', '2021-07-14', '2022-03-14']
+        )
+        periods, consistency = calculate_periods(
+            start_time, end_time, 'month'
+        )
+        self.assertTrue((periods == pd.Series([4, 5, 12])).all())
+        self.assertTrue(consistency)
+    
+    def test_calculate_periods_unevenly(self):
+        start_time = pd.Series(
+            ['2021-01-14', '2021-02-14', '2021-03-14']
+        )
+        end_time = pd.Series(
+            ['2021-05-14', '2021-07-14', '2022-03-14']
+        )
+        periods, consistency = calculate_periods(
+            start_time, end_time, 'quarter'
+        )
+        self.assertTrue((periods == pd.Series([1, 1, 4])).all())
+        self.assertFalse(consistency)

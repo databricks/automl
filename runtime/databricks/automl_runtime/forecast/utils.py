@@ -14,9 +14,9 @@
 # limitations under the License.
 #
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP,\
-    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS
+    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS, OFFSET_ALIAS_MAP
 
 import pandas as pd
 
@@ -112,7 +112,34 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
 def is_quaterly_alias(freq: str):
     return freq in QUATERLY_OFFSET_ALIAS
 
-def calculate_dateoffset_period(start_time: pd.Datetime, end_time, freq:str):
-    while start
-
-def calculate_
+def calculate_periods(
+                start_time: pd.Series,
+                end_time: pd.Series, 
+                freq:str) -> Tuple[pd.Series, bool]:
+    """
+    Calculate the periods given a start time, end time and period frequency.
+    :param start_time: A pd series convertable to datetime
+    :param end_time: A pd series convertable to datetime, must be in same size
+                as start_time.
+    :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
+                'month' etc.
+    :return: A tuple of pd.Series indicates the round-down integer period
+             calculated and a boolean indicate whether the time interval is
+             evenly divisible by the period.
+    """
+    if start_time.size != end_time.size:
+        raise ValueError(
+            "Start and end time must be in same size to calculate period."
+        )
+    start_time = pd.to_datetime(start_time)
+    end_time = pd.to_datetime(end_time)
+    consistency = pd.Series([False]*start_time.size)
+    ans = pd.Series([0]*start_time.size)
+    offset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]])
+    while True:
+        start_time += offset
+        ans[start_time <= end_time] += 1
+        consistency |= start_time == end_time
+        if (start_time >= end_time).all():
+            break
+    return ans, consistency.all()
