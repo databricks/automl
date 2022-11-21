@@ -196,3 +196,16 @@ class TestCalculatePeriods(unittest.TestCase):
         )
         self.assertTrue((periods == pd.Series([1, 1, 4])).all())
         self.assertFalse(consistency)
+    
+    def test_scalar(self):
+        start_time = pd.Series(
+            ['2021-01-14', '2021-02-14', '2021-03-14']
+        )
+        end_time = pd.Series(
+            ['2021-05-14', '2021-07-14', '2022-03-14']
+        )
+        start_scalar = pd.to_datetime('2021-01-14')
+        end_scalar = pd.to_datetime('2021-05-14')
+        calculate_periods(start_scalar, end_scalar, 'month')
+        calculate_periods(start_scalar, end_time, 'month')
+        calculate_periods(start_time, end_scalar, 'month')

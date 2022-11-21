@@ -141,8 +141,8 @@ class ArimaEstimator:
     @staticmethod
     def _validate_ds_freq(df: pd.DataFrame, frequency: str):
         start_ds = df["ds"].min()
-        diff = (df["ds"] - start_ds) / pd.Timedelta(1, unit=frequency)
-        if not diff.apply(float.is_integer).all():
+        _, consistency = utils.calculate_periods(start_ds, df["ds"], frequency)
+        if not consistency:
             raise ValueError(
                 f"Input time column includes different frequency than the specified frequency {frequency}."
             )

@@ -127,19 +127,23 @@ def calculate_periods(
              calculated and a boolean indicate whether the time interval is
              evenly divisible by the period.
     """
-    if start_time.size != end_time.size:
-        raise ValueError(
-            "Start and end time must be in same size to calculate period."
-        )
     start_time = pd.to_datetime(start_time)
     end_time = pd.to_datetime(end_time)
-    consistency = pd.Series([False]*start_time.size)
-    ans = pd.Series([0]*start_time.size)
+    scalar = False
+    if type(start_time) is pd.Timestamp and type(end_time) is pd.Timestamp:
+        scalar = True
+    consistency = pd.Series(start_time == end_time)
+    ans = pd.Series([0]*consistency.size, index=consistency.index)
     offset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]])
     while True:
         start_time += offset
-        ans[start_time <= end_time] += 1
+        if not scalar:
+            ans[start_time <= end_time] += 1
+        else:
+            ans += 1    
         consistency |= start_time == end_time
-        if (start_time >= end_time).all():
+        if scalar and start_time >= end_time:
+            break
+        if not scalar and (start_time >= end_time).all():
             break
     return ans, consistency.all()

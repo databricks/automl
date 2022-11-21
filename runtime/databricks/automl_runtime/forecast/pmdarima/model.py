@@ -25,6 +25,7 @@ from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+from databricks.automl_runtime.forecast.utils import calculate_periods
 
 
 ARIMA_CONDA_ENV = {
@@ -148,8 +149,8 @@ class ArimaModel(AbstractArimaModel):
         df["ds"] = pd.to_datetime(df["ds"], infer_datetime_format=True)
         # Check if the time has correct frequency
         pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[self._frequency])
-        diff = (df["ds"] - self._start_ds) / pd.Timedelta(1, unit=self._frequency)
-        if not diff.apply(float.is_integer).all():
+        _, consistency = calculate_periods(self._start_ds, df["ds"], self._frequency)
+        if not consistency:
             raise MlflowException(
                 message=(
                     f"Input time column '{self._time_col}' includes different frequency."
@@ -168,7 +169,8 @@ class ArimaModel(AbstractArimaModel):
             )
         preds_pds = []
         # Out-of-sample prediction if needed
-        horizon = int((max(df["ds"]) - self._end_ds) / pd.Timedelta(1, unit=self._frequency))
+        horizon, _ = calculate_periods(self._end_ds, max(df["ds"]), self._frequency)
+        horizon = int(horizon)
         if horizon > 0:
             future_pd = self._forecast(horizon)
             preds_pds.append(future_pd)
@@ -183,15 +185,19 @@ class ArimaModel(AbstractArimaModel):
 
     def _predict_in_sample(self, start_ds: pd.Timestamp = None, end_ds: pd.Timestamp = None) -> pd.DataFrame:
         if start_ds and end_ds:
-            start_idx = int((start_ds - self._start_ds) / pd.Timedelta(1, unit=self._frequency))
-            end_idx = int((end_ds - self._start_ds) / pd.Timedelta(1, unit=self._frequency))
+            start_idx, _ = calculate_periods(self._start_ds, start_ds, self._frequency)
+            end_idx, _ = calculate_periods(self._start_ds, end_ds, self._frequency)
+            start_idx = int(start_idx)
+            end_idx = int(end_idx)
         else:
             start_ds = self._start_ds
             end_ds = self._end_ds
             start_idx, end_idx = None, None
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             start=start_idx, end=end_idx, return_conf_int=True)
-        periods = ((end_ds - start_ds) / pd.Timedelta(1, unit=self._frequency)) + 1
+        periods, _ = calculate_periods(start_ds, end_ds, self._frequency)
+        periods = int(periods) + 1
+        import pdb; pdb.set_trace()
         ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
