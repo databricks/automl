@@ -136,14 +136,14 @@ def calculate_periods(
     ans = pd.Series([0]*consistency.size, index=consistency.index)
     offset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]])
     while True:
-        start_time += offset
-        if not scalar:
-            ans[start_time <= end_time] += 1
-        else:
-            ans += 1    
         consistency |= start_time == end_time
         if scalar and start_time >= end_time:
             break
         if not scalar and (start_time >= end_time).all():
             break
+        start_time += offset
+        if not scalar:
+            ans[start_time <= end_time] += 1
+        else:
+            ans += 1    
     return ans, consistency.all()

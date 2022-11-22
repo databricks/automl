@@ -147,16 +147,6 @@ class ArimaModel(AbstractArimaModel):
     def _predict_impl(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.rename(columns={self._time_col: "ds"})
         df["ds"] = pd.to_datetime(df["ds"], infer_datetime_format=True)
-        # Check if the time has correct frequency
-        pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[self._frequency])
-        _, consistency = calculate_periods(self._start_ds, df["ds"], self._frequency)
-        if not consistency:
-            raise MlflowException(
-                message=(
-                    f"Input time column '{self._time_col}' includes different frequency."
-                ),
-                error_code=INVALID_PARAMETER_VALUE,
-            )
         # Validate the time range
         pred_start_ds = min(df["ds"])
         if pred_start_ds < self._start_ds:
@@ -164,6 +154,16 @@ class ArimaModel(AbstractArimaModel):
                 message=(
                     f"Input time column '{self._time_col}' includes time earlier than "
                     "the history data that the model was trained on."
+                ),
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+        # Check if the time has correct frequency
+        pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[self._frequency])
+        _, consistency = calculate_periods(self._start_ds, df["ds"], self._frequency)
+        if not consistency:
+            raise MlflowException(
+                message=(
+                    f"Input time column '{self._time_col}' includes different frequency."
                 ),
                 error_code=INVALID_PARAMETER_VALUE,
             )
@@ -197,7 +197,6 @@ class ArimaModel(AbstractArimaModel):
             start=start_idx, end=end_idx, return_conf_int=True)
         periods, _ = calculate_periods(start_ds, end_ds, self._frequency)
         periods = int(periods) + 1
-        import pdb; pdb.set_trace()
         ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample

@@ -189,12 +189,12 @@ class TestCalculatePeriods(unittest.TestCase):
             ['2021-01-14', '2021-02-14', '2021-03-14']
         )
         end_time = pd.Series(
-            ['2021-05-14', '2021-07-14', '2022-03-14']
+            ['2021-05-12', '2021-07-15', '2021-03-14']
         )
         periods, consistency = calculate_periods(
-            start_time, end_time, 'quarter'
+            start_time, end_time, 'month'
         )
-        self.assertTrue((periods == pd.Series([1, 1, 4])).all())
+        self.assertTrue((periods == pd.Series([3, 5, 0])).all())
         self.assertFalse(consistency)
     
     def test_scalar(self):
