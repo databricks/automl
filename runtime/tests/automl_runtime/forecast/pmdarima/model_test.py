@@ -147,16 +147,16 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
     def setUp(self) -> None:
         num_rows = 9
         self.X = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-10-{i + 1}")),
+            pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-{i + 1:02d}-13")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
         model.fit(self.X.set_index("date"))
         pickled_model = pickle.dumps(model)
         pickled_model_dict = {"1": pickled_model, "2": pickled_model}
-        start_ds_dict = {"1": pd.Timestamp("2020-10-01"), "2": pd.Timestamp("2020-10-01")}
-        end_ds_dict = {"1": pd.Timestamp("2020-10-09"), "2": pd.Timestamp("2020-10-09")}
-        self.arima_model = MultiSeriesArimaModel(pickled_model_dict, horizon=1, frequency='d',
+        start_ds_dict = {"1": pd.Timestamp("2020-01-13"), "2": pd.Timestamp("2020-01-13")}
+        end_ds_dict = {"1": pd.Timestamp("2020-09-13"), "2": pd.Timestamp("2020-09-13")}
+        self.arima_model = MultiSeriesArimaModel(pickled_model_dict, horizon=1, frequency='month',
                                                  start_ds_dict=start_ds_dict, end_ds_dict=end_ds_dict,
                                                  time_col="date", id_cols=["id"])
 
@@ -171,8 +171,8 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
 
     def test_predict_success(self):
         test_df = pd.DataFrame({
-            "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-10-05"),
-                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+            "date": [pd.to_datetime("2020-05-13"), pd.to_datetime("2020-05-13"),
+                     pd.to_datetime("2020-12-13"), pd.to_datetime("2020-12-13")],
             "id": ["1", "2", "1", "2"],
         })
         expected_test_df = test_df.copy()
@@ -181,14 +181,14 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
     def test_predict_success_one_row(self):
-        test_df = pd.DataFrame({"date": [pd.to_datetime("2020-11-01")], "id": ["1"]})
+        test_df = pd.DataFrame({"date": [pd.to_datetime("2020-11-13")], "id": ["1"]})
         yhat = self.arima_model.predict(None, test_df)
         self.assertEqual(1, len(yhat))
 
     def test_predict_fail_unseen_id(self):
         test_df = pd.DataFrame({
-            "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2020-10-05"),
-                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+            "date": [pd.to_datetime("2020-10-13"), pd.to_datetime("2020-10-13"),
+                     pd.to_datetime("2020-11-13"), pd.to_datetime("2020-11-13")],
             "id": ["1", "2", "1", "3"],
         })
         with pytest.raises(MlflowException, match="includes unseen values in id columns") as e:
@@ -207,8 +207,8 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
 
     def test_predict_failure_invalid_time_range(self):
         test_df = pd.DataFrame({
-            "date": [pd.to_datetime("2020-10-05"), pd.to_datetime("2000-10-05"),
-                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+            "date": [pd.to_datetime("2020-10-13"), pd.to_datetime("2000-10-13"),
+                     pd.to_datetime("2020-11-13"), pd.to_datetime("2020-11-13")],
             "id": ["1", "2", "1", "2"],
         })
         with pytest.raises(MlflowException, match="includes time earlier than the history data that the model was "
@@ -218,8 +218,8 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
 
     def test_predict_failure_invalid_time_col_name(self):
         test_df = pd.DataFrame({
-            "time": [pd.to_datetime("2020-10-05"), pd.to_datetime("2000-10-05"),
-                     pd.to_datetime("2020-11-04"), pd.to_datetime("2020-11-04")],
+            "time": [pd.to_datetime("2020-05-13"), pd.to_datetime("2000-05-13"),
+                     pd.to_datetime("2020-11-13"), pd.to_datetime("2020-11-13")],
             "invalid_id_col_name": ["1", "2", "1", "2"],
         })
         with pytest.raises(MlflowException, match="Input data columns") as e:
