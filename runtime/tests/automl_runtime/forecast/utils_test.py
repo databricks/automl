@@ -19,7 +19,8 @@ import unittest
 import pandas as pd
 
 from databricks.automl_runtime.forecast.utils import \
-    generate_cutoffs, get_validation_horizon, calculate_periods
+    generate_cutoffs, get_validation_horizon, calculate_periods, \
+    is_frequency_consistency
 
 
 class TestGetValidationHorizon(unittest.TestCase):
@@ -167,7 +168,7 @@ class TestGenerateCutoffs(unittest.TestCase):
         cutoffs = generate_cutoffs(df, horizon=1, unit="YS", num_folds=3, seasonal_period=1)
         self.assertEqual([pd.Timestamp('2018-07-14 00:00:00'), pd.Timestamp('2019-07-14 00:00:00'), pd.Timestamp('2020-07-14 00:00:00')], cutoffs)
 
-class TestCalculatePeriods(unittest.TestCase):
+class TestCalculatePeriodsAndFrequency(unittest.TestCase):
     def setUp(self) -> None:
         return super().setUp()
     
@@ -178,11 +179,11 @@ class TestCalculatePeriods(unittest.TestCase):
         end_time = pd.Series(
             ['2021-05-14', '2021-07-14', '2022-03-14']
         )
-        periods, consistency = calculate_periods(
+        periods = calculate_periods(
             start_time, end_time, 'month'
         )
         self.assertTrue((periods == pd.Series([4, 5, 12])).all())
-        self.assertTrue(consistency)
+        # self.assertTrue(consistency)
     
     def test_calculate_periods_unevenly(self):
         start_time = pd.Series(
@@ -191,11 +192,11 @@ class TestCalculatePeriods(unittest.TestCase):
         end_time = pd.Series(
             ['2021-05-12', '2021-07-15', '2021-03-14']
         )
-        periods, consistency = calculate_periods(
+        periods = calculate_periods(
             start_time, end_time, 'month'
         )
-        self.assertTrue((periods == pd.Series([3, 5, 0])).all())
-        self.assertFalse(consistency)
+        self.assertTrue((periods == pd.Series([4, 5, 0])).all())
+        # self.assertFalse(consistency)
     
     def test_scalar(self):
         start_time = pd.Series(
@@ -206,6 +207,25 @@ class TestCalculatePeriods(unittest.TestCase):
         )
         start_scalar = pd.to_datetime('2021-01-14')
         end_scalar = pd.to_datetime('2021-05-14')
-        calculate_periods(start_scalar, end_scalar, 'month')
-        calculate_periods(start_scalar, end_time, 'month')
-        calculate_periods(start_time, end_scalar, 'month')
+        self.assertTrue(
+            (calculate_periods(start_scalar, end_scalar, 'month') == \
+                pd.Series([4])).all())
+        self.assertTrue(
+            (calculate_periods(start_scalar, end_time, 'month') == \
+                pd.Series([4, 6, 14])).all())
+        self.assertTrue(
+            (calculate_periods(start_time, end_scalar, 'month') == \
+                pd.Series([4, 3, 2])) .all())
+
+    def test_frequency_consistency(self):
+        start_time = pd.Series(
+            ['2021-01-14', '2021-02-14', '2021-03-14']
+        )
+        end_time = pd.Series(
+            ['2021-05-14', '2021-07-14', '2022-03-14']
+        )
+        start_scalar = pd.to_datetime('2021-01-14')
+        end_scalar = pd.to_datetime('2021-05-16')
+        self.assertFalse(is_frequency_consistency(start_scalar, end_scalar, 'month'))
+        self.assertTrue(is_frequency_consistency(start_scalar, end_time, 'month'))
+        self.assertFalse(is_frequency_consistency(start_time, end_scalar, 'month'))

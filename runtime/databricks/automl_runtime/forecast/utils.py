@@ -14,9 +14,9 @@
 # limitations under the License.
 #
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP,\
-    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS, OFFSET_ALIAS_MAP
+    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS, OFFSET_ALIAS_MAP, PERIOD_ALIAS_MAP
 
 import pandas as pd
 
@@ -53,7 +53,8 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
         return max_horizon // MIN_HORIZONS
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
-                     num_folds: int, seasonal_period: int = 0, seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
+                     num_folds: int, seasonal_period: int = 0, 
+                     seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
     """
     Generate cutoff times for cross validation with the control of number of folds.
     :param df: pd.DataFrame of the historical data.
@@ -112,10 +113,33 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
 def is_quaterly_alias(freq: str):
     return freq in QUATERLY_OFFSET_ALIAS
 
+def is_frequency_consistency(
+                start_time: Union[pd.Series, pd.Timestamp],
+                end_time: Union[pd.Series, pd.Timestamp], 
+                freq:str) -> bool:
+    """
+    Validate the periods given a start time, end time is consistent with given frequency.
+    :param start_time: A pd series convertable to datetime
+    :param end_time: A pd series convertable to datetime, must be in same size
+                as start_time.
+    :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
+                'month' etc.
+    :return: A boolean indicate whether the time interval is
+             evenly divisible by the period.
+    """
+    periods = calculate_periods(start_time, end_time, freq)
+    diff = pd.to_datetime(end_time) -  pd.DateOffset(
+                **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]]
+            ) * periods == pd.to_datetime(start_time)
+    if type(diff) is bool:
+        return diff
+    return diff.all()
+
+
 def calculate_periods(
-                start_time: pd.Series,
-                end_time: pd.Series, 
-                freq:str) -> Tuple[pd.Series, bool]:
+                start_time: Union[pd.Series, pd.Timestamp],
+                end_time: Union[pd.Series, pd.Timestamp], 
+                freq:str) -> pd.Series:
     """
     Calculate the periods given a start time, end time and period frequency.
     :param start_time: A pd series convertable to datetime
@@ -123,27 +147,22 @@ def calculate_periods(
                 as start_time.
     :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
                 'month' etc.
-    :return: A tuple of pd.Series indicates the round-down integer period
-             calculated and a boolean indicate whether the time interval is
-             evenly divisible by the period.
+    :return: A pd.Series indicates the round-down integer period
+             calculated.
     """
     start_time = pd.to_datetime(start_time)
     end_time = pd.to_datetime(end_time)
-    scalar = False
-    if type(start_time) is pd.Timestamp and type(end_time) is pd.Timestamp:
-        scalar = True
-    consistency = pd.Series(start_time == end_time)
-    ans = pd.Series([0]*consistency.size, index=consistency.index)
-    offset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]])
-    while True:
-        consistency |= start_time == end_time
-        if scalar and start_time >= end_time:
-            break
-        if not scalar and (start_time >= end_time).all():
-            break
-        start_time += offset
-        if not scalar:
-            ans[start_time <= end_time] += 1
-        else:
-            ans += 1    
-    return ans, consistency.all()
+    freq_alias = PERIOD_ALIAS_MAP[OFFSET_ALIAS_MAP[freq]]
+    if type(start_time) is pd.Timestamp:
+        start_time = start_time.to_period(freq_alias)
+    else:
+        start_time = start_time.dt.to_period(freq_alias)
+    if type(end_time) is pd.Timestamp:
+        end_time = end_time.to_period(freq_alias)
+    else:
+        end_time = end_time.dt.to_period(freq_alias)
+    diff = end_time - start_time
+    if type(diff) is pd.Series:
+        return diff.apply(lambda x: x.n)
+    else:
+        return diff.n
