@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP,\
     QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS, OFFSET_ALIAS_MAP, PERIOD_ALIAS_MAP
 
