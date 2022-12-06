@@ -114,11 +114,14 @@ def is_quaterly_alias(freq: str):
     return freq in QUATERLY_OFFSET_ALIAS
 
 def is_frequency_consistency(
-                start_time: Union[pd.Series, pd.Timestamp],
-                end_time: Union[pd.Series, pd.Timestamp], 
+                start_time: pd.Timestamp,
+                end_time: pd.Timestamp, 
                 freq:str) -> bool:
     """
     Validate the periods given a start time, end time is consistent with given frequency.
+    We consider consistency as only integer frequencies between start and end time, e.g.
+    3 days for day, 10 hours for hour, but 2 day and 2 hours are not considered consistency
+    for day frequency.
     :param start_time: A pd series convertable to datetime
     :param end_time: A pd series convertable to datetime, must be in same size
                 as start_time.
@@ -127,18 +130,16 @@ def is_frequency_consistency(
     :return: A boolean indicate whether the time interval is
              evenly divisible by the period.
     """
-    periods = calculate_periods(start_time, end_time, freq)
+    periods = calculate_period_differences(start_time, end_time, freq)
     diff = pd.to_datetime(end_time) -  pd.DateOffset(
                 **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]]
             ) * periods == pd.to_datetime(start_time)
-    if type(diff) is bool:
-        return diff
-    return diff.all()
+    return diff
 
 
-def calculate_periods(
-                start_time: Union[pd.Series, pd.Timestamp],
-                end_time: Union[pd.Series, pd.Timestamp], 
+def calculate_period_differences(
+                start_time: pd.Timestamp,
+                end_time: pd.Timestamp, 
                 freq:str) -> pd.Series:
     """
     Calculate the periods given a start time, end time and period frequency.
@@ -153,16 +154,4 @@ def calculate_periods(
     start_time = pd.to_datetime(start_time)
     end_time = pd.to_datetime(end_time)
     freq_alias = PERIOD_ALIAS_MAP[OFFSET_ALIAS_MAP[freq]]
-    if type(start_time) is pd.Timestamp:
-        start_time = start_time.to_period(freq_alias)
-    else:
-        start_time = start_time.dt.to_period(freq_alias)
-    if type(end_time) is pd.Timestamp:
-        end_time = end_time.to_period(freq_alias)
-    else:
-        end_time = end_time.dt.to_period(freq_alias)
-    diff = end_time - start_time
-    if type(diff) is pd.Series:
-        return diff.apply(lambda x: x.n)
-    else:
-        return diff.n
+    return  (end_time.to_period(freq_alias) - start_time.to_period(freq_alias)).n

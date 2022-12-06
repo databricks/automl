@@ -25,7 +25,7 @@ from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
-from databricks.automl_runtime.forecast.utils import calculate_periods, is_frequency_consistency
+from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency
 
 
 ARIMA_CONDA_ENV = {
@@ -158,7 +158,9 @@ class ArimaModel(AbstractArimaModel):
                 error_code=INVALID_PARAMETER_VALUE,
             )
         # Check if the time has correct frequency
-        consistency = is_frequency_consistency(self._start_ds, df["ds"], self._frequency)
+        consistency = df["ds"].apply(lambda x: 
+            is_frequency_consistency(self._start_ds, x, self._frequency)
+        ).all()
         if not consistency:
             raise MlflowException(
                 message=(
@@ -168,7 +170,7 @@ class ArimaModel(AbstractArimaModel):
             )
         preds_pds = []
         # Out-of-sample prediction if needed
-        horizon = calculate_periods(self._end_ds, max(df["ds"]), self._frequency)
+        horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency)
         horizon = int(horizon)
         if horizon > 0:
             future_pd = self._forecast(horizon)
@@ -184,8 +186,8 @@ class ArimaModel(AbstractArimaModel):
 
     def _predict_in_sample(self, start_ds: pd.Timestamp = None, end_ds: pd.Timestamp = None) -> pd.DataFrame:
         if start_ds and end_ds:
-            start_idx = calculate_periods(self._start_ds, start_ds, self._frequency)
-            end_idx = calculate_periods(self._start_ds, end_ds, self._frequency)
+            start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency)
+            end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency)
             start_idx = int(start_idx)
             end_idx = int(end_idx)
         else:
@@ -194,7 +196,7 @@ class ArimaModel(AbstractArimaModel):
             start_idx, end_idx = None, None
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             start=start_idx, end=end_idx, return_conf_int=True)
-        periods = calculate_periods(start_ds, end_ds, self._frequency)
+        periods = calculate_period_differences(start_ds, end_ds, self._frequency)
         periods = int(periods) + 1
         ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})

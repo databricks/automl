@@ -153,3 +153,13 @@ class TestArimaEstimator(unittest.TestCase):
     def test_validate_ds_freq_unmatched_frequency(self):
         with pytest.raises(ValueError, match="includes different frequency"):
             ArimaEstimator._validate_ds_freq(self.df, frequency='W')
+
+    def test_fit_predict_monthly_success(self):
+        self.df = pd.concat([
+            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i+1:02d}-14")),
+            pd.Series(np.random.rand(self.num_rows), name="y")
+        ], axis=1)
+        self.df_string_time = pd.concat([
+            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i+1:02d}-14"),
+            pd.Series(np.random.rand(self.num_rows), name="y")
+        ], axis=1)
