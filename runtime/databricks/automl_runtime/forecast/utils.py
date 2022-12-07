@@ -140,7 +140,7 @@ def is_frequency_consistency(
 def calculate_period_differences(
                 start_time: pd.Timestamp,
                 end_time: pd.Timestamp, 
-                freq:str) -> pd.Series:
+                freq:str) -> int:
     """
     Calculate the periods given a start time, end time and period frequency.
     :param start_time: A pd series convertable to datetime

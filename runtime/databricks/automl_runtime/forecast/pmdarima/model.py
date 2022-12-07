@@ -175,7 +175,6 @@ class ArimaModel(AbstractArimaModel):
         preds_pds = []
         # Out-of-sample prediction if needed
         horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency)
-        horizon = int(horizon)
         if horizon > 0:
             future_pd = self._forecast(horizon)
             preds_pds.append(future_pd)
@@ -192,16 +191,13 @@ class ArimaModel(AbstractArimaModel):
         if start_ds and end_ds:
             start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency)
             end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency)
-            start_idx = int(start_idx)
-            end_idx = int(end_idx)
         else:
             start_ds = self._start_ds
             end_ds = self._end_ds
             start_idx, end_idx = None, None
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             start=start_idx, end=end_idx, return_conf_int=True)
-        periods = calculate_period_differences(start_ds, end_ds, self._frequency)
-        periods = int(periods) + 1
+        periods = calculate_period_differences(start_ds, end_ds, self._frequency) + 1
         ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
