@@ -137,9 +137,7 @@ class TestArimaEstimator(unittest.TestCase):
         self.assertIsInstance(result["model"], pm.arima.ARIMA)
 
     def test_fill_missing_time_steps(self):
-        # supported_freq = ["month", "W", "days", "hr", "min", "sec"]
-
-        supported_freq = ["month"]
+        supported_freq = ["month", "W", "days", "hr", "min", "sec"]
         start_ds = pd.Timestamp("2020-07-05")
         for frequency in supported_freq:
             ds = pd.date_range(start=start_ds, periods=12, freq=pd.DateOffset(
@@ -162,13 +160,3 @@ class TestArimaEstimator(unittest.TestCase):
     def test_validate_ds_freq_unmatched_frequency(self):
         with pytest.raises(ValueError, match="includes different frequency"):
             ArimaEstimator._validate_ds_freq(self.df, frequency='W')
-
-    def test_fit_predict_monthly_success(self):
-        self.df = pd.concat([
-            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i+1:02d}-14")),
-            pd.Series(np.random.rand(self.num_rows), name="y")
-        ], axis=1)
-        self.df_string_time = pd.concat([
-            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i+1:02d}-14"),
-            pd.Series(np.random.rand(self.num_rows), name="y")
-        ], axis=1)
