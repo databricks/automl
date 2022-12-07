@@ -122,9 +122,8 @@ def is_frequency_consistency(
     We consider consistency as only integer frequencies between start and end time, e.g.
     3 days for day, 10 hours for hour, but 2 day and 2 hours are not considered consistency
     for day frequency.
-    :param start_time: A pd series convertable to datetime
-    :param end_time: A pd series convertable to datetime, must be in same size
-                as start_time.
+    :param start_time: A pandas timestamp.
+    :param end_time: A pandas timestamp.
     :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
                 'month' etc.
     :return: A boolean indicate whether the time interval is
@@ -143,9 +142,8 @@ def calculate_period_differences(
                 freq:str) -> int:
     """
     Calculate the periods given a start time, end time and period frequency.
-    :param start_time: A pd series convertable to datetime
-    :param end_time: A pd series convertable to datetime, must be in same size
-                as start_time.
+    :param start_time: A pandas timestamp.
+    :param end_time: A pandas timestamp.
     :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
                 'month' etc.
     :return: A pd.Series indicates the round-down integer period
