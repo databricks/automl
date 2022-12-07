@@ -23,7 +23,7 @@ import numpy as np
 import pmdarima as pm
 
 from databricks.automl_runtime.forecast.pmdarima.training import ArimaEstimator
-from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 
 
 class TestArimaEstimator(unittest.TestCase):
@@ -38,15 +38,19 @@ class TestArimaEstimator(unittest.TestCase):
             pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}"),
             pd.Series(np.random.rand(self.num_rows), name="y")
         ], axis=1)
+        self.df_monthly = pd.concat([
+            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i + 1:02d}-07")),
+            pd.Series(np.random.rand(self.num_rows), name="y")
+        ], axis=1)
 
     def test_fit_success(self):
-        arima_estimator = ArimaEstimator(horizon=1,
-                                         frequency_unit="d",
-                                         metric="smape",
-                                         seasonal_periods=[1, 7],
-                                         num_folds=2)
-
-        for df in [self.df, self.df_string_time]:
+        for freq, df in [['d', self.df], ['d', self.df_string_time],
+                            ['month', self.df_monthly]]:
+            arima_estimator = ArimaEstimator(horizon=1,
+                                            frequency_unit=freq,
+                                            metric="smape",
+                                            seasonal_periods=[1, 7],
+                                            num_folds=2)
             results_pd = arima_estimator.fit(df)
             self.assertIn("smape", results_pd)
             self.assertIn("pickled_model", results_pd)
@@ -59,7 +63,7 @@ class TestArimaEstimator(unittest.TestCase):
                                          num_folds=2)
         with self.assertLogs(logger="databricks.automl_runtime.forecast.pmdarima.training", level="WARNING") as cm:
             results_pd = arima_estimator.fit(self.df)
-            self.assertIn("Skipping seasonal_period=14 (14 days 00:00:00). Dataframe timestamps must span at least two seasonality periods", cm.output[0])
+            self.assertIn("Skipping seasonal_period=14 (D). Dataframe timestamps must span at least two seasonality periods", cm.output[0])
 
     @patch("databricks.automl_runtime.forecast.prophet.forecast.utils.generate_cutoffs")
     def test_fit_horizon_truncation(self, mock_generate_cutoffs):
@@ -133,10 +137,14 @@ class TestArimaEstimator(unittest.TestCase):
         self.assertIsInstance(result["model"], pm.arima.ARIMA)
 
     def test_fill_missing_time_steps(self):
-        supported_freq = ["month", "W", "days", "hr", "min", "sec"]
-        start_ds = pd.Timestamp("2020-07-01")
+        # supported_freq = ["month", "W", "days", "hr", "min", "sec"]
+
+        supported_freq = ["month"]
+        start_ds = pd.Timestamp("2020-07-05")
         for frequency in supported_freq:
-            ds = pd.date_range(start=start_ds, periods=12, freq=OFFSET_ALIAS_MAP[frequency])
+            ds = pd.date_range(start=start_ds, periods=12, freq=pd.DateOffset(
+                **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]])
+            )
             if ds.min() != start_ds:  # make sure ds have start_ds as the first timestamp
                 offset = ds.min() - start_ds
                 ds = ds - offset
@@ -149,6 +157,7 @@ class TestArimaEstimator(unittest.TestCase):
 
     def test_validate_ds_freq_matched_frequency(self):
         ArimaEstimator._validate_ds_freq(self.df, frequency='D')
+        ArimaEstimator._validate_ds_freq(self.df_monthly, frequency='month')
 
     def test_validate_ds_freq_unmatched_frequency(self):
         with pytest.raises(ValueError, match="includes different frequency"):

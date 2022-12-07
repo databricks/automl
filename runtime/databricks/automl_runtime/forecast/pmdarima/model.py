@@ -23,7 +23,7 @@ import pmdarima
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
-from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency
 
@@ -73,7 +73,7 @@ class AbstractArimaModel(ForecastModel):
         :param frequency: the frequency of the DatetimeIndex.
         :return: a DatetimeIndex.
         """
-        ds_indices = pd.date_range(start=start_ds, periods=periods, freq=frequency)
+        ds_indices = pd.date_range(start=start_ds, periods=periods, freq=pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency]))
         modified_start_ds = ds_indices.min()
         if start_ds != modified_start_ds:
             offset = modified_start_ds - start_ds
