@@ -141,7 +141,8 @@ class ArimaEstimator:
         df_filled = df.set_index("ds")
         # NOTE: We have to normalize the index before resampling since pandas will
         # normalize the week month quarter and year data during resample causing
-        # the closed right not work as expected. 
+        # the closed right not work as expected.
+        # TODO(ML-27585): Improve this implementation/file a PR to pandas.
         if OFFSET_ALIAS_MAP[frequency] in ['W', 'MS', 'QS', 'YS']:
             df_filled.index = df_filled.index.normalize()
         df_filled = df_filled.resample(
