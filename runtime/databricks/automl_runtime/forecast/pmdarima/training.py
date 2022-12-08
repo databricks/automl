@@ -25,7 +25,7 @@ from pmdarima.arima import StepwiseContext
 from prophet.diagnostics import performance_metrics
 
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import cross_validation
-from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 
 _logger = logging.getLogger(__name__)
 
@@ -131,8 +131,29 @@ class ArimaEstimator:
 
     @staticmethod
     def _fill_missing_time_steps(df: pd.DataFrame, frequency: str):
-        # Backward fill missing time steps
-        df_filled = df.set_index("ds").resample(rule=OFFSET_ALIAS_MAP[frequency], closed='left').bfill().reset_index()
+        # Forward fill missing time steps
+        # NOTE: the right closed meanning that the time data after resample
+        # will be right-shifted to the closest frequency, e.g. 2020-01-01 03:00:00
+        # will be shifted to 2020-01-02 00:00:00, thus we can perform a forward
+        # fill to fill the NaN since all the resampled time are after the original
+        # time. 
+        # Reference: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.resample.html
+        df_filled = df.set_index("ds")
+        # NOTE: We have to normalize the index before resampling since pandas will
+        # normalize the week month quarter and year data during resample causing
+        # the closed right not work as expected. 
+        if OFFSET_ALIAS_MAP[frequency] in ['W', 'MS', 'QS', 'YS']:
+            df_filled.index = df_filled.index.normalize()
+        df_filled = df_filled.resample(
+                rule=OFFSET_ALIAS_MAP[frequency], closed='right'
+            ).pad().reset_index()
+        # We want to re-align the resampled time to the original start time.
+        # However, since all of our supported monthly/quarterly/annualy data
+        # are counted from the begining of month/quarter/year, so we need to
+        # first shift back one frequency unit to correctly caluclate the offset. 
+        df_filled["ds"] = df_filled["ds"] - pd.DateOffset(
+            **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
+        )
         start_ds, modified_start_ds = df["ds"].min(), df_filled["ds"].min()
         if start_ds != modified_start_ds:
             offset = modified_start_ds - start_ds
