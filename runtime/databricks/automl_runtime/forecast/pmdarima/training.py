@@ -131,13 +131,6 @@ class ArimaEstimator:
 
     @staticmethod
     def _fill_missing_time_steps(df: pd.DataFrame, frequency: str):
-        # Forward fill missing time steps
-        # NOTE: the right closed meanning that the time data after resample
-        # will be right-shifted to the closest frequency, e.g. 2020-01-01 03:00:00
-        # will be shifted to 2020-01-02 00:00:00, thus we can perform a forward
-        # fill to fill the NaN since all the resampled time are after the original
-        # time. 
-        # Reference: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.resample.html
         df_filled = df.set_index("ds")
         # NOTE: We have to normalize the index before resampling since pandas will
         # normalize the week month quarter and year data during resample causing
@@ -145,6 +138,13 @@ class ArimaEstimator:
         # TODO(ML-27585): Improve this implementation/file a PR to pandas.
         if OFFSET_ALIAS_MAP[frequency] in ['W', 'MS', 'QS', 'YS']:
             df_filled.index = df_filled.index.normalize()
+        # Forward fill missing time steps
+        # NOTE: the right closed meanning that the time data after resample
+        # will be right-shifted to the closest frequency, e.g. 2020-01-01 03:00:00
+        # will be shifted to 2020-01-02 00:00:00, thus we can perform a forward
+        # fill to fill the NaN since all the resampled time are after the original
+        # time. 
+        # Reference: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.resample.html
         df_filled = df_filled.resample(
                 rule=OFFSET_ALIAS_MAP[frequency], closed='right'
             ).pad().reset_index()
