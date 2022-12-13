@@ -165,6 +165,13 @@ class ArimaEstimator:
         )
         start_ds, modified_start_ds = df["ds"].min(), df_filled["ds"].min()
         if start_ds != modified_start_ds:
+            # We have to special handle the year frequency since year is resampled
+            # to calendar year, and we have to consider leap year, so we directly
+            # use the same day and month as original start_ds.
+            if OFFSET_ALIAS_MAP[frequency] == 'YS':
+                df_filled["ds"] += pd.DateOffset(months=start_ds.month-1)
+                df_filled["ds"] += pd.DateOffset(days=start_ds.day-1)
+                modified_start_ds = df_filled["ds"].min()
             offset = modified_start_ds - start_ds
             df_filled["ds"] = df_filled["ds"] - offset
         return df_filled
