@@ -141,9 +141,9 @@ class ArimaEstimator:
         # Forward fill missing time steps
         # NOTE: the right closed meanning that the time data after resample
         # will be right-shifted to the closest frequency, e.g. 2020-01-01 03:00:00
-        # will be shifted to 2020-01-02 00:00:00, thus we can perform a forward
-        # fill to fill the NaN since all the resampled time are after the original
-        # time. 
+        # will be shifted to 2020-01-02 00:00:00 with daily frequency, thus we can
+        # perform a forward fill to fill the NaN since all the resampled time are
+        # after the original time. 
         # Reference: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.resample.html
         df_filled = df_filled.resample(
                 rule=OFFSET_ALIAS_MAP[frequency], closed='right'
@@ -151,7 +151,15 @@ class ArimaEstimator:
         # We want to re-align the resampled time to the original start time.
         # However, since all of our supported monthly/quarterly/annualy data
         # are counted from the begining of month/quarter/year, so we need to
-        # first shift back one frequency unit to correctly caluclate the offset. 
+        # first shift back one frequency unit to correctly caluclate the offset.
+        # Example: 2021-01-03 will be resampled to 2021-02-01 with a right
+        # closed strategy. If we calculate offset directly, we are calculating
+        # based on days from 01-03 to 02-01. However, this would problematic
+        # since different month have different length and we would not get back
+        # to the correct original date we want. But if we shift 02-01 back
+        # to 01-01, we are calculating the offset counting from begining of
+        # the month and thus we would get a time series based on same date of
+        # month. 
         df_filled["ds"] = df_filled["ds"] - pd.DateOffset(
             **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
         )
