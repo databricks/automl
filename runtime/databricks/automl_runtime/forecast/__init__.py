@@ -84,3 +84,15 @@ QUATERLY_OFFSET_ALIAS = [
 NON_DAILY_OFFSET_ALIAS = [
     'M', 'MS', 'Q', 'QS', 'Y', 'YS'
 ]
+
+# 
+PERIOD_ALIAS_MAP = {
+    "W": "W",
+    "D": "D",
+    "H": "H",
+    "min": "min",
+    "S": "S",
+    'MS': 'M',
+    'QS': 'Q',
+    'YS': 'Y',
+}
