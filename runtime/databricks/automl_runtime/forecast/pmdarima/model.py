@@ -23,8 +23,9 @@ import pmdarima
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
-from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP
+from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency
 
 
 ARIMA_CONDA_ENV = {
@@ -72,7 +73,11 @@ class AbstractArimaModel(ForecastModel):
         :param frequency: the frequency of the DatetimeIndex.
         :return: a DatetimeIndex.
         """
-        ds_indices = pd.date_range(start=start_ds, periods=periods, freq=frequency)
+        ds_indices = pd.date_range(
+            start=start_ds,
+            periods=periods,
+            freq=pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency])
+        )
         modified_start_ds = ds_indices.min()
         if start_ds != modified_start_ds:
             offset = modified_start_ds - start_ds
@@ -146,15 +151,6 @@ class ArimaModel(AbstractArimaModel):
     def _predict_impl(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.rename(columns={self._time_col: "ds"})
         df["ds"] = pd.to_datetime(df["ds"], infer_datetime_format=True)
-        # Check if the time has correct frequency
-        diff = (df["ds"] - self._start_ds) / pd.Timedelta(1, unit=self._frequency)
-        if not diff.apply(float.is_integer).all():
-            raise MlflowException(
-                message=(
-                    f"Input time column '{self._time_col}' includes different frequency."
-                ),
-                error_code=INVALID_PARAMETER_VALUE,
-            )
         # Validate the time range
         pred_start_ds = min(df["ds"])
         if pred_start_ds < self._start_ds:
@@ -165,9 +161,20 @@ class ArimaModel(AbstractArimaModel):
                 ),
                 error_code=INVALID_PARAMETER_VALUE,
             )
+        # Check if the time has correct frequency
+        consistency = df["ds"].apply(lambda x: 
+            is_frequency_consistency(self._start_ds, x, self._frequency)
+        ).all()
+        if not consistency:
+            raise MlflowException(
+                message=(
+                    f"Input time column '{self._time_col}' includes different frequency."
+                ),
+                error_code=INVALID_PARAMETER_VALUE,
+            )
         preds_pds = []
         # Out-of-sample prediction if needed
-        horizon = int((max(df["ds"]) - self._end_ds) / pd.Timedelta(1, unit=self._frequency))
+        horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency)
         if horizon > 0:
             future_pd = self._forecast(horizon)
             preds_pds.append(future_pd)
@@ -182,15 +189,15 @@ class ArimaModel(AbstractArimaModel):
 
     def _predict_in_sample(self, start_ds: pd.Timestamp = None, end_ds: pd.Timestamp = None) -> pd.DataFrame:
         if start_ds and end_ds:
-            start_idx = int((start_ds - self._start_ds) / pd.Timedelta(1, unit=self._frequency))
-            end_idx = int((end_ds - self._start_ds) / pd.Timedelta(1, unit=self._frequency))
+            start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency)
+            end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency)
         else:
             start_ds = self._start_ds
             end_ds = self._end_ds
             start_idx, end_idx = None, None
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             start=start_idx, end=end_idx, return_conf_int=True)
-        periods = ((end_ds - start_ds) / pd.Timedelta(1, unit=self._frequency)) + 1
+        periods = calculate_period_differences(start_ds, end_ds, self._frequency) + 1
         ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample

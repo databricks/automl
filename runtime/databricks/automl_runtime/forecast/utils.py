@@ -16,7 +16,7 @@
 import logging
 from typing import List, Optional
 from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP,\
-    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS
+    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS, OFFSET_ALIAS_MAP, PERIOD_ALIAS_MAP
 
 import pandas as pd
 
@@ -53,7 +53,8 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
         return max_horizon // MIN_HORIZONS
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
-                     num_folds: int, seasonal_period: int = 0, seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
+                     num_folds: int, seasonal_period: int = 0, 
+                     seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
     """
     Generate cutoff times for cross validation with the control of number of folds.
     :param df: pd.DataFrame of the historical data.
@@ -111,3 +112,44 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
 
 def is_quaterly_alias(freq: str):
     return freq in QUATERLY_OFFSET_ALIAS
+
+def is_frequency_consistency(
+                start_time: pd.Timestamp,
+                end_time: pd.Timestamp, 
+                freq:str) -> bool:
+    """
+    Validate the periods given a start time, end time is consistent with given frequency.
+    We consider consistency as only integer frequencies between start and end time, e.g.
+    3 days for day, 10 hours for hour, but 2 day and 2 hours are not considered consistency
+    for day frequency.
+    :param start_time: A pandas timestamp.
+    :param end_time: A pandas timestamp.
+    :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
+                'month' etc.
+    :return: A boolean indicate whether the time interval is
+             evenly divisible by the period.
+    """
+    periods = calculate_period_differences(start_time, end_time, freq)
+    diff = pd.to_datetime(end_time) -  pd.DateOffset(
+                **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]]
+            ) * periods == pd.to_datetime(start_time)
+    return diff
+
+
+def calculate_period_differences(
+                start_time: pd.Timestamp,
+                end_time: pd.Timestamp, 
+                freq:str) -> int:
+    """
+    Calculate the periods given a start time, end time and period frequency.
+    :param start_time: A pandas timestamp.
+    :param end_time: A pandas timestamp.
+    :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
+                'month' etc.
+    :return: A pd.Series indicates the round-down integer period
+             calculated.
+    """
+    start_time = pd.to_datetime(start_time)
+    end_time = pd.to_datetime(end_time)
+    freq_alias = PERIOD_ALIAS_MAP[OFFSET_ALIAS_MAP[freq]]
+    return  (end_time.to_period(freq_alias) - start_time.to_period(freq_alias)).n
