@@ -53,7 +53,7 @@ class TestArimaModel(unittest.TestCase):
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
         expected_ds = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows + self.horizon, frequency=self.freq)
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
-        self.assertEqual(14, forecast_pd.shape[0])
+        self.assertEqual(10, forecast_pd.shape[0])
         pd.testing.assert_series_equal(pd.Series(expected_ds, name='ds'), forecast_pd["ds"])
         # Test forecast without history data
         forecast_future_pd = self.arima_model.predict_timeseries(include_history=False)
