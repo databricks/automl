@@ -133,7 +133,12 @@ class ArimaEstimator:
     @staticmethod
     def _fill_missing_time_steps(df: pd.DataFrame, frequency: str):
         # Forward fill missing time steps
-        return df.set_index("ds").resample(rule=OFFSET_ALIAS_MAP[frequency]).ffill().reset_index()
+        df_filled = df.set_index("ds").resample(rule=OFFSET_ALIAS_MAP[frequency]).pad().reset_index()
+        start_ds, modified_start_ds = df["ds"].min(), df_filled["ds"].min()
+        if start_ds != modified_start_ds:
+            offset = modified_start_ds - start_ds
+            df_filled["ds"] = df_filled["ds"] - offset
+        return df_filled
 
     @staticmethod
     def _validate_ds_freq(df: pd.DataFrame, frequency: str):
