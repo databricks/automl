@@ -25,7 +25,7 @@ from pmdarima.arima import StepwiseContext
 from prophet.diagnostics import performance_metrics
 
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import cross_validation
-from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
+from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP
 
 _logger = logging.getLogger(__name__)
 
@@ -63,12 +63,13 @@ class ArimaEstimator:
         # Check if the time has consistent frequency
         self._validate_ds_freq(history_pd, self._frequency_unit)
 
-        # Impute missing time steps
-        history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
-
         history_periods = utils.calculate_period_differences(
             history_pd['ds'].min(), history_pd['ds'].max(), self._frequency_unit
         )
+        if history_periods + 1 != history_pd['ds'].size:
+            # Impute missing time steps
+            history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
+
 
         # Tune seasonal periods
         best_result = None
@@ -131,47 +132,10 @@ class ArimaEstimator:
 
     @staticmethod
     def _fill_missing_time_steps(df: pd.DataFrame, frequency: str):
-        df_filled = df.set_index("ds")
-        # NOTE: We have to normalize the index before resampling since pandas will
-        # normalize the week month quarter and year data during resample causing
-        # the closed right not work as expected.
-        # TODO(ML-27585): Improve this implementation/file a PR to pandas.
-        if OFFSET_ALIAS_MAP[frequency] in ['W', 'MS', 'QS', 'YS']:
-            df_filled.index = df_filled.index.normalize()
         # Forward fill missing time steps
-        # NOTE: the right closed meanning that the time data after resample
-        # will be right-shifted to the closest frequency, e.g. 2020-01-01 03:00:00
-        # will be shifted to 2020-01-02 00:00:00 with daily frequency, thus we can
-        # perform a forward fill to fill the NaN since all the resampled time are
-        # after the original time. 
-        # Reference: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.resample.html
-        df_filled = df_filled.resample(
-                rule=OFFSET_ALIAS_MAP[frequency], closed='right'
-            ).pad().reset_index()
-        # We want to re-align the resampled time to the original start time.
-        # However, since all of our supported monthly/quarterly/annualy data
-        # are counted from the begining of month/quarter/year, so we need to
-        # first shift back one frequency unit to correctly caluclate the offset.
-        # Example: 2021-01-03 will be resampled to 2021-02-01 with a right
-        # closed strategy. If we calculate offset directly, we are calculating
-        # based on days from 01-03 to 02-01. However, this would problematic
-        # since different month have different length and we would not get back
-        # to the correct original date we want. But if we shift 02-01 back
-        # to 01-01, we are calculating the offset counting from begining of
-        # the month and thus we would get a time series based on same date of
-        # month. 
-        df_filled["ds"] = df_filled["ds"] - pd.DateOffset(
-            **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
-        )
+        df_filled = df.set_index("ds").resample(rule=OFFSET_ALIAS_MAP[frequency]).pad().reset_index()
         start_ds, modified_start_ds = df["ds"].min(), df_filled["ds"].min()
         if start_ds != modified_start_ds:
-            # We have to special handle the year frequency since year is resampled
-            # to calendar year, and we have to consider leap year, so we directly
-            # use the same day and month as original start_ds.
-            if OFFSET_ALIAS_MAP[frequency] == 'YS':
-                df_filled["ds"] += pd.DateOffset(months=start_ds.month-1)
-                df_filled["ds"] += pd.DateOffset(days=start_ds.day-1)
-                modified_start_ds = df_filled["ds"].min()
             offset = modified_start_ds - start_ds
             df_filled["ds"] = df_filled["ds"] - offset
         return df_filled

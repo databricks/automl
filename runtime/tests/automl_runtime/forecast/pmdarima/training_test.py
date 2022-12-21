@@ -137,8 +137,8 @@ class TestArimaEstimator(unittest.TestCase):
         self.assertIsInstance(result["model"], pm.arima.ARIMA)
 
     def test_fill_missing_time_steps(self):
-        supported_freq = ["year", "quarter", "month", "W", "days", "hr", "min", "sec"]
-        start_ds = pd.Timestamp("2020-07-05 03:00:00")
+        supported_freq = ["W", "days", "hr", "min", "sec"]
+        start_ds = pd.Timestamp("2020-07-05 00:00:00")
         for frequency in supported_freq:
             ds = pd.date_range(start=start_ds, periods=12, freq=pd.DateOffset(
                 **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]])
