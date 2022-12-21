@@ -25,7 +25,7 @@ from pmdarima.arima import StepwiseContext
 from prophet.diagnostics import performance_metrics
 
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import cross_validation
-from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
+from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP
 
 _logger = logging.getLogger(__name__)
 
