@@ -152,18 +152,18 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         ], axis=1)
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
         model.fit(self.X.set_index("date"))
-        pickled_model = pickle.dumps(model)
-        pickled_model_dict = {"1": pickled_model, "2": pickled_model}
-        start_ds_dict = {"1": pd.Timestamp("2020-01-13"), "2": pd.Timestamp("2020-01-13")}
-        end_ds_dict = {"1": pd.Timestamp("2020-09-13"), "2": pd.Timestamp("2020-09-13")}
+        self.pickled_model = pickle.dumps(model)
+        pickled_model_dict = {("1",): self.pickled_model, ("2",): self.pickled_model}
+        start_ds_dict = {("1",): pd.Timestamp("2020-01-13"), ("2",): pd.Timestamp("2020-01-13")}
+        end_ds_dict = {("1",): pd.Timestamp("2020-09-13"), ("2",): pd.Timestamp("2020-09-13")}
         self.arima_model = MultiSeriesArimaModel(pickled_model_dict, horizon=1, frequency='month',
                                                  start_ds_dict=start_ds_dict, end_ds_dict=end_ds_dict,
                                                  time_col="date", id_cols=["id"])
 
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
-        expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
-        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        expected_columns = {"id", "ds", "yhat", "yhat_lower", "yhat_upper"}
+        self.assertCountEqual(expected_columns, set(forecast_pd.columns))
         self.assertEqual(20, forecast_pd.shape[0])
         # Test forecast without history data
         forecast_future_pd = self.arima_model.predict_timeseries(include_history=False)
@@ -225,6 +225,25 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         with pytest.raises(MlflowException, match="Input data columns") as e:
             self.arima_model.predict(None, test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
+
+    def test_make_future_dataframe(self):
+        future_df = self.arima_model.make_future_dataframe(include_history=False)
+        self.assertCountEqual(future_df.columns, {"ds", "id"})
+        self.assertEqual(2, future_df.shape[0])
+
+    def test_make_future_dataframe_multi_ids(self):
+        pickled_model_dict = {(1, "1"): self.pickled_model, (2, "1"): self.pickled_model}
+        start_ds_dict = {(1, "1"): pd.Timestamp("2020-01-13"), (2, "1"): pd.Timestamp("2020-01-13")}
+        end_ds_dict = {(1, "1"): pd.Timestamp("2020-09-13"), (2, "1"): pd.Timestamp("2020-09-13")}
+        arima_model = MultiSeriesArimaModel(pickled_model_dict, horizon=1, frequency='month',
+                                            start_ds_dict=start_ds_dict, end_ds_dict=end_ds_dict,
+                                            time_col="date", id_cols=["id1", "id2"])
+        future_df = arima_model.make_future_dataframe(include_history=False)
+        self.assertCountEqual(future_df.columns, {"ds", "id1", "id2"})
+        # Make sure keep the column types for identity columns
+        self.assertTrue(future_df.dtypes["id1"] == "int")
+        self.assertTrue(future_df.dtypes["id2"] == "object")
+        self.assertEqual(2, future_df.shape[0])
 
 
 class TestAbstractArimaModel(unittest.TestCase):
@@ -289,9 +308,9 @@ class TestLogModel(unittest.TestCase):
         loaded_model._model_impl.python_model.predict_timeseries()
 
     def test_mlflow_arima_log_model_multiseries(self):
-        pickled_model_dict = {"1": self.pickled_model, "2": self.pickled_model}
-        start_ds_dict = {"1": pd.Timestamp("2020-10-01"), "2": pd.Timestamp("2020-10-01")}
-        end_ds_dict = {"1": pd.Timestamp("2020-10-09"), "2": pd.Timestamp("2020-10-09")}
+        pickled_model_dict = {("1",): self.pickled_model, ("2",): self.pickled_model}
+        start_ds_dict = {("1",): pd.Timestamp("2020-10-01"), ("2",): pd.Timestamp("2020-10-01")}
+        end_ds_dict = {("1",): pd.Timestamp("2020-10-09"), ("2",): pd.Timestamp("2020-10-09")}
         multiseries_arima_model = MultiSeriesArimaModel(pickled_model_dict, horizon=1, frequency='d',
                                                         start_ds_dict=start_ds_dict, end_ds_dict=end_ds_dict,
                                                         time_col="date", id_cols=["id"])
