@@ -42,15 +42,21 @@ class TestArimaEstimator(unittest.TestCase):
             pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i + 1:02d}-07")),
             pd.Series(np.random.rand(self.num_rows), name="y")
         ], axis=1)
+        self.df_with_exogenous = pd.concat([
+            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
+            pd.Series(np.random.rand(self.num_rows), name="y"),
+            pd.Series(np.random.rand(self.num_rows), name="x1"),
+            pd.Series(np.random.rand(self.num_rows), name="x2")
+        ], axis=1)
 
     def test_fit_success(self):
-        for freq, df in [['d', self.df], ['d', self.df_string_time],
-                            ['month', self.df_monthly]]:
+        for freq, df in [['d', self.df], ['d', self.df_string_time], ['month', self.df_monthly], ['d', self.df_with_exogenous]]:
             arima_estimator = ArimaEstimator(horizon=1,
-                                            frequency_unit=freq,
-                                            metric="smape",
-                                            seasonal_periods=[1, 7],
-                                            num_folds=2)
+                                             frequency_unit=freq,
+                                             metric="smape",
+                                             seasonal_periods=[1, 7],
+                                             num_folds=2)
+
             results_pd = arima_estimator.fit(df)
             self.assertIn("smape", results_pd)
             self.assertIn("pickled_model", results_pd)

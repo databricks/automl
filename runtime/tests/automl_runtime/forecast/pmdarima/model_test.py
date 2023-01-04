@@ -37,12 +37,12 @@ class TestArimaModel(unittest.TestCase):
         self.horizon = 1
         self.freq = 'W'
         dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency=self.freq)
-        self.X = pd.concat([
+        self.df = pd.concat([
             pd.Series(dates, name='date'),
             pd.Series(range(self.num_rows), name="y")
         ], axis=1)
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
-        model.fit(self.X.set_index("date"))
+        model.fit(self.df.set_index("date"))
         pickled_model = pickle.dumps(model)
         self.arima_model = ArimaModel(pickled_model, horizon=self.horizon, frequency=self.freq,
                                       start_ds=self.start_ds, end_ds=pd.Timestamp("2020-11-26"),
@@ -51,7 +51,10 @@ class TestArimaModel(unittest.TestCase):
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
-        expected_ds = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows + self.horizon, frequency=self.freq)
+        expected_ds = AbstractArimaModel._get_ds_indices(
+            self.start_ds,
+            periods=self.num_rows + self.horizon,
+            frequency=self.freq)
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(10, forecast_pd.shape[0])
         pd.testing.assert_series_equal(pd.Series(expected_ds, name='ds'), forecast_pd["ds"])
@@ -64,7 +67,7 @@ class TestArimaModel(unittest.TestCase):
             "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")]
         })
         expected_test_df = test_df.copy()
-        yhat = self.arima_model.predict(None, test_df)
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
         self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
@@ -73,7 +76,7 @@ class TestArimaModel(unittest.TestCase):
             "date": [datetime.date(2020, 10, 8), datetime.date(2020, 12, 10)]
         })
         expected_test_df = test_df.copy()
-        yhat = self.arima_model.predict(None, test_df)
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
         self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
@@ -82,7 +85,7 @@ class TestArimaModel(unittest.TestCase):
             "date": ["2020-10-08", "2020-12-10"]
         })
         expected_test_df = test_df.copy()
-        yhat = self.arima_model.predict(None, test_df)
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
         self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
@@ -91,7 +94,7 @@ class TestArimaModel(unittest.TestCase):
             "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10"), pd.to_datetime("2020-11-06")]
         })
         with pytest.raises(MlflowException, match="includes different frequency") as e:
-            self.arima_model.predict(None, test_df)
+            self.arima_model.predict(context=None, model_input=test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
     def test_predict_failure_invalid_time_range(self):
@@ -100,7 +103,7 @@ class TestArimaModel(unittest.TestCase):
         })
         with pytest.raises(MlflowException, match="includes time earlier than the history data that the model was "
                                                   "trained on") as e:
-            self.arima_model.predict(None, test_df)
+            self.arima_model.predict(context=None, model_input=test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
     def test_predict_failure_invalid_time_col_name(self):
@@ -108,7 +111,7 @@ class TestArimaModel(unittest.TestCase):
             "invalid_time_col_name": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")]
         })
         with pytest.raises(MlflowException, match="Input data columns") as e:
-            self.arima_model.predict(None, test_df)
+            self.arima_model.predict(context=None, model_input=test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
 
@@ -121,12 +124,12 @@ class TestArimaModelDate(unittest.TestCase):
         self.freq = 'W'
         dates = AbstractArimaModel._get_ds_indices(
             pd.to_datetime(self.start_ds), periods=self.num_rows, frequency=self.freq)
-        self.X = pd.concat([
+        self.df = pd.concat([
             pd.Series(dates, name='date'),
             pd.Series(range(self.num_rows), name="y")
         ], axis=1)
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
-        model.fit(self.X.set_index("date"))
+        model.fit(self.df.set_index("date"))
         pickled_model = pickle.dumps(model)
         self.arima_model = ArimaModel(pickled_model, horizon=self.horizon, frequency=self.freq,
                                       start_ds=self.start_ds, end_ds=pd.Timestamp("2020-11-26"),
@@ -137,7 +140,61 @@ class TestArimaModelDate(unittest.TestCase):
             "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")]
         })
         expected_test_df = test_df.copy()
-        yhat = self.arima_model.predict(None, test_df)
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
+        self.assertEqual(2, len(yhat))
+        pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
+
+
+class TestArimaModelWithExogenous(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.num_rows = 9
+        self.start_ds = pd.Timestamp("2020-10-01")
+        self.horizon = 1
+        self.freq = 'W'
+        dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency=self.freq)
+        self.df = pd.concat([
+            pd.Series(dates, name='date'),
+            pd.Series(range(self.num_rows), name="y"),
+            pd.Series(range(self.num_rows), name="x1"),
+            pd.Series(range(self.num_rows), name="x2")
+        ], axis=1)
+        train_df = self.df.set_index("date")
+        self.X = train_df.drop(["y"], axis=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(train_df[["y"]], X=self.X)
+        pickled_model = pickle.dumps(model)
+        self.arima_model = ArimaModel(pickled_model,
+                                      horizon=self.horizon,
+                                      frequency=self.freq,
+                                      start_ds=self.start_ds,
+                                      end_ds=pd.Timestamp("2020-11-26"),
+                                      time_col="date")
+
+    # TODO(maddie.dawson): This is failing because we need to impute
+    def test_predict_timeseries_success(self):
+        forecast_pd = self.arima_model.predict_timeseries(X=self.X)
+        expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
+        expected_ds = AbstractArimaModel._get_ds_indices(
+            self.start_ds,
+            periods=self.num_rows + self.horizon,
+            frequency=self.freq)
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        self.assertEqual(10, forecast_pd.shape[0])
+        pd.testing.assert_series_equal(pd.Series(expected_ds, name='ds'), forecast_pd["ds"])
+        # Test forecast without history data
+        forecast_future_pd = self.arima_model.predict_timeseries(X=self.X, include_history=False)
+        self.assertEqual(len(forecast_future_pd), self.horizon)
+
+    # TODO(maddie.dawson): This is failing because we need to impute
+    def test_predict_success(self):
+        test_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")],
+            "x1": [0, 0],
+            "x2": [0, 0]
+        })
+        expected_test_df = test_df.copy()
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
         self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
@@ -146,7 +203,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
 
     def setUp(self) -> None:
         num_rows = 9
-        self.X = pd.concat([
+        self.df = pd.concat([
             pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-{i + 1:02d}-13")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
@@ -176,13 +233,13 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
             "id": ["1", "2", "1", "2"],
         })
         expected_test_df = test_df.copy()
-        yhat = self.arima_model.predict(None, test_df)
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
         self.assertEqual(4, len(yhat))
         pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
     def test_predict_success_one_row(self):
         test_df = pd.DataFrame({"date": [pd.to_datetime("2020-11-13")], "id": ["1"]})
-        yhat = self.arima_model.predict(None, test_df)
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
         self.assertEqual(1, len(yhat))
 
     def test_predict_fail_unseen_id(self):
@@ -192,7 +249,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
             "id": ["1", "2", "1", "3"],
         })
         with pytest.raises(MlflowException, match="includes unseen values in id columns") as e:
-            self.arima_model.predict(None, test_df)
+            self.arima_model.predict(context=None, model_input=test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
     def test_predict_failure_unmatched_frequency(self):
@@ -202,7 +259,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
             "id": ["1", "2", "1", "2"],
         })
         with pytest.raises(MlflowException, match="includes different frequency") as e:
-            self.arima_model.predict(None, test_df)
+            self.arima_model.predict(context=None, model_input=test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
     def test_predict_failure_invalid_time_range(self):
@@ -213,7 +270,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         })
         with pytest.raises(MlflowException, match="includes time earlier than the history data that the model was "
                                                   "trained on") as e:
-            self.arima_model.predict(None, test_df)
+            self.arima_model.predict(context=None, model_input=test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
     def test_predict_failure_invalid_time_col_name(self):
@@ -223,7 +280,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
             "invalid_id_col_name": ["1", "2", "1", "2"],
         })
         with pytest.raises(MlflowException, match="Input data columns") as e:
-            self.arima_model.predict(None, test_df)
+            self.arima_model.predict(context=None, model_input=test_df)
         assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
 
     def test_make_future_dataframe(self):
@@ -249,6 +306,57 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         with pytest.raises(ValueError, match="Invalid groups:"):
             future_df = self.arima_model.make_future_dataframe(groups=[(1,)])
 
+
+
+class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
+
+    def setUp(self) -> None:
+        num_rows = 9
+        self.df = pd.concat([
+            pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-{i + 1:02d}-13")),
+            pd.Series(range(num_rows), name="y"),
+            pd.Series(range(num_rows), name="x1"),
+            pd.Series(range(num_rows), name="x2")
+        ], axis=1)
+        train_df = self.df.set_index("date")
+        self.X = train_df.drop(["y"], axis=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(train_df[["y"]], X=self.X)
+        pickled_model = pickle.dumps(model)
+        pickled_model_dict = {"1": pickled_model, "2": pickled_model}
+        start_ds_dict = {"1": pd.Timestamp("2020-01-13"), "2": pd.Timestamp("2020-01-13")}
+        end_ds_dict = {"1": pd.Timestamp("2020-09-13"), "2": pd.Timestamp("2020-09-13")}
+        self.arima_model = MultiSeriesArimaModel(pickled_model_dict,
+                                                 horizon=1,
+                                                 frequency='month',
+                                                 start_ds_dict=start_ds_dict,
+                                                 end_ds_dict=end_ds_dict,
+                                                 time_col="date",
+                                                 id_cols=["id"])
+
+    # TODO(maddie.dawson): This is failing because we need to impute
+    def test_predict_timeseries_success(self):
+        forecast_pd = self.arima_model.predict_timeseries(X=self.X)
+        expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        self.assertEqual(20, forecast_pd.shape[0])
+        # Test forecast without history data
+        forecast_future_pd = self.arima_model.predict_timeseries(X=self.X, include_history=False)
+        self.assertEqual(len(forecast_future_pd), 2)
+
+    # TODO(maddie.dawson): This is failing because we need to impute
+    def test_predict_success(self):
+        test_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-05-13"), pd.to_datetime("2020-05-13"),
+                     pd.to_datetime("2020-12-13"), pd.to_datetime("2020-12-13")],
+            "id": ["1", "2", "1", "2"],
+            "x1": [0, 0, 0, 0],
+            "x2": [0, 0, 0, 0]
+        })
+        expected_test_df = test_df.copy()
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
+        self.assertEqual(4, len(yhat))
+        pd.testing.assert_frame_equal(test_df, expected_test_df)  # check the input dataframe is unchanged
 
 
 class TestAbstractArimaModel(unittest.TestCase):
@@ -289,12 +397,12 @@ class TestLogModel(unittest.TestCase):
 
     def setUp(self) -> None:
         num_rows = 9
-        self.X = pd.concat([
+        self.df = pd.concat([
             pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-10-{i + 1}")),
             pd.Series(range(num_rows), name="y")
         ], axis=1)
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
-        model.fit(self.X.set_index("date"))
+        model.fit(self.df.set_index("date"))
         self.pickled_model = pickle.dumps(model)
 
     def test_mlflow_arima_log_model(self):
@@ -309,7 +417,7 @@ class TestLogModel(unittest.TestCase):
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
         # Make sure can make forecasts with the saved model
-        loaded_model.predict(self.X.drop("y", axis=1))
+        loaded_model.predict(self.df.drop("y", axis=1))
         loaded_model._model_impl.python_model.predict_timeseries()
 
     def test_mlflow_arima_log_model_multiseries(self):
