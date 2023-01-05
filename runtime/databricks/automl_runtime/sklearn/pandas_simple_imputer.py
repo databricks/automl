@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import pandas as pd
-from sklearn.base import BaseEstimator
 from sklearn.impute import SimpleImputer
 
 class PandasSimpleImputer(SimpleImputer):
@@ -24,7 +23,7 @@ class PandasSimpleImputer(SimpleImputer):
     A wrapper of `SimpleImputer` with the support for pandas dataframe output.
     """
 
-    def fit(self, X: pd.DataFrame, y:pd.DataFrame=None) -> "PandasSimpleImputer":
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> "PandasSimpleImputer":
         """Fits the imputer on X
 
         Parameters
