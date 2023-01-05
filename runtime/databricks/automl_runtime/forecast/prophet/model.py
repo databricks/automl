@@ -25,8 +25,7 @@ from mlflow.models.signature import ModelSignature
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime import version
-from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe, \
-    make_single_future_dataframe
+from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe
 
 
 PROPHET_CONDA_ENV = {
