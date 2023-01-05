@@ -13,7 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from typing import Union
+
 import pandas as pd
+from sklearn.base import BaseEstimator
 from sklearn.impute import SimpleImputer
 
 class PandasSimpleImputer(SimpleImputer):
@@ -21,7 +24,7 @@ class PandasSimpleImputer(SimpleImputer):
     A wrapper of `SimpleImputer` with the support for pandas dataframe output.
     """
 
-    def fit(self, X, y=None):
+    def fit(self, X: pd.DataFrame, y:pd.DataFrame=None) -> PandasSimpleImputer:
         """Fits the imputer on X
 
         Parameters
@@ -30,13 +33,12 @@ class PandasSimpleImputer(SimpleImputer):
         X : pd.DataFrame of shape = [n_samples, n_features]
             Training dataframe, where n_samples is the number of samples
             and n_features is the number of features.
-        y : array-like, shape = [n_samples]
-            Target values.
+        y : Not used, present here for API consistency by convention.
         """
         self.columns = X.columns
         return super().fit(X, y)
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """Impute all missing values in `X`.
 
         Parameters
@@ -49,7 +51,7 @@ class PandasSimpleImputer(SimpleImputer):
         Returns
         -------
 
-        X_tr : pd.DataFrame of shape (n_samples, n_features_encoded)
+        pd.DataFrame of shape (n_samples, n_features_encoded)
             Transformed features.
         """
         return pd.DataFrame(super().transform(X), columns=self.columns)
