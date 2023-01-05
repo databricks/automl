@@ -155,7 +155,7 @@ class MultiSeriesProphetModel(ProphetModel):
         :param model_json: the dictionary of json strings of Prophet model for multi-series forecasting
         :param timeseries_starts: the dictionary of pd.Timestamp as the starting time of each time series
         :param timeseries_end: the end time of the time series
-        :param horizon: Int number of periods to forecast forward
+        :param horizon: int number of periods to forecast forward
         :param frequency: the frequency of the time series
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
@@ -186,11 +186,10 @@ class MultiSeriesProphetModel(ProphetModel):
         """
         Generate dataframe with future timestamps for all valid identities
         :param horizon: Int number of periods in the future
-        :param frequency: frequency of the history time series. It should be valid frequency
-            for pd.date_range, such as "D" or "M"
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
         :param groups: the collection of group(s) to generate forecast predictions.
-            The group definiteions must be the key value
-        :return: pd.DataFrame that extends forward from history_last_date
+        :return: pd.DataFrame that extends forward
         """
         horizon=horizon or self._horizon
         if groups is not None:
@@ -208,7 +207,7 @@ class MultiSeriesProphetModel(ProphetModel):
             frequency=self._frequency,
             include_history=include_history,
             groups=groups,
-            group_names=self._id_cols
+            identity_column_names=self._id_cols
         )
         return future_df
 
@@ -256,7 +255,7 @@ class MultiSeriesProphetModel(ProphetModel):
             frequency=self._frequency,
             include_history=include_history,
             groups=self._model_json.keys(),
-            group_names=self._id_cols
+            identity_column_names=self._id_cols
         )
         future_df["ts_id"] = future_df[self._id_cols].apply(tuple, axis=1)
         return future_df.groupby(self._id_cols).apply(lambda df: self._predict_impl(df, horizon, include_history)).reset_index()

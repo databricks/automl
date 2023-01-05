@@ -227,7 +227,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         :param horizon: int number of periods to forecast forward.
         :param frequency: the frequency of the time series
         :param start_ds_dict: the dictionary of the starting time of each time series in training data.
-        :param end_ds_dict: the dictionary of the starting time of each time series  in training data.
+        :param end_ds_dict: the dictionary of the end time of each time series in training data.
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
         """
@@ -279,7 +279,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
             frequency=self._frequency,
             include_history=include_history,
             groups=groups,
-            group_names=self._id_cols
+            identity_column_names=self._id_cols
         )
         return future_df
 

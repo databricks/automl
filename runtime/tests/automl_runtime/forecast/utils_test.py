@@ -15,12 +15,13 @@
 #
 
 import unittest
+from parameterized import parameterized
 
 import pandas as pd
 
 from databricks.automl_runtime.forecast.utils import \
     generate_cutoffs, get_validation_horizon, calculate_period_differences, \
-    is_frequency_consistency
+    is_frequency_consistency, make_future_dataframe, make_single_future_dataframe
 
 
 class TestGetValidationHorizon(unittest.TestCase):
@@ -168,6 +169,7 @@ class TestGenerateCutoffs(unittest.TestCase):
         cutoffs = generate_cutoffs(df, horizon=1, unit="YS", num_folds=3, seasonal_period=1)
         self.assertEqual([pd.Timestamp('2018-07-14 00:00:00'), pd.Timestamp('2019-07-14 00:00:00'), pd.Timestamp('2020-07-14 00:00:00')], cutoffs)
 
+
 class TestCalculatePeriodsAndFrequency(unittest.TestCase):
     def setUp(self) -> None:
         return super().setUp()
@@ -220,3 +222,56 @@ class TestCalculatePeriodsAndFrequency(unittest.TestCase):
         self.assertTrue(end_time.apply(
             lambda x: is_frequency_consistency(start_scalar, x, 'month')
         ).all())
+
+
+class TestMakeFutureDataFrame(unittest.TestCase):
+    def test_make_single_future_dataframe(self):
+        future_df = make_single_future_dataframe(
+            start_time=pd.to_datetime('2022-01-01'),
+            end_time=pd.to_datetime('2022-01-04'),
+            horizon=1,
+            frequency="d",
+            include_history=False,
+            column_name="test_date"
+        )
+        self.assertEqual(len(future_df), 1)
+        expected_columns = { "test_date" }
+        self.assertTrue(expected_columns.issubset(set(future_df.columns)))
+
+        future_df = make_single_future_dataframe(
+            start_time=pd.to_datetime('2022-01-01'),
+            end_time=pd.to_datetime('2022-01-04'),
+            horizon=1,
+            frequency="d",
+            include_history=True,
+            column_name="test_date"
+        )
+        self.assertEqual(len(future_df), 5)
+        expected_columns = { "test_date" }
+        self.assertTrue(expected_columns.issubset(set(future_df.columns)))
+
+    @parameterized.expand([
+        (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), None, None, { "ds" }, ),
+        (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), ["id"], [("1", )], { "ds", "id" }),
+        (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), ["id1", "id2"],
+         [("1", 1)], { "ds", "id1", "id2" }),
+        ({("1", ): pd.to_datetime('2022-01-01'), ("2", ): pd.to_datetime('2022-01-01')},
+         pd.to_datetime('2022-01-02'), ["id"], [("1", ), ("2", )], { "ds", "id" }),
+        ({("1", ): pd.to_datetime('2022-01-01'), ("2", ): pd.to_datetime('2022-01-01')},
+         {("1", ): pd.to_datetime('2022-01-02'), ("2", ): pd.to_datetime('2022-01-02')},
+         ["id"], [("1", ), ("2", )], { "ds", "id" }),
+    ])
+    def test_make_future_dataframe(self, start_time, end_time,
+                                   identity_column_names,
+                                   groups, expected_columns):
+        future_df = make_future_dataframe(
+            start_time=start_time,
+            end_time=end_time,
+            horizon=1,
+            frequency="d",
+            groups=groups,
+            identity_column_names=identity_column_names,
+        )
+        print(future_df)
+        self.assertEqual(len(future_df), 6)
+        self.assertTrue(expected_columns.issubset(set(future_df.columns)))

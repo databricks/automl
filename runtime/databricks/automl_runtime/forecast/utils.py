@@ -29,8 +29,19 @@ def make_future_dataframe(
         frequency: str,
         include_history: bool = True,
         groups: List[Tuple] = None,
-        group_names: List[str] = None,
+        identity_column_names: List[str] = None,
 ) -> pd.DataFrame:
+    """
+    Utility function to generate the dataframe with future timestamps.
+    :param start_time: the dictionary of the starting time of each time series in training data.
+    :param end_time: the dictionary of the end time of each time series in training data.
+    :param horizon: int number of periods to forecast forward.
+    :param frequency: the frequency of the time series
+    :param include_history:
+    :param groups: the collection of group(s) to generate forecast predictions.
+    :param identity_column_names: Column names of the identity columns
+    :return: pd.DataFrame that extends forward
+    """
     if groups is None:
         return make_single_future_dataframe(start_time, end_time, horizon, frequency)
 
@@ -45,8 +56,8 @@ def make_future_dataframe(
         else:
             group_end_time = end_time
         df = make_single_future_dataframe(group_start_time, group_end_time, horizon, frequency, include_history)
-        for idx, group_name in enumerate(group_names):
-            df[group_name] = group[idx]
+        for idx, identity_column_name in enumerate(identity_column_names):
+            df[identity_column_name] = group[idx]
         future_df_list.append(df)
     return pd.concat(future_df_list)
 
