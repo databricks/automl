@@ -335,3 +335,7 @@ class TestMultiSeriesProphetModel(unittest.TestCase):
         self.assertTrue(future_df.dtypes["id1"] == "int")
         self.assertTrue(future_df.dtypes["id2"] == "object")
         self.assertEqual(2, future_df.shape[0])
+
+    def test_make_future_dataframe_invalid_group(self):
+        with pytest.raises(ValueError, match="Invalid groups:"):
+            future_df = self.prophet_model.make_future_dataframe(groups=[(1,)])
