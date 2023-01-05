@@ -211,19 +211,6 @@ class MultiSeriesProphetModel(ProphetModel):
         )
         return future_df
 
-    def _make_future_dataframe(self, id: Tuple, horizon: int, include_history: bool = True) -> pd.DataFrame:
-        """
-        Generate future dataframe for one model
-        :param id: Identity for the Prophet model
-        :param horizon: Int number of periods to forecast forward
-        :param include_history: Boolean to include the historical dates in the data
-            frame for predictions.
-        :return: pd.Dataframe that extends forward from the end of self.history for the
-        requested number of periods.
-        """
-        return make_single_future_dataframe(self._timeseries_starts[id], self._timeseries_end,
-                                            horizon, self._frequency, include_history)
-
     def _predict_impl(self, df: pd.DataFrame, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the API from prophet model.
