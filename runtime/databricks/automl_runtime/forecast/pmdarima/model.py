@@ -184,10 +184,11 @@ class ArimaModel(AbstractArimaModel):
         # Out-of-sample prediction if needed
         horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency)
         if horizon > 0:
-            X_future = df[df["ds"] > self._end_ds].set_index("ds")
+            # Forward fill missing time steps
+            X_future = df[df["ds"] > self._end_ds].set_index("ds").resample(rule=OFFSET_ALIAS_MAP[self._frequency]).pad()
             future_pd = self._forecast(
                 horizon,
-                X=X_future if not X_future.empty else None)
+                X=X_future if len(X_future.columns) > 0 else None)
             preds_pds.append(future_pd)
         # In-sample prediction if needed
         if pred_start_ds <= self._end_ds:
@@ -195,7 +196,7 @@ class ArimaModel(AbstractArimaModel):
             in_sample_pd = self._predict_in_sample(
                 start_ds=pred_start_ds,
                 end_ds=self._end_ds,
-                X=X_in_sample if not X_in_sample.empty else None)
+                X=X_in_sample if len(X_in_sample.columns) > 0 else None)
             preds_pds.append(in_sample_pd)
         # Map predictions back to given timestamps
         preds_pd = pd.concat(preds_pds).set_index("ds")

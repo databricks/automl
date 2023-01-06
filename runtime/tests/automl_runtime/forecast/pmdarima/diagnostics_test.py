@@ -47,7 +47,7 @@ class TestDiagnostics(unittest.TestCase):
             with StepwiseContext(max_steps=1):
                 model = auto_arima(
                     y=y_train,
-                    X=X_train if not X_train.empty else None,
+                    X=X_train if len(X_train.columns) > 0 else None,
                     m=1)
 
             expected_ds = df[df["ds"] > cutoffs[0]]["ds"]
@@ -69,7 +69,7 @@ class TestDiagnostics(unittest.TestCase):
             with StepwiseContext(max_steps=1):
                 model = auto_arima(
                     y=y_train,
-                    X=X_train if not X_train.empty else None,
+                    X=X_train if len(X_train.columns) > 0 else None,
                     m=1)
 
             expected_ds = test_df["ds"][:2]

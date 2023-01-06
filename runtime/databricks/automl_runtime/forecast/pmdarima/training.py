@@ -118,7 +118,7 @@ class ArimaEstimator:
         with StepwiseContext(max_steps=max_steps):
             arima_model = pm.auto_arima(
                 y=y_train,
-                X=X_train if not X_train.empty else None,
+                X=X_train if len(X_train.columns) > 0 else None,
                 m=seasonal_period,
                 stepwise=True,
             )
