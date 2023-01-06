@@ -32,7 +32,7 @@ class InterpolationImputer(TransformerMixin, BaseEstimator):
     def __init__(self,
                  *,
                  impute_params: Dict[str, Any]=None,
-                 impute_all: boolean=True,
+                 impute_all: bool=True,
         ):
         """Create a `DatetimeImputer`.
 
