@@ -40,7 +40,7 @@ class ProphetHyperParams(Enum):
 def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
                          horizon: int, frequency: str, cutoffs: List[pd.Timestamp],
                          interval_width: int, primary_metric: str,
-                         country_holidays: Optional[str] = None) -> Dict[str, Any]:
+                         country_holidays: Optional[str] = None, regressors = None) -> Dict[str, Any]:
     """
     Training function for hyperparameter tuning with hyperopt
 
@@ -58,6 +58,11 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     model = Prophet(interval_width=interval_width, **params)
     if country_holidays:
         model.add_country_holidays(country_name=country_holidays)
+
+    if self._regressors:
+        for regressor in self._regressors:
+            model.add_regressor(regressor)
+            
     model.fit(history_pd, iter=200)
     offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
     horizon_offset = pd.DateOffset(**offset_kwarg)*horizon
