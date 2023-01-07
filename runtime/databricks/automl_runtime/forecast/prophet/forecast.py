@@ -62,7 +62,7 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     if self._regressors:
         for regressor in self._regressors:
             model.add_regressor(regressor)
-            
+
     model.fit(history_pd, iter=200)
     offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
     horizon_offset = pd.DateOffset(**offset_kwarg)*horizon
@@ -141,7 +141,7 @@ class ProphetHyperoptEstimator(ABC):
         train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=validation_horizon,
                            frequency=self._frequency_unit, cutoffs=cutoffs,
                            interval_width=self._interval_width,
-                           primary_metric=self._metric, country_holidays=self._country_holidays)
+                           primary_metric=self._metric, country_holidays=self._country_holidays, regressors=self._regressors)
 
         if self._is_parallel:
             trials = SparkTrials() # pragma: no cover
