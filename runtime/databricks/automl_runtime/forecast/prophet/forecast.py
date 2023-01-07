@@ -59,8 +59,8 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     if country_holidays:
         model.add_country_holidays(country_name=country_holidays)
 
-    if self._regressors:
-        for regressor in self._regressors:
+    if regressors:
+        for regressor in regressors:
             model.add_regressor(regressor)
 
     model.fit(history_pd, iter=200)
