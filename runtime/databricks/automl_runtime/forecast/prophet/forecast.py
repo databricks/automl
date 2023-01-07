@@ -82,7 +82,7 @@ class ProphetHyperoptEstimator(ABC):
                  country_holidays: str, search_space: Dict[str, Any],
                  algo=hyperopt.tpe.suggest, num_folds: int = 5,
                  max_eval: int = 10, trial_timeout: int = None,
-                 random_state: int = 0, is_parallel: bool = True) -> None:
+                 random_state: int = 0, is_parallel: bool = True, regressors = None) -> None:
         """
         Initialization
 
@@ -97,7 +97,8 @@ class ProphetHyperoptEstimator(ABC):
         :param max_eval: Max number of trials generated in hyperopt
         :param trial_timeout: timeout for hyperopt
         :param random_state: random seed for hyperopt
-        :param is_parallel: Indicators to decide that whether run hyperopt in parallel
+        :param is_parallel: Indicators to decide that whether run hyperopt in 
+        :param regressors: list of column names of external regressors
         """
         self._horizon = horizon
         self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
@@ -111,6 +112,7 @@ class ProphetHyperoptEstimator(ABC):
         self._max_eval = max_eval
         self._timeout = trial_timeout
         self._is_parallel = is_parallel
+        self._regressors = regressors
 
     def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -159,6 +161,10 @@ class ProphetHyperoptEstimator(ABC):
 
         if self._country_holidays:
             model.add_country_holidays(country_name=self._country_holidays)
+        
+        if self._regressors:
+            for regressor in self._regressors:
+                model.add_regressor(regressor)
 
         model.fit(df)
 
