@@ -50,7 +50,7 @@ class InterpolationImputer(TransformerMixin, BaseEstimator):
         self._impute_params = impute_params or DEFAULT_PARAMS
         self._impute_all = impute_all
 
-    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> "InterpolationImputer":
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> InterpolationImputer:
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
