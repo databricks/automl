@@ -23,7 +23,7 @@ class PandasSimpleImputer(SimpleImputer):
     A wrapper of `SimpleImputer` with the support for pandas dataframe output.
     """
 
-    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> "PandasSimpleImputer":
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> PandasSimpleImputer:
         """Fits the imputer on X
 
         Parameters
