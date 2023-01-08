@@ -19,6 +19,7 @@ from parameterized import parameterized
 
 import pandas as pd
 
+from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.utils import \
     generate_cutoffs, get_validation_horizon, calculate_period_differences, \
     is_frequency_consistency, make_future_dataframe, make_single_future_dataframe
@@ -249,6 +250,22 @@ class TestMakeFutureDataFrame(unittest.TestCase):
         self.assertEqual(len(future_df), 5)
         expected_columns = { "test_date" }
         self.assertTrue(expected_columns.issubset(set(future_df.columns)))
+
+    def test_make_single_future_dataframe_with_different_freq(self):
+        for freq, offset_freq in DATE_OFFSET_KEYWORD_MAP.items():
+            start_time = pd.to_datetime('2022-01-01')
+            end_time = start_time + pd.DateOffset(**offset_freq)
+            future_df = make_single_future_dataframe(
+                start_time=start_time,
+                end_time=end_time,
+                horizon=1,
+                frequency=freq,
+                include_history=True,
+                column_name="test_date"
+            )
+            self.assertEqual(len(future_df), 3)
+            expected_columns = { "test_date" }
+            self.assertTrue(expected_columns.issubset(set(future_df.columns)))
 
     @parameterized.expand([
         (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), None, None, { "ds" }, ),

@@ -26,6 +26,7 @@ jobs:
         python -m pip install flake8 pytest pytest-cov
         python -m pip install build --user
         if [ -f environment.txt ]; then pip install -r environment.txt; fi
+        if [ -f test-environment.txt ]; then pip install -r test-environment.txt; fi
       working-directory: runtime
     - name: Lint with flake8
       run: |
