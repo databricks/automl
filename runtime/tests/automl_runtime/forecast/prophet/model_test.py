@@ -34,6 +34,8 @@ from databricks.automl_runtime.forecast.prophet.model import (
     DATE_OFFSET_KEYWORD_MAP,
 )
 
+PROPHET_MODEL_JSON = '{"growth": "linear", "n_changepoints": 6, "specified_changepoints": false, "changepoint_range": 0.8, "yearly_seasonality": "auto", "weekly_seasonality": "auto", "daily_seasonality": "auto", "seasonality_mode": "additive", "seasonality_prior_scale": 10.0, "changepoint_prior_scale": 0.05, "holidays_prior_scale": 10.0, "mcmc_samples": 0, "interval_width": 0.8, "uncertainty_samples": 1000, "y_scale": 8.0, "logistic_floor": false, "country_holidays": null, "component_modes": {"additive": ["weekly", "additive_terms", "extra_regressors_additive", "holidays"], "multiplicative": ["multiplicative_terms", "extra_regressors_multiplicative"]}, "changepoints": "{\\"name\\":\\"ds\\",\\"index\\":[1,2,3,4,5,6],\\"data\\":[\\"2020-10-04T00:00:00.000\\",\\"2020-10-07T00:00:00.000\\",\\"2020-10-10T00:00:00.000\\",\\"2020-10-13T00:00:00.000\\",\\"2020-10-16T00:00:00.000\\",\\"2020-10-19T00:00:00.000\\"]}", "history_dates": "{\\"name\\":\\"ds\\",\\"index\\":[0,1,2,3,4,5,6,7,8],\\"data\\":[\\"2020-10-01T00:00:00.000\\",\\"2020-10-04T00:00:00.000\\",\\"2020-10-07T00:00:00.000\\",\\"2020-10-10T00:00:00.000\\",\\"2020-10-13T00:00:00.000\\",\\"2020-10-16T00:00:00.000\\",\\"2020-10-19T00:00:00.000\\",\\"2020-10-22T00:00:00.000\\",\\"2020-10-25T00:00:00.000\\"]}", "train_holiday_names": null, "start": 1601510400.0, "t_scale": 2073600.0, "holidays": null, "history": "{\\"schema\\":{\\"fields\\":[{\\"name\\":\\"ds\\",\\"type\\":\\"datetime\\"},{\\"name\\":\\"y\\",\\"type\\":\\"integer\\"},{\\"name\\":\\"floor\\",\\"type\\":\\"integer\\"},{\\"name\\":\\"t\\",\\"type\\":\\"number\\"},{\\"name\\":\\"y_scaled\\",\\"type\\":\\"number\\"}],\\"pandas_version\\":\\"1.4.0\\"},\\"data\\":[{\\"ds\\":\\"2020-10-01T00:00:00.000\\",\\"y\\":0,\\"floor\\":0,\\"t\\":0.0,\\"y_scaled\\":0.0},{\\"ds\\":\\"2020-10-04T00:00:00.000\\",\\"y\\":1,\\"floor\\":0,\\"t\\":0.125,\\"y_scaled\\":0.125},{\\"ds\\":\\"2020-10-07T00:00:00.000\\",\\"y\\":2,\\"floor\\":0,\\"t\\":0.25,\\"y_scaled\\":0.25},{\\"ds\\":\\"2020-10-10T00:00:00.000\\",\\"y\\":3,\\"floor\\":0,\\"t\\":0.375,\\"y_scaled\\":0.375},{\\"ds\\":\\"2020-10-13T00:00:00.000\\",\\"y\\":4,\\"floor\\":0,\\"t\\":0.5,\\"y_scaled\\":0.5},{\\"ds\\":\\"2020-10-16T00:00:00.000\\",\\"y\\":5,\\"floor\\":0,\\"t\\":0.625,\\"y_scaled\\":0.625},{\\"ds\\":\\"2020-10-19T00:00:00.000\\",\\"y\\":6,\\"floor\\":0,\\"t\\":0.75,\\"y_scaled\\":0.75},{\\"ds\\":\\"2020-10-22T00:00:00.000\\",\\"y\\":7,\\"floor\\":0,\\"t\\":0.875,\\"y_scaled\\":0.875},{\\"ds\\":\\"2020-10-25T00:00:00.000\\",\\"y\\":8,\\"floor\\":0,\\"t\\":1.0,\\"y_scaled\\":1.0}]}", "train_component_cols": "{\\"schema\\":{\\"fields\\":[{\\"name\\":\\"additive_terms\\",\\"type\\":\\"integer\\"},{\\"name\\":\\"weekly\\",\\"type\\":\\"integer\\"},{\\"name\\":\\"multiplicative_terms\\",\\"type\\":\\"integer\\"}],\\"pandas_version\\":\\"1.4.0\\"},\\"data\\":[{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0}]}", "changepoints_t": [0.125, 0.25, 0.375, 0.5, 0.625, 0.75], "seasonalities": [["weekly"], {"weekly": {"period": 7, "fourier_order": 3, "prior_scale": 10.0, "mode": "additive", "condition_name": null}}], "extra_regressors": [[], {}], "fit_kwargs": {}, "params": {"lp__": [[202.053]], "k": [[1.19777]], "m": [[0.0565623]], "delta": [[-0.86152, 0.409957, -0.103241, 0.528979, 0.535181, -0.509356]], "sigma_obs": [[2.53056e-13]], "beta": [[-0.00630566, 0.016248, 0.0318587, -0.068705, 0.0029986, -0.00410522]], "trend": [[0.0565623, 0.206283, 0.248314, 0.341589, 0.421959, 0.568452, 0.781842, 0.931562, 1.08128]]}, "__prophet_version": "1.1.1"}'
+
 
 class TestProphetModel(unittest.TestCase):
     @classmethod
@@ -64,7 +66,7 @@ class TestProphetModel(unittest.TestCase):
                 8.794826e00,
             ]
         )
-        cls.model_json = '{"growth": "linear", "n_changepoints": 6, "specified_changepoints": false, "changepoint_range": 0.8, "yearly_seasonality": "auto", "weekly_seasonality": "auto", "daily_seasonality": "auto", "seasonality_mode": "additive", "seasonality_prior_scale": 10.0, "changepoint_prior_scale": 0.05, "holidays_prior_scale": 10.0, "mcmc_samples": 0, "interval_width": 0.8, "uncertainty_samples": 1000, "y_scale": 8.0, "logistic_floor": false, "country_holidays": null, "component_modes": {"additive": ["weekly", "additive_terms", "extra_regressors_additive", "holidays"], "multiplicative": ["multiplicative_terms", "extra_regressors_multiplicative"]}, "changepoints": "{\\"name\\":\\"ds\\",\\"index\\":[1,2,3,4,5,6],\\"data\\":[\\"2020-10-04T00:00:00.000\\",\\"2020-10-07T00:00:00.000\\",\\"2020-10-10T00:00:00.000\\",\\"2020-10-13T00:00:00.000\\",\\"2020-10-16T00:00:00.000\\",\\"2020-10-19T00:00:00.000\\"]}", "history_dates": "{\\"name\\":\\"ds\\",\\"index\\":[0,1,2,3,4,5,6,7,8],\\"data\\":[\\"2020-10-01T00:00:00.000\\",\\"2020-10-04T00:00:00.000\\",\\"2020-10-07T00:00:00.000\\",\\"2020-10-10T00:00:00.000\\",\\"2020-10-13T00:00:00.000\\",\\"2020-10-16T00:00:00.000\\",\\"2020-10-19T00:00:00.000\\",\\"2020-10-22T00:00:00.000\\",\\"2020-10-25T00:00:00.000\\"]}", "train_holiday_names": null, "start": 1601510400.0, "t_scale": 2073600.0, "holidays": null, "history": "{\\"schema\\":{\\"fields\\":[{\\"name\\":\\"ds\\",\\"type\\":\\"datetime\\"},{\\"name\\":\\"y\\",\\"type\\":\\"integer\\"},{\\"name\\":\\"floor\\",\\"type\\":\\"integer\\"},{\\"name\\":\\"t\\",\\"type\\":\\"number\\"},{\\"name\\":\\"y_scaled\\",\\"type\\":\\"number\\"}],\\"pandas_version\\":\\"1.4.0\\"},\\"data\\":[{\\"ds\\":\\"2020-10-01T00:00:00.000\\",\\"y\\":0,\\"floor\\":0,\\"t\\":0.0,\\"y_scaled\\":0.0},{\\"ds\\":\\"2020-10-04T00:00:00.000\\",\\"y\\":1,\\"floor\\":0,\\"t\\":0.125,\\"y_scaled\\":0.125},{\\"ds\\":\\"2020-10-07T00:00:00.000\\",\\"y\\":2,\\"floor\\":0,\\"t\\":0.25,\\"y_scaled\\":0.25},{\\"ds\\":\\"2020-10-10T00:00:00.000\\",\\"y\\":3,\\"floor\\":0,\\"t\\":0.375,\\"y_scaled\\":0.375},{\\"ds\\":\\"2020-10-13T00:00:00.000\\",\\"y\\":4,\\"floor\\":0,\\"t\\":0.5,\\"y_scaled\\":0.5},{\\"ds\\":\\"2020-10-16T00:00:00.000\\",\\"y\\":5,\\"floor\\":0,\\"t\\":0.625,\\"y_scaled\\":0.625},{\\"ds\\":\\"2020-10-19T00:00:00.000\\",\\"y\\":6,\\"floor\\":0,\\"t\\":0.75,\\"y_scaled\\":0.75},{\\"ds\\":\\"2020-10-22T00:00:00.000\\",\\"y\\":7,\\"floor\\":0,\\"t\\":0.875,\\"y_scaled\\":0.875},{\\"ds\\":\\"2020-10-25T00:00:00.000\\",\\"y\\":8,\\"floor\\":0,\\"t\\":1.0,\\"y_scaled\\":1.0}]}", "train_component_cols": "{\\"schema\\":{\\"fields\\":[{\\"name\\":\\"additive_terms\\",\\"type\\":\\"integer\\"},{\\"name\\":\\"weekly\\",\\"type\\":\\"integer\\"},{\\"name\\":\\"multiplicative_terms\\",\\"type\\":\\"integer\\"}],\\"pandas_version\\":\\"1.4.0\\"},\\"data\\":[{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0},{\\"additive_terms\\":1,\\"weekly\\":1,\\"multiplicative_terms\\":0}]}", "changepoints_t": [0.125, 0.25, 0.375, 0.5, 0.625, 0.75], "seasonalities": [["weekly"], {"weekly": {"period": 7, "fourier_order": 3, "prior_scale": 10.0, "mode": "additive", "condition_name": null}}], "extra_regressors": [[], {}], "fit_kwargs": {}, "params": {"lp__": [[202.053]], "k": [[1.19777]], "m": [[0.0565623]], "delta": [[-0.86152, 0.409957, -0.103241, 0.528979, 0.535181, -0.509356]], "sigma_obs": [[2.53056e-13]], "beta": [[-0.00630566, 0.016248, 0.0318587, -0.068705, 0.0029986, -0.00410522]], "trend": [[0.0565623, 0.206283, 0.248314, 0.341589, 0.421959, 0.568452, 0.781842, 0.931562, 1.08128]]}, "__prophet_version": "1.1.1"}'
+        cls.model_json = PROPHET_MODEL_JSON
         cls.model = model_from_json(cls.model_json)
 
     def test_model_save_and_load(self):
@@ -100,134 +102,6 @@ class TestProphetModel(unittest.TestCase):
             self.assertEqual(future_df.iloc[-1]["ds"], expected_time,
                              f"Wrong future dataframe generated with frequency {feq_unit}:"
                              f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
-
-    def test_model_save_and_load_multi_series(self):
-        multi_series_model_json = {"1": self.model_json, "2": self.model_json}
-        multi_series_start = {
-            "1": pd.Timestamp("2020-07-01"),
-            "2": pd.Timestamp("2020-07-01"),
-        }
-        prophet_model = MultiSeriesProphetModel(
-            multi_series_model_json,
-            multi_series_start,
-            "2020-07-25",
-            1,
-            "days",
-            "time",
-            ["id"],
-        )
-        test_df = pd.DataFrame(
-            {
-                "time": [
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-04"),
-                    pd.to_datetime("2020-11-04"),
-                ],
-                "id": ["1", "2", "1", "2"],
-            }
-        )
-        with mlflow.start_run() as run:
-            mlflow_prophet_log_model(prophet_model, sample_input=test_df)
-
-        # Load the saved model from mlflow
-        run_id = run.info.run_id
-        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
-
-        # Check the prediction with the saved model
-        ids = pd.DataFrame(multi_series_model_json.keys(), columns=["ts_id"])
-        # Check model_predict functions
-        loaded_model._model_impl.python_model.model_predict(ids)
-        loaded_model._model_impl.python_model.predict_timeseries()
-        forecast_future_pd = loaded_model._model_impl.python_model.predict_timeseries(
-            include_history=False
-        )
-        self.assertEqual(len(forecast_future_pd), 2)
-
-        # Check predict API
-        expected_test_df = test_df.copy()
-        forecast_y = loaded_model.predict(test_df)
-        np.testing.assert_array_almost_equal(
-            np.array(forecast_y), np.array([10.794835, 10.794835, 12.65636, 12.65636])
-        )
-        # Make sure that the input dataframe is unchanged
-        assert_frame_equal(test_df, expected_test_df)
-
-        # Check predict API works with one-row dataframe
-        loaded_model.predict(test_df[0:1])
-
-    def test_model_save_and_load_multi_series_multi_ids(self):
-        multi_series_model_json = {"1-1": self.model_json, "2-1": self.model_json}
-        multi_series_start = {
-            "1-1": pd.Timestamp("2020-07-01"),
-            "2-1": pd.Timestamp("2020-07-01"),
-        }
-        prophet_model = MultiSeriesProphetModel(
-            multi_series_model_json,
-            multi_series_start,
-            "2020-07-25",
-            1,
-            "days",
-            "time",
-            ["id1", "id2"],
-        )
-        # The id of the last row does not match to any saved model. It should return nan.
-        test_df = pd.DataFrame(
-            {
-                "time": [
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-04"),
-                    pd.to_datetime("2020-11-04"),
-                ],
-                "id1": ["1", "2", "1", "1"],
-                "id2": ["1", "1", "1", "2"],
-            }
-        )
-        with mlflow.start_run() as run:
-            mlflow_prophet_log_model(prophet_model, sample_input=test_df)
-
-        # Load the saved model from mlflow
-        run_id = run.info.run_id
-        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
-
-        # Check the prediction with the saved model
-        ids = pd.DataFrame(multi_series_model_json.keys(), columns=["ts_id"])
-        # Check model_predict functions
-        loaded_model._model_impl.python_model.model_predict(ids)
-        loaded_model._model_impl.python_model.predict_timeseries()
-        forecast_future_pd = loaded_model._model_impl.python_model.predict_timeseries(
-            include_history=False
-        )
-        self.assertEqual(len(forecast_future_pd), 2)
-
-        # Check predict API
-        expected_test_df = test_df.copy()
-        forecast_y = loaded_model.predict(test_df)
-        np.testing.assert_array_almost_equal(
-            np.array(forecast_y), np.array([10.794835, 10.794835, 12.65636, np.nan])
-        )
-        # Make sure that the input dataframe is unchanged
-        assert_frame_equal(test_df, expected_test_df)
-
-    def test_predict_success_multi_series_one_row(self):
-        multi_series_model_json = {"1": self.model_json, "2": self.model_json}
-        multi_series_start = {
-            "1": pd.Timestamp("2020-07-01"),
-            "2": pd.Timestamp("2020-07-01"),
-        }
-        prophet_model = MultiSeriesProphetModel(
-            multi_series_model_json,
-            multi_series_start,
-            "2020-07-25",
-            1,
-            "days",
-            "time",
-            ["id"],
-        )
-        test_df = pd.DataFrame({"time": [pd.to_datetime("2020-11-01")], "id": ["1"]})
-        yhat = prophet_model.predict(None, test_df)
-        self.assertEqual(1, len(yhat))
 
     def test_predict_success_datetime_date(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
@@ -269,11 +143,77 @@ class TestProphetModel(unittest.TestCase):
             prophet_model.predict(test_df)
         assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)
 
-    def test_validate_predict_cols_multi_series(self):
-        multi_series_model_json = {"1": self.model_json, "2": self.model_json}
+
+class TestMultiSeriesProphetModel(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.model_json = PROPHET_MODEL_JSON
+        cls.multi_series_model_json = {("1",): cls.model_json, ("2",): cls.model_json}
+        cls.multi_series_start = {
+            ("1",): pd.Timestamp("2020-07-01"),
+            ("2",): pd.Timestamp("2020-07-01"),
+        }
+        cls.prophet_model = MultiSeriesProphetModel(
+            model_json=cls.multi_series_model_json,
+            timeseries_starts=cls.multi_series_start,
+            timeseries_end="2020-07-25",
+            horizon=1,
+            frequency="days",
+            time_col="time",
+            id_cols=["id"],
+        )
+
+    def test_model_save_and_load(self):
+        test_df = pd.DataFrame(
+            {
+                "time": [
+                    pd.to_datetime("2020-11-01"),
+                    pd.to_datetime("2020-11-01"),
+                    pd.to_datetime("2020-11-04"),
+                    pd.to_datetime("2020-11-04"),
+                ],
+                "id": ["1", "2", "1", "2"],
+            }
+        )
+        with mlflow.start_run() as run:
+            mlflow_prophet_log_model(self.prophet_model, sample_input=test_df)
+
+        # Load the saved model from mlflow
+        run_id = run.info.run_id
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+
+        # Check the prediction with the saved model
+        future_df = loaded_model._model_impl.python_model.make_future_dataframe(include_history=False)
+        # Check model_predict functions
+        forecast_pd = loaded_model._model_impl.python_model.model_predict(future_df)
+        expected_columns = {"id", "ds", "yhat", "yhat_lower", "yhat_upper"}
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        forecast_pd = loaded_model._model_impl.python_model.predict_timeseries()
+        expected_columns = {"id", "ds", "yhat", "yhat_lower", "yhat_upper"}
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+
+        forecast_future_pd = loaded_model._model_impl.python_model.predict_timeseries(
+            include_history=False
+        )
+        self.assertEqual(len(forecast_future_pd), 2)
+
+        # Check predict API
+        expected_test_df = test_df.copy()
+        forecast_y = loaded_model.predict(test_df)
+        np.testing.assert_array_almost_equal(
+            np.array(forecast_y), np.array([10.794835, 10.794835, 12.65636, 12.65636])
+        )
+        # Make sure that the input dataframe is unchanged
+        assert_frame_equal(test_df, expected_test_df)
+
+        # Check predict API works with one-row dataframe
+        loaded_model.predict(test_df[0:1])
+
+    def test_model_save_and_load_multi_ids(self):
+        multi_series_model_json = {("1", "1"): self.model_json, ("2", "1"): self.model_json}
         multi_series_start = {
-            "1": pd.Timestamp("2020-07-01"),
-            "2": pd.Timestamp("2020-07-01"),
+            ("1", "1"): pd.Timestamp("2020-07-01"),
+            ("2", "1"): pd.Timestamp("2020-07-01"),
         }
         prophet_model = MultiSeriesProphetModel(
             multi_series_model_json,
@@ -281,8 +221,66 @@ class TestProphetModel(unittest.TestCase):
             "2020-07-25",
             1,
             "days",
-            "ds",
-            ["id1"],
+            "time",
+            ["id1", "id2"],
+        )
+        # The id of the last row does not match to any saved model. It should return nan.
+        test_df = pd.DataFrame(
+            {
+                "time": [
+                    pd.to_datetime("2020-11-01"),
+                    pd.to_datetime("2020-11-01"),
+                    pd.to_datetime("2020-11-04"),
+                    pd.to_datetime("2020-11-04"),
+                ],
+                "id1": ["1", "2", "1", "1"],
+                "id2": ["1", "1", "1", "2"],
+            }
+        )
+        with mlflow.start_run() as run:
+            mlflow_prophet_log_model(prophet_model, sample_input=test_df)
+
+        # Load the saved model from mlflow
+        run_id = run.info.run_id
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+
+        # Check the prediction with the saved model
+        future_df = loaded_model._model_impl.python_model.make_future_dataframe(include_history=False)
+        # Check model_predict functions
+        forecast_pd = loaded_model._model_impl.python_model.model_predict(future_df)
+        expected_columns = {"id1", "id2", "ds", "yhat", "yhat_lower", "yhat_upper"}
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        forecast_pd = loaded_model._model_impl.python_model.predict_timeseries()
+        expected_columns = {"id1", "id2", "ds", "yhat", "yhat_lower", "yhat_upper"}
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        forecast_future_pd = loaded_model._model_impl.python_model.predict_timeseries(
+            include_history=False
+        )
+        self.assertEqual(len(forecast_future_pd), 2)
+
+        # Check predict API
+        expected_test_df = test_df.copy()
+        forecast_y = loaded_model.predict(test_df)
+        np.testing.assert_array_almost_equal(
+            np.array(forecast_y), np.array([10.794835, 10.794835, 12.65636, np.nan])
+        )
+        # Make sure that the input dataframe is unchanged
+        assert_frame_equal(test_df, expected_test_df)
+
+    def test_predict_success_one_row(self):
+        test_df = pd.DataFrame({"time": [pd.to_datetime("2020-11-01")], "id": ["1"]})
+        yhat = self.prophet_model.predict(None, test_df)
+        self.assertEqual(1, len(yhat))
+
+    def test_validate_predict_cols(self):
+        prophet_model = MultiSeriesProphetModel(
+            model_json=self.multi_series_model_json,
+            timeseries_starts=self.multi_series_start,
+            timeseries_end="2020-07-25",
+            horizon=1,
+            frequency="days",
+            time_col="ds",
+            id_cols=["id1"],
         )
         sample_df = pd.DataFrame(
             {
@@ -310,3 +308,34 @@ class TestProphetModel(unittest.TestCase):
         with pytest.raises(MlflowException, match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
         assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)
+
+    def test_make_future_dataframe(self):
+        future_df = self.prophet_model.make_future_dataframe(include_history=False)
+        self.assertCountEqual(future_df.columns, {"ds", "id"})
+        self.assertEqual(2, future_df.shape[0])
+
+    def test_make_future_dataframe_multi_ids(self):
+        multi_series_model_json = {(1, "1"): self.model_json, (2, "1"): self.model_json}
+        multi_series_start = {
+            (1, "1"): pd.Timestamp("2020-07-01"),
+            (2, "1"): pd.Timestamp("2020-07-01"),
+        }
+        prophet_model = MultiSeriesProphetModel(
+            multi_series_model_json,
+            multi_series_start,
+            "2020-07-25",
+            1,
+            "days",
+            "time",
+            ["id1", "id2"],
+        )
+        future_df = prophet_model.make_future_dataframe(include_history=False)
+        self.assertCountEqual(future_df.columns, {"ds", "id1", "id2"})
+        # Make sure keep the column types for identity columns
+        self.assertTrue(future_df.dtypes["id1"] == "int")
+        self.assertTrue(future_df.dtypes["id2"] == "object")
+        self.assertEqual(2, future_df.shape[0])
+
+    def test_make_future_dataframe_invalid_group(self):
+        with pytest.raises(ValueError, match="Invalid groups:"):
+            future_df = self.prophet_model.make_future_dataframe(groups=[(1,)])

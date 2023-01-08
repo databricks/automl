@@ -15,7 +15,7 @@
 #
 import pickle
 from abc import abstractmethod
-from typing import List, Dict, Union
+from typing import List, Dict, Tuple, Optional, Union
 
 import pandas as pd
 import mlflow
@@ -25,7 +25,8 @@ from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
-from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency
+from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency, \
+    make_future_dataframe
 
 
 ARIMA_CONDA_ENV = {
@@ -217,8 +218,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
     ARIMA mlflow model wrapper for multivariate forecasting.
     """
 
-    def __init__(self, pickled_model_dict: Dict[str, bytes], horizon: int, frequency: str,
-                 start_ds_dict: Dict[str, pd.Timestamp], end_ds_dict: Dict[str, pd.Timestamp],
+    def __init__(self, pickled_model_dict: Dict[Tuple, bytes], horizon: int, frequency: str,
+                 start_ds_dict: Dict[Tuple, pd.Timestamp], end_ds_dict: Dict[Tuple, pd.Timestamp],
                  time_col: str, id_cols: List[str]) -> None:
         """
         Initialize the mlflow Python model wrapper for multiseries ARIMA.
@@ -226,7 +227,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         :param horizon: int number of periods to forecast forward.
         :param frequency: the frequency of the time series
         :param start_ds_dict: the dictionary of the starting time of each time series in training data.
-        :param end_ds_dict: the dictionary of the starting time of each time series  in training data.
+        :param end_ds_dict: the dictionary of the end time of each time series in training data.
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
         """
@@ -239,13 +240,48 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         self._time_col = time_col
         self._id_cols = id_cols
 
-    def model(self, id_: str) -> pmdarima.arima.ARIMA:
+    def model(self, id_: Tuple) -> pmdarima.arima.ARIMA:
         """
         Deserialize the ARIMA model for specified time series by pickle.
         :param: id for specified time series.
         :return: ARIMA model
         """
         return pickle.loads(self._pickled_models[id_])
+
+    def make_future_dataframe(
+            self,
+            horizon: Optional[int] = None,
+            include_history: bool = True,
+            groups: List[Tuple] = None,
+    ) -> pd.DataFrame:
+        """
+        Generate dataframe with future timestamps for all valid identities
+        :param horizon: Int number of periods in the future
+        :param frequency: frequency of the history time series. It should be valid frequency
+            for pd.date_range, such as "D" or "M"
+        :param groups: the collection of group(s) to generate forecast predictions.
+            The group definiteions must be the key value
+        :return: pd.DataFrame that extends forward from history_last_date
+        """
+        if horizon is None:
+            horizon = self._horizon
+        if groups is not None:
+            model_keys = set(self._pickled_models.keys())
+            if not set(groups).issubset(model_keys):
+                raise ValueError(f"Invalid groups: {set(groups) - model_keys}.")
+        else:
+            groups = list(self._pickled_models.keys())
+
+        future_df = make_future_dataframe(
+            start_time=self._starts,
+            end_time=self._ends,
+            horizon=horizon,
+            frequency=self._frequency,
+            include_history=include_history,
+            groups=groups,
+            identity_column_names=self._id_cols
+        )
+        return future_df
 
     def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
@@ -260,11 +296,12 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, include_history), ids))
         return pd.concat(preds_dfs).reset_index(drop=True)
 
-    def _predict_timeseries_single_id(self, id_: str, horizon: int, include_history: bool = True) -> pd.DataFrame:
+    def _predict_timeseries_single_id(self, id_: Tuple, horizon: int, include_history: bool = True) -> pd.DataFrame:
         arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency,
                                            self._starts[id_], self._ends[id_], self._time_col)
         preds_df = arima_model_single_id.predict_timeseries(horizon, include_history)
-        preds_df["ts_id"] = id_
+        for id, col_name in zip(id_, self._id_cols):
+            preds_df[col_name] = id
         return preds_df
 
     def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
@@ -281,7 +318,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         """
         self._validate_cols(model_input, self._id_cols + [self._time_col])
         df = model_input.copy()
-        df["ts_id"] = df[self._id_cols].apply(lambda r: "-".join(r.values.astype(str)), axis=1)
+        df["ts_id"] = df[self._id_cols].apply(tuple, axis=1)
         known_ids = set(self._pickled_models.keys())
         ids = set(df["ts_id"].unique())
         if not ids.issubset(known_ids):
@@ -293,8 +330,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
                 ),
                 error_code=INVALID_PARAMETER_VALUE,
             )
-        preds_df = df.groupby("ts_id").apply(self._predict_single_id).reset_index(drop=True)
-        df = df.merge(preds_df, how="left", on=[self._time_col, "ts_id"])  # merge predictions to original order
+        preds_df = df.groupby(self._id_cols).apply(self._predict_single_id).reset_index(drop=True)
+        df = df.merge(preds_df, how="left", on=[self._time_col] + self._id_cols)  # merge predictions to original order
         return df["yhat"]
 
     def _predict_single_id(self, df: pd.DataFrame) -> pd.DataFrame:
