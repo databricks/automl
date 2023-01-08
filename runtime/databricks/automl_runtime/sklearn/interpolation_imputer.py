@@ -22,6 +22,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 DEFAULT_PARAMS = dict(
         method="linear",
         limit_direction="both",
+        inplace=False,
         axis=0)
 
 
@@ -64,6 +65,6 @@ class InterpolationImputer(TransformerMixin, BaseEstimator):
 
         X_imputed = X.interpolate(**self._impute_params)
         if self._impute_all:
-            X_imputed = X_imputed.interpolate(**DEFAULT_PARAMS)
+            X_imputed.interpolate(**DEFAULT_PARAMS)
 
         return X_imputed
