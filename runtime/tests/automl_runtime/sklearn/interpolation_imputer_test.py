@@ -16,8 +16,11 @@
 
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_frame_equal
 import unittest
+
+from pandas.testing import assert_frame_equal
+from sklearn.pipeline import Pipeline
+
 
 from databricks.automl_runtime.sklearn import InterpolationImputer
 
@@ -46,3 +49,7 @@ class TestInterpolationImputer(unittest.TestCase):
         interpolate_param = {"method": 'pad', "limit": 2}
         imputed_df = InterpolationImputer(impute_params=interpolate_param).transform(self.df)
         assert_frame_equal(imputed_df, expected_df)
+
+    def test_pipeline(self):
+        imputed_df = Pipeline([("imputer", InterpolationImputer())]).fit_transform(self.df)
+        assert_frame_equal(imputed_df, self.expected_df)
