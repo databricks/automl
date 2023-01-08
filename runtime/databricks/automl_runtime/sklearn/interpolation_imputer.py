@@ -22,7 +22,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 DEFAULT_PARAMS = dict(
         method="linear",
         limit_direction="both",
-        inplace=False,
+        inplace=True,
         axis=0)
 
 
