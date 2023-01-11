@@ -40,7 +40,8 @@ class ProphetHyperParams(Enum):
 def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
                          horizon: int, frequency: str, cutoffs: List[pd.Timestamp],
                          interval_width: int, primary_metric: str,
-                         country_holidays: Optional[str] = None, regressors = None) -> Dict[str, Any]:
+                         country_holidays: Optional[str] = None,
+                         regressors = None, **prophet_kwargs) -> Dict[str, Any]:
     """
     Training function for hyperparameter tuning with hyperopt
 
@@ -53,9 +54,11 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     :param interval_width: Width of the uncertainty intervals provided for the forecast
     :param primary_metric: Metric that will be optimized across trials
     :param country_holidays: Built-in holidays for the specified country
+    :param prophet_kwargs: Optional keyword arguments for Prophet model.
     :return: Dictionary as the format for hyperopt
     """
-    model = Prophet(interval_width=interval_width, **params)
+    input_params = {**params, **prophet_kwargs}
+    model = Prophet(interval_width=interval_width, **input_params)
     if country_holidays:
         model.add_country_holidays(country_name=country_holidays)
 
@@ -87,7 +90,8 @@ class ProphetHyperoptEstimator(ABC):
                  country_holidays: str, search_space: Dict[str, Any],
                  algo=hyperopt.tpe.suggest, num_folds: int = 5,
                  max_eval: int = 10, trial_timeout: int = None,
-                 random_state: int = 0, is_parallel: bool = True, regressors = None) -> None:
+                 random_state: int = 0, is_parallel: bool = True,
+                 regressors = None, **prophet_kwargs) -> None:
         """
         Initialization
 
@@ -104,6 +108,9 @@ class ProphetHyperoptEstimator(ABC):
         :param random_state: random seed for hyperopt
         :param is_parallel: Indicators to decide that whether run hyperopt in 
         :param regressors: list of column names of external regressors
+        :param prophet_kwargs: Optional keyword arguments for Prophet model.
+            For information about the parameters see:
+            `The Prophet source code <https://github.com/facebook/prophet/blob/master/python/prophet/forecaster.py>`_.
         """
         self._horizon = horizon
         self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
@@ -118,6 +125,7 @@ class ProphetHyperoptEstimator(ABC):
         self._timeout = trial_timeout
         self._is_parallel = is_parallel
         self._regressors = regressors
+        self._prophet_kwargs = prophet_kwargs
 
     def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -141,7 +149,8 @@ class ProphetHyperoptEstimator(ABC):
         train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=validation_horizon,
                            frequency=self._frequency_unit, cutoffs=cutoffs,
                            interval_width=self._interval_width,
-                           primary_metric=self._metric, country_holidays=self._country_holidays, regressors=self._regressors)
+                           primary_metric=self._metric, country_holidays=self._country_holidays,
+                           regressors=self._regressors, **self._prophet_kwargs)
 
         if self._is_parallel:
             trials = SparkTrials() # pragma: no cover
@@ -162,7 +171,8 @@ class ProphetHyperoptEstimator(ABC):
                         seasonality_prior_scale=best_result.get(ProphetHyperParams.SEASONALITY_PRIOR_SCALE.value, 10.0),
                         holidays_prior_scale=best_result.get(ProphetHyperParams.HOLIDAYS_PRIOR_SCALE.value, 10.0),
                         seasonality_mode=seasonality_mode[best_result.get(ProphetHyperParams.SEASONALITY_MODE.value, 0)],
-                        interval_width=self._interval_width)
+                        interval_width=self._interval_width,
+                        **self._prophet_kwargs)
 
         if self._country_holidays:
             model.add_country_holidays(country_name=self._country_holidays)
