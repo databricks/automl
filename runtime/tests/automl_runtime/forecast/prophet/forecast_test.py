@@ -19,6 +19,7 @@ import json
 import datetime
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 from hyperopt import hp
 
@@ -115,6 +116,29 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             model_json = json.loads(results["model_json"][0])
             self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
             self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
+
+    def test_training_with_extra_regressors(self):
+        df = pd.concat([
+            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
+            pd.Series(range(self.num_rows), name="y"),
+            pd.Series(range(self.num_rows), name="f1"),
+            pd.Series(np.random.randn(self.num_rows), name="f2"),
+        ], axis=1)
+        hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
+                                                  frequency_unit="d",
+                                                  metric="smape",
+                                                  interval_width=0.8,
+                                                  country_holidays="US",
+                                                  search_space=self.search_space,
+                                                  num_folds=2,
+                                                  trial_timeout=1000,
+                                                  random_state=0,
+                                                  is_parallel=False,
+                                                  regressors=["f1", "f2"])
+        results = hyperopt_estim.fit(df)
+        self.assertAlmostEqual(results["smape"][0], 0, delta=0.002)
+        model_json = json.loads(results["model_json"][0])
+        self.assertListEqual(model_json["extra_regressors"][0], ["f1", "f2"])
 
     @patch("databricks.automl_runtime.forecast.prophet.forecast.fmin")
     @patch("databricks.automl_runtime.forecast.prophet.forecast.Trials")
