@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 from __future__ import annotations
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
