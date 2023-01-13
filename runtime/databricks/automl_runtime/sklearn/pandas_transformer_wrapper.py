@@ -77,4 +77,4 @@ class PandasTransformerWrapper(TransformerMixin, BaseEstimator):
         feature_names_out : ndarray of str objects
             Transformed feature names.
         """
-        return self.columns
+        return self.columns.to_list()

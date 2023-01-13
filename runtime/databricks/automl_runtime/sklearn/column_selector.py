@@ -54,3 +54,6 @@ class ColumnSelector(ABC, TransformerMixin, BaseEstimator):
         """
         X = X.copy()
         return X[self.cols]
+
+    def get_feature_names_out(self, input_features=None):
+        return self.cols

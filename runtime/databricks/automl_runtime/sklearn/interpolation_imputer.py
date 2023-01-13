@@ -51,6 +51,7 @@ class InterpolationImputer(TransformerMixin, BaseEstimator):
         self._impute_all = impute_all
 
     def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> InterpolationImputer:
+        self.columns = X.columns
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -61,9 +62,23 @@ class InterpolationImputer(TransformerMixin, BaseEstimator):
         X: a pandas DataFrame whose values are date or timestamp.
         """
         assert isinstance(X, pd.DataFrame)
+        self.columns = X.columns
 
         X_imputed = X.interpolate(**self._impute_params)
         if self._impute_all:
             X_imputed.interpolate(inplace=True, **DEFAULT_PARAMS)
 
         return X_imputed
+
+    def get_feature_names_out(self, input_features: List[str]=None):
+        """Get output feature names for transformation.
+        Parameters
+        ----------
+        input_features : array-like of str or None, default=None
+            Not used, present here for API consistency by convention.
+        Returns
+        -------
+        feature_names_out : ndarray of str objects
+            Transformed feature names.
+        """
+        return self.columns.to_list()

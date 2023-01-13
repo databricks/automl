@@ -54,3 +54,16 @@ class PandasSimpleImputer(SimpleImputer):
             Transformed features.
         """
         return pd.DataFrame(super().transform(X), columns=self.columns)
+
+    def get_feature_names_out(self, input_features: List[str]=None):
+        """Get output feature names for transformation.
+        Parameters
+        ----------
+        input_features : array-like of str or None, default=None
+            Not used, present here for API consistency by convention.
+        Returns
+        -------
+        feature_names_out : ndarray of str objects
+            Transformed feature names.
+        """
+        return self.columns.to_list()

@@ -50,3 +50,7 @@ class TestPandasTransformerWrapper(unittest.TestCase):
         self.assertTrue(isinstance(output_df, pd.DataFrame))
         self.assertCountEqual(self.expected_columns, set(output_df.columns))
         np.testing.assert_almost_equal(output_df.to_numpy(), self.expected_output_X)
+
+    def test_get_feature_names_out(self):
+        imputer = PandasTransformerWrapper(SimpleImputer()).fit(self.X)
+        self.assertListEqual(imputer.get_feature_names_out(), self.X.columns.to_list())
