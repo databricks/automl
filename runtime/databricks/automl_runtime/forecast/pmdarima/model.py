@@ -117,11 +117,10 @@ class ArimaModel(AbstractArimaModel):
         """
         return pickle.loads(self._pickled_model)
 
-    # TODO(maddie.dawson): Remove X from this signature?
     def predict_timeseries(
         self,
         horizon: int = None,
-        X: pd.DataFrame = None,
+        df: pd.DataFrame = None,
         include_history: bool = True) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
@@ -131,6 +130,8 @@ class ArimaModel(AbstractArimaModel):
         :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
         horizon = horizon or self._horizon
+        df.set_index("ds", inplace=True)
+        X = df.drop(["y"], axis=1)
         future_pd = self._forecast(horizon, X)
         if include_history:
             in_sample_pd = self._predict_in_sample(X=X)
@@ -139,7 +140,6 @@ class ArimaModel(AbstractArimaModel):
             return future_pd
 
     def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
-        print("MDD predict")
         """
         Predict API from mlflow.pyfunc.PythonModel.
 
@@ -156,7 +156,6 @@ class ArimaModel(AbstractArimaModel):
         return result_df["yhat"]
 
     def _predict_impl(self, input_df: pd.DataFrame) -> pd.DataFrame:
-        print("MDD _predict_impl")
         df = input_df.rename(columns={self._time_col: "ds"})
         df["ds"] = pd.to_datetime(df["ds"], infer_datetime_format=True)
         # Validate the time range
@@ -208,7 +207,6 @@ class ArimaModel(AbstractArimaModel):
         start_ds: pd.Timestamp = None,
         end_ds: pd.Timestamp = None,
         X: pd.DataFrame = None) -> pd.DataFrame:
-        print("MDD _predict_in_sample")
         if start_ds and end_ds:
             start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency)
             end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency)
@@ -216,7 +214,6 @@ class ArimaModel(AbstractArimaModel):
             start_ds = self._start_ds
             end_ds = self._end_ds
             start_idx, end_idx = None, None
-        print(f"MDD calling pmdarima.arima.ARIMA.predict_in_sample with X={X}")
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             X=X,
             start=start_idx,
@@ -232,9 +229,7 @@ class ArimaModel(AbstractArimaModel):
         self,
         horizon: int = None,
         X: pd.DataFrame = None) -> pd.DataFrame:
-        print("MDD _forecast")
         horizon = horizon or self._horizon
-        print(f"MDD calling pmdarima.arima.ARIMA.predict with horizon={horizon}, X={X}")
         preds, conf = self.model().predict(
             horizon,
             X=X,
@@ -315,11 +310,10 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         )
         return future_df
 
-    # TODO(maddie.dawson): Remove X from this signature?
     def predict_timeseries(
         self,
         horizon: int = None,
-        X: pd.DataFrame = None,
+        df: pd.DataFrame = None,
         include_history: bool = True) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
@@ -330,6 +324,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         """
         horizon = horizon or self._horizon
         ids = self._pickled_models.keys()
+        df.set_index("ds", inplace=True)
+        X = df.drop(["y"], axis=1)
         preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, X, include_history), ids))
         return pd.concat(preds_dfs).reset_index(drop=True)
 

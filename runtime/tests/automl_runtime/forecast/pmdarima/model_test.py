@@ -171,7 +171,6 @@ class TestArimaModelWithExogenous(unittest.TestCase):
                                       end_ds=pd.Timestamp("2020-11-26"),
                                       time_col="date")
 
-    # TODO(maddie.dawson): This is failing because we need to impute
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries(X=self.X)
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
@@ -186,7 +185,6 @@ class TestArimaModelWithExogenous(unittest.TestCase):
         forecast_future_pd = self.arima_model.predict_timeseries(X=self.X, include_history=False)
         self.assertEqual(len(forecast_future_pd), self.horizon)
 
-    # TODO(maddie.dawson): This is failing because we need to impute
     def test_predict_success(self):
         test_df = pd.DataFrame({
             "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")],
@@ -334,7 +332,6 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
                                                  time_col="date",
                                                  id_cols=["id"])
 
-    # TODO(maddie.dawson): This is failing because we need to impute
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries(X=self.X)
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
@@ -344,7 +341,6 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
         forecast_future_pd = self.arima_model.predict_timeseries(X=self.X, include_history=False)
         self.assertEqual(len(forecast_future_pd), 2)
 
-    # TODO(maddie.dawson): This is failing because we need to impute
     def test_predict_success(self):
         test_df = pd.DataFrame({
             "date": [pd.to_datetime("2020-05-13"), pd.to_datetime("2020-05-13"),
