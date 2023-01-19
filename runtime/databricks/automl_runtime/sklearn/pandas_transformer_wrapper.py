@@ -17,14 +17,17 @@ from __future__ import annotations
 from typing import List
 
 import pandas as pd
-from sklearn.impute import SimpleImputer
+from sklearn.base import TransformerMixin, BaseEstimator
 
-class PandasSimpleImputer(SimpleImputer):
+class PandasTransformerWrapper(TransformerMixin, BaseEstimator):
     """
     A wrapper of `SimpleImputer` with the support for pandas dataframe output.
     """
 
-    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> PandasSimpleImputer:
+    def __init__(self, estimator: BaseEstimator) -> None:
+        self.estimator = estimator
+
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> PandasTransformerWrapper:
         """Fits the imputer on X
 
         Parameters
@@ -36,7 +39,8 @@ class PandasSimpleImputer(SimpleImputer):
         y : Not used, present here for API consistency by convention.
         """
         self.columns = X.columns
-        return super().fit(X, y)
+        self.estimator = self.estimator.fit(X=X, y=y)
+        return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """Impute all missing values in `X`.
@@ -54,7 +58,13 @@ class PandasSimpleImputer(SimpleImputer):
         pd.DataFrame of shape (n_samples, n_features_encoded)
             Transformed features.
         """
-        return pd.DataFrame(super().transform(X), columns=self.columns)
+        return pd.DataFrame(self.estimator.transform(X), columns=self.columns)
+
+    def fit_transform(self, X: pd.DataFrame, y: pd.DataFrame=None):
+        """Learn a list of feature name -> indices mappings and transform X.
+        """
+        self.fit(X, y)
+        return self.transform(X)
 
     def get_feature_names_out(self, input_features: List[str]=None):
         """Get output feature names for transformation.

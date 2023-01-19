@@ -53,3 +53,8 @@ class TestInterpolationImputer(unittest.TestCase):
     def test_pipeline(self):
         imputed_df = Pipeline([("imputer", InterpolationImputer())]).fit_transform(self.df)
         assert_frame_equal(imputed_df, self.expected_df)
+
+    def test_get_feature_names_out(self):
+        imputer = InterpolationImputer()
+        imputer.transform(self.df)
+        self.assertListEqual(imputer.get_feature_names_out(), self.df.columns.to_list())

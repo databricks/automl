@@ -13,15 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import unittest
 
 import pandas as pd
 import numpy as np
-from databricks.automl_runtime.sklearn import PandasSimpleImputer
+from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 
-class TestOneHotEncoder(unittest.TestCase):
+from databricks.automl_runtime.sklearn import PandasTransformerWrapper
+
+
+class TestPandasTransformerWrapper(unittest.TestCase):
     
     def setUp(self) -> None:
         missing_values = np.nan
@@ -37,18 +39,18 @@ class TestOneHotEncoder(unittest.TestCase):
         self.expected_columns = {"a", "b", "c", "d"}
 
     def test_fit_and_transform(self):
-        imputer = PandasSimpleImputer().fit(self.X)
+        imputer = PandasTransformerWrapper(SimpleImputer()).fit(self.X)
         output_df = imputer.transform(self.X)
         self.assertTrue(isinstance(output_df, pd.DataFrame))
         self.assertCountEqual(self.expected_columns, set(output_df.columns))
         np.testing.assert_almost_equal(output_df.to_numpy(), self.expected_output_X)
 
     def test_pipeline(self):
-        output_df = Pipeline([("imputer", PandasSimpleImputer())]).fit_transform(self.X)
+        output_df = Pipeline([("imputer", PandasTransformerWrapper(SimpleImputer()))]).fit_transform(self.X)
         self.assertTrue(isinstance(output_df, pd.DataFrame))
         self.assertCountEqual(self.expected_columns, set(output_df.columns))
         np.testing.assert_almost_equal(output_df.to_numpy(), self.expected_output_X)
 
     def test_get_feature_names_out(self):
-        imputer = PandasSimpleImputer().fit(self.X)
+        imputer = PandasTransformerWrapper(SimpleImputer()).fit(self.X)
         self.assertListEqual(imputer.get_feature_names_out(), self.X.columns.to_list())
