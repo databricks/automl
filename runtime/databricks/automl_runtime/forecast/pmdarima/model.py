@@ -120,18 +120,21 @@ class ArimaModel(AbstractArimaModel):
     def predict_timeseries(
         self,
         horizon: int = None,
-        df: pd.DataFrame = None,
-        include_history: bool = True) -> pd.DataFrame:
+        include_history: bool = True,
+        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
         :param horizon: int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
+        :param df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
         :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
         horizon = horizon or self._horizon
-        df.set_index("ds", inplace=True)
-        X = df.drop(["y"], axis=1)
+        X = None
+        if df is not None:
+            df.set_index("ds", inplace=True)
+            X = df.drop(["y"], axis=1)
         future_pd = self._forecast(horizon, X)
         if include_history:
             in_sample_pd = self._predict_in_sample(X=X)
@@ -182,9 +185,12 @@ class ArimaModel(AbstractArimaModel):
         preds_pds = []
         # Out-of-sample prediction if needed
         horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency)
+        print(f"MDD self._end_ds {self._end_ds} max {max(df['ds'])} freq {self._frequency} horizon {horizon}")
         if horizon > 0:
+            print(f"MDD df {df}")
             # Forward fill missing time steps
             X_future = df[df["ds"] > self._end_ds].set_index("ds").resample(rule=OFFSET_ALIAS_MAP[self._frequency]).pad()
+            print(f"MDD X_future {X_future}")
             future_pd = self._forecast(
                 horizon,
                 X=X_future if len(X_future.columns) > 0 else None)
@@ -313,19 +319,22 @@ class MultiSeriesArimaModel(AbstractArimaModel):
     def predict_timeseries(
         self,
         horizon: int = None,
-        df: pd.DataFrame = None,
-        include_history: bool = True) -> pd.DataFrame:
+        include_history: bool = True,
+        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
         :param horizon: Int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
+        :param df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
         :return: A pd.DataFrame with the forecast components.
         """
         horizon = horizon or self._horizon
         ids = self._pickled_models.keys()
-        df.set_index("ds", inplace=True)
-        X = df.drop(["y"], axis=1)
+        X = None
+        if df is not None:
+            df.set_index("ds", inplace=True)
+            X = df.drop(["y"], axis=1)
         preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, X, include_history), ids))
         return pd.concat(preds_dfs).reset_index(drop=True)
 
