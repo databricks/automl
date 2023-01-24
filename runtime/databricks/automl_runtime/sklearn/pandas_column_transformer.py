@@ -24,7 +24,7 @@ class PandasColumnTransformer(ColumnTransformer):
     A wrapper of `ColumnTransformer` with the support for pandas dataframe output.
     """
 
-    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> PandasTransformerWrapper:
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> PandasColumnTransformer:
         """Fits the imputer on X
 
         Parameters
