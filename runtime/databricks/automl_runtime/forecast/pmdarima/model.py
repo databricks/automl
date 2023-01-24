@@ -22,6 +22,7 @@ import mlflow
 import pmdarima
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
+from mlflow.utils.environment import _mlflow_conda_env
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
@@ -29,19 +30,13 @@ from databricks.automl_runtime.forecast.utils import calculate_period_difference
     make_future_dataframe
 
 
-ARIMA_CONDA_ENV = {
-    "channels": ["conda-forge"],
-    "dependencies": [
-        {
-            "pip": [
-                f"pmdarima=={pmdarima.__version__}",
-                f"pickle=={pickle.format_version}",
-                f"pandas=={pd.__version__}",
-            ]
-        }
-    ],
-    "name": "pmdarima_env",
-}
+ARIMA_CONDA_ENV = _mlflow_conda_env(
+    additional_pip_deps=[
+        f"pmdarima=={pmdarima.__version__}",
+        f"pickle=={pickle.format_version}",
+        f"pandas=={pd.__version__}",
+    ]
+)
 
 
 class AbstractArimaModel(ForecastModel):

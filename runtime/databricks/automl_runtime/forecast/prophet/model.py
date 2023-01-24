@@ -21,6 +21,7 @@ import pandas as pd
 import prophet
 
 from mlflow.models.signature import ModelSignature
+from mlflow.utils.environment import _mlflow_conda_env
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
@@ -28,19 +29,13 @@ from databricks.automl_runtime import version
 from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe
 
 
-PROPHET_CONDA_ENV = {
-    "channels": ["conda-forge"],
-    "dependencies": [
-        {
-            "pip": [
-                f"prophet=={prophet.__version__}",
-                f"cloudpickle=={cloudpickle.__version__}",
-                f"databricks-automl-runtime=={version.__version__}",
-            ]
-        }
-    ],
-    "name": "fbp_env",
-}
+PROPHET_CONDA_ENV = _mlflow_conda_env(
+    additional_pip_deps=[
+        f"prophet=={prophet.__version__}",
+        f"cloudpickle=={cloudpickle.__version__}",
+        f"databricks-automl-runtime=={version.__version__}",
+    ]
+)
 
 
 class ProphetModel(ForecastModel):
