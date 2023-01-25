@@ -112,18 +112,24 @@ class ArimaModel(AbstractArimaModel):
         """
         return pickle.loads(self._pickled_model)
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def predict_timeseries(
+        self,
+        horizon: int = None,
+        include_history: bool = True,
+        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
         :param horizon: int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
+        :param df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
         :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
         horizon = horizon or self._horizon
-        future_pd = self._forecast(horizon)
+        X = None if df is None else df[df[self._time_col] > self._end_ds].set_index(self._time_col).drop(["y"], axis=1)
+        future_pd = self._forecast(horizon, X)
         if include_history:
-            in_sample_pd = self._predict_in_sample()
+            in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, X=X)
             return pd.concat([in_sample_pd, future_pd]).reset_index(drop=True)
         else:
             return future_pd
@@ -172,18 +178,29 @@ class ArimaModel(AbstractArimaModel):
         # Out-of-sample prediction if needed
         horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency)
         if horizon > 0:
-            future_pd = self._forecast(horizon)
+            X_future = df[df["ds"] > self._end_ds].set_index("ds")
+            future_pd = self._forecast(
+                horizon,
+                X=X_future if len(X_future.columns) > 0 else None)
             preds_pds.append(future_pd)
         # In-sample prediction if needed
         if pred_start_ds <= self._end_ds:
-            in_sample_pd = self._predict_in_sample(start_ds=pred_start_ds, end_ds=self._end_ds)
+            X_in_sample = df[df["ds"] <= self._end_ds].set_index("ds")
+            in_sample_pd = self._predict_in_sample(
+                start_ds=pred_start_ds,
+                end_ds=self._end_ds,
+                X=X_in_sample if len(X_in_sample.columns) > 0 else None)
             preds_pds.append(in_sample_pd)
         # Map predictions back to given timestamps
         preds_pd = pd.concat(preds_pds).set_index("ds")
         df = df.set_index("ds").join(preds_pd, how="left").reset_index()
         return df
 
-    def _predict_in_sample(self, start_ds: pd.Timestamp = None, end_ds: pd.Timestamp = None) -> pd.DataFrame:
+    def _predict_in_sample(
+        self,
+        start_ds: pd.Timestamp = None,
+        end_ds: pd.Timestamp = None,
+        X: pd.DataFrame = None) -> pd.DataFrame:
         if start_ds and end_ds:
             start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency)
             end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency)
@@ -192,16 +209,25 @@ class ArimaModel(AbstractArimaModel):
             end_ds = self._end_ds
             start_idx, end_idx = None, None
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
-            start=start_idx, end=end_idx, return_conf_int=True)
+            X=X,
+            start=start_idx,
+            end=end_idx,
+            return_conf_int=True)
         periods = calculate_period_differences(start_ds, end_ds, self._frequency) + 1
         ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
         return in_sample_pd
 
-    def _forecast(self, horizon: int = None) -> pd.DataFrame:
+    def _forecast(
+        self,
+        horizon: int = None,
+        X: pd.DataFrame = None) -> pd.DataFrame:
         horizon = horizon or self._horizon
-        preds, conf = self.model().predict(horizon, return_conf_int=True)
+        preds, conf = self.model().predict(
+            horizon,
+            X=X,
+            return_conf_int=True)
         ds_indices = self._get_ds_indices(start_ds=self._end_ds, periods=horizon + 1, frequency=self._frequency)[1:]
         preds_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds})
         preds_pd[["yhat_lower", "yhat_upper"]] = conf
@@ -278,23 +304,33 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         )
         return future_df
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def predict_timeseries(
+        self,
+        horizon: int = None,
+        include_history: bool = True,
+        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
         :param horizon: Int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
+        :param df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
         :return: A pd.DataFrame with the forecast components.
         """
         horizon = horizon or self._horizon
         ids = self._pickled_models.keys()
-        preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, include_history), ids))
+        preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, include_history, df), ids))
         return pd.concat(preds_dfs).reset_index(drop=True)
 
-    def _predict_timeseries_single_id(self, id_: Tuple, horizon: int, include_history: bool = True) -> pd.DataFrame:
+    def _predict_timeseries_single_id(
+        self,
+        id_: Tuple,
+        horizon: int,
+        include_history: bool = True,
+        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency,
                                            self._starts[id_], self._ends[id_], self._time_col)
-        preds_df = arima_model_single_id.predict_timeseries(horizon, include_history)
+        preds_df = arima_model_single_id.predict_timeseries(horizon, include_history, df)
         for id, col_name in zip(id_, self._id_cols):
             preds_df[col_name] = id
         return preds_df
@@ -331,9 +367,13 @@ class MultiSeriesArimaModel(AbstractArimaModel):
 
     def _predict_single_id(self, df: pd.DataFrame) -> pd.DataFrame:
         id_ = df["ts_id"].to_list()[0]
-        arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency,
-                                           self._starts[id_], self._ends[id_], self._time_col)
-        df["yhat"] = arima_model_single_id.predict(None, df).to_list()
+        arima_model_single_id = ArimaModel(self._pickled_models[id_],
+                                           self._horizon,
+                                           self._frequency,
+                                           self._starts[id_],
+                                           self._ends[id_],
+                                           self._time_col)
+        df["yhat"] = arima_model_single_id.predict(context=None, model_input=df.drop(["id", "ts_id"], axis=1)).to_list()
         return df
 
 

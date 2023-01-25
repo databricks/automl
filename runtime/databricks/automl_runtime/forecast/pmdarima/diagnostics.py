@@ -42,7 +42,12 @@ def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoff
 
     # Update model with data in last cutoff
     last_df = test_df[test_df["cutoff"] == cutoffs[-1]]
-    arima_model.update(last_df["y"].values)
+    last_df.set_index("ds", inplace=True)
+    y_update = last_df[["y"]]
+    X_update = last_df.drop(["y", "cutoff"], axis=1)
+    arima_model.update(
+        y_update,
+        X=X_update if len(X_update.columns) > 0 else None)
 
     return pd.concat(predicts, axis=0).reset_index(drop=True)
 
@@ -61,12 +66,20 @@ def single_cutoff_forecast(arima_model: pmdarima.arima.ARIMA, test_df: pd.DataFr
     # Update the model with data in the previous cutoff
     prev_df = test_df[test_df["cutoff"] == prev_cutoff]
     if not prev_df.empty:
-        y_update = prev_df[["ds", "y"]].set_index("ds")
-        arima_model.update(y_update)
+        prev_df.set_index("ds", inplace=True)
+        y_update = prev_df[["y"]]
+        X_update = prev_df.drop(["y", "cutoff"], axis=1)
+        arima_model.update(
+            y_update,
+            X=X_update if len(X_update.columns) > 0 else None)
     # Predict with data in the new cutoff
     new_df = test_df[test_df["cutoff"] == cutoff].copy()
+    X_predict = new_df.drop(["y", "cutoff"], axis=1).set_index("ds")
     n_periods = len(new_df["y"].values)
-    fc, conf_int = arima_model.predict(n_periods=n_periods, return_conf_int=True)
+    fc, conf_int = arima_model.predict(
+        n_periods=n_periods,
+        X=X_predict if len(X_predict.columns) > 0 else None,
+        return_conf_int=True)
     fc = fc.tolist()
     conf = np.asarray(conf_int).tolist()
 

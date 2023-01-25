@@ -42,15 +42,21 @@ class TestArimaEstimator(unittest.TestCase):
             pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i + 1:02d}-07")),
             pd.Series(np.random.rand(self.num_rows), name="y")
         ], axis=1)
+        self.df_with_exogenous = pd.concat([
+            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
+            pd.Series(np.random.rand(self.num_rows), name="y"),
+            pd.Series(np.random.rand(self.num_rows), name="x1"),
+            pd.Series(np.random.rand(self.num_rows), name="x2")
+        ], axis=1)
 
     def test_fit_success(self):
-        for freq, df in [['d', self.df], ['d', self.df_string_time],
-                            ['month', self.df_monthly]]:
+        for freq, df in [['d', self.df], ['d', self.df_string_time], ['month', self.df_monthly], ['d', self.df_with_exogenous]]:
             arima_estimator = ArimaEstimator(horizon=1,
-                                            frequency_unit=freq,
-                                            metric="smape",
-                                            seasonal_periods=[1, 7],
-                                            num_folds=2)
+                                             frequency_unit=freq,
+                                             metric="smape",
+                                             seasonal_periods=[1, 7],
+                                             num_folds=2)
+
             results_pd = arima_estimator.fit(df)
             self.assertIn("smape", results_pd)
             self.assertIn("pickled_model", results_pd)
@@ -148,6 +154,21 @@ class TestArimaEstimator(unittest.TestCase):
             df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency)
             for index in indices_to_drop:
                 self.assertTrue(df_filled["y"][index] == df_filled["y"][index - 1])
+            self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
+
+    def test_fill_missing_time_steps_with_exogenous(self):
+        supported_freq = ["W", "days", "hr", "min", "sec"]
+        start_ds = pd.Timestamp("2020-07-05 00:00:00")
+        for frequency in supported_freq:
+            ds = pd.date_range(start=start_ds, periods=12, freq=pd.DateOffset(
+                **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]])
+            )
+            indices_to_drop = [5, 8]
+            df_missing = pd.DataFrame({"ds": ds, "y": range(12), "x": range(12)}).drop(indices_to_drop).reset_index(drop=True)
+            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency)
+            for index in indices_to_drop:
+                self.assertTrue(df_filled["y"][index] == df_filled["y"][index - 1])
+                self.assertTrue(df_filled["x"][index] == df_filled["x"][index - 1])
             self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
 
     def test_validate_ds_freq_matched_frequency(self):
