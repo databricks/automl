@@ -2,10 +2,10 @@
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: Formatting python code
-
 on:
-  pull_request:
-    - 'runtime/**.py'
+  push:
+    paths:
+      - 'runtime/**.py'
 jobs:
   autoyapf:
     runs-on: ubuntu-latest
