@@ -23,10 +23,16 @@ import concurrent.futures
 
 import pandas as pd
 
-
 logger = logging.getLogger('prophet')
 
-def cross_validation(model, horizon, period=None, initial=None, parallel=None, cutoffs=None, disable_tqdm=False):
+
+def cross_validation(model,
+                     horizon,
+                     period=None,
+                     initial=None,
+                     parallel=None,
+                     cutoffs=None,
+                     disable_tqdm=False):
     """Cross-Validation for time series.
 
     This function is same as prophet's native function
@@ -96,30 +102,34 @@ def cross_validation(model, horizon, period=None, initial=None, parallel=None, c
     predict_columns = ['ds', 'yhat']
     if model.uncertainty_samples:
         predict_columns.extend(['yhat_lower', 'yhat_upper'])
-        
+
     # Identify largest seasonality period
     period_max = 0.
     for s in model.seasonalities.values():
         period_max = max(period_max, s['period'])
-    seasonality_dt = pd.Timedelta(str(period_max) + ' days')    
+    seasonality_dt = pd.Timedelta(str(period_max) + ' days')
 
     # add validation of the cutoff to make sure that the min cutoff is strictly greater than the min date in the history
-    if min(cutoffs) <= df['ds'].min(): 
-        raise ValueError("Minimum cutoff value is not strictly greater than min date in history")
+    if min(cutoffs) <= df['ds'].min():
+        raise ValueError(
+            "Minimum cutoff value is not strictly greater than min date in history"
+        )
     # max value of cutoffs is <= (end date minus horizon)
-    end_date_minus_horizon = df['ds'].max() - horizon 
-    if max(cutoffs) > end_date_minus_horizon: 
-        raise ValueError("Maximum cutoff value is greater than end date minus horizon, no value for cross-validation remaining")
+    end_date_minus_horizon = df['ds'].max() - horizon
+    if max(cutoffs) > end_date_minus_horizon:
+        raise ValueError(
+            "Maximum cutoff value is greater than end date minus horizon, no value for cross-validation remaining"
+        )
     initial = cutoffs[0] - df['ds'].min()
-        
-    # Check if the initial window 
+
+    # Check if the initial window
     # (that is, the amount of time between the start of the history and the first cutoff)
     # is less than the maximum seasonality period
     if initial < seasonality_dt:
-            msg = 'Seasonality has period of {} days '.format(period_max)
-            msg += 'which is larger than initial window. '
-            msg += 'Consider increasing initial.'
-            logger.warning(msg)
+        msg = 'Seasonality has period of {} days '.format(period_max)
+        msg += 'which is larger than initial window. '
+        msg += 'Consider increasing initial.'
+        logger.warning(msg)
 
     if parallel:
         valid = {"threads", "processes", "dask"}
@@ -156,7 +166,7 @@ def cross_validation(model, horizon, period=None, initial=None, parallel=None, c
 
     else:
         predicts = [
-            single_cutoff_forecast(df, model, cutoff, horizon, predict_columns) 
+            single_cutoff_forecast(df, model, cutoff, horizon, predict_columns)
             for cutoff in (tqdm(cutoffs) if not disable_tqdm else cutoffs)
         ]
     # Combine all predicted pd.DataFrame into one pd.DataFrame

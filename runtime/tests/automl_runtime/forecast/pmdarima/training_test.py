@@ -31,26 +31,34 @@ class TestArimaEstimator(unittest.TestCase):
     def setUp(self) -> None:
         self.num_rows = 12
         self.df = pd.concat([
-            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
+            pd.to_datetime(
+                pd.Series(range(self.num_rows),
+                          name="ds").apply(lambda i: f"2020-07-{2 * i + 1}")),
             pd.Series(np.random.rand(self.num_rows), name="y")
-        ], axis=1)
+        ],
+                            axis=1)
         self.df_string_time = pd.concat([
-            pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-07-{2 * i + 1}"),
+            pd.Series(range(self.num_rows),
+                      name="ds").apply(lambda i: f"2020-07-{2 * i + 1}"),
             pd.Series(np.random.rand(self.num_rows), name="y")
-        ], axis=1)
+        ],
+                                        axis=1)
         self.df_monthly = pd.concat([
-            pd.to_datetime(pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"2020-{i + 1:02d}-07")),
+            pd.to_datetime(
+                pd.Series(range(self.num_rows),
+                          name="ds").apply(lambda i: f"2020-{i + 1:02d}-07")),
             pd.Series(np.random.rand(self.num_rows), name="y")
-        ], axis=1)
+        ],
+                                    axis=1)
 
     def test_fit_success(self):
         for freq, df in [['d', self.df], ['d', self.df_string_time],
-                            ['month', self.df_monthly]]:
+                         ['month', self.df_monthly]]:
             arima_estimator = ArimaEstimator(horizon=1,
-                                            frequency_unit=freq,
-                                            metric="smape",
-                                            seasonal_periods=[1, 7],
-                                            num_folds=2)
+                                             frequency_unit=freq,
+                                             metric="smape",
+                                             seasonal_periods=[1, 7],
+                                             num_folds=2)
             results_pd = arima_estimator.fit(df)
             self.assertIn("smape", results_pd)
             self.assertIn("pickled_model", results_pd)
@@ -61,11 +69,17 @@ class TestArimaEstimator(unittest.TestCase):
                                          metric="smape",
                                          seasonal_periods=[3, 14],
                                          num_folds=2)
-        with self.assertLogs(logger="databricks.automl_runtime.forecast.pmdarima.training", level="WARNING") as cm:
+        with self.assertLogs(
+                logger="databricks.automl_runtime.forecast.pmdarima.training",
+                level="WARNING") as cm:
             results_pd = arima_estimator.fit(self.df)
-            self.assertIn("Skipping seasonal_period=14 (D). Dataframe timestamps must span at least two seasonality periods", cm.output[0])
+            self.assertIn(
+                "Skipping seasonal_period=14 (D). Dataframe timestamps must span at least two seasonality periods",
+                cm.output[0])
 
-    @patch("databricks.automl_runtime.forecast.prophet.forecast.utils.generate_cutoffs")
+    @patch(
+        "databricks.automl_runtime.forecast.prophet.forecast.utils.generate_cutoffs"
+    )
     def test_fit_horizon_truncation(self, mock_generate_cutoffs):
         period = 2
         arima_estimator = ArimaEstimator(horizon=100,
@@ -80,7 +94,8 @@ class TestArimaEstimator(unittest.TestCase):
             pass
 
         # self.df spans 22 days, so the valididation_horizon is floor(22/4)=5 days, and only one cutoff is produced
-        self.assertEqual(mock_generate_cutoffs.call_args_list[0].kwargs["horizon"], 5)
+        self.assertEqual(
+            mock_generate_cutoffs.call_args_list[0].kwargs["horizon"], 5)
 
     @patch.object(ArimaEstimator, "_fit_predict")
     def test_fit_horizon_truncation_one_cutoff(self, mock_fit_predict):
@@ -97,10 +112,13 @@ class TestArimaEstimator(unittest.TestCase):
             pass
 
         # self.df spans 22 days, so the valididation_horizon is floor(22/4)=5 days, and only one cutoff is produced
-        self.assertEqual(len(mock_fit_predict.call_args_list[0].kwargs["cutoffs"]), 1)
+        self.assertEqual(
+            len(mock_fit_predict.call_args_list[0].kwargs["cutoffs"]), 1)
 
     def test_fit_success_with_failed_seasonal_periods(self):
-        self.df["y"] = range(self.num_rows)  # make pm.auto_arima fail with m=7 because of singular matrices
+        self.df["y"] = range(
+            self.num_rows
+        )  # make pm.auto_arima fail with m=7 because of singular matrices
         # generate_cutoffs will fail with m=30 because of no enough data
         # The fit method still succeeds because m=1 succeeds
         arima_estimator = ArimaEstimator(horizon=1,
@@ -127,12 +145,15 @@ class TestArimaEstimator(unittest.TestCase):
                                          metric="smape",
                                          seasonal_periods=[30],
                                          num_folds=2)
-        with pytest.raises(Exception, match="No model is successfully trained"):
+        with pytest.raises(Exception,
+                           match="No model is successfully trained"):
             arima_estimator.fit(self.df)
 
     def test_fit_predict_success(self):
         cutoffs = [pd.to_datetime("2020-07-11")]
-        result = ArimaEstimator._fit_predict(self.df, cutoffs, seasonal_period=1)
+        result = ArimaEstimator._fit_predict(self.df,
+                                             cutoffs,
+                                             seasonal_period=1)
         self.assertIn("metrics", result)
         self.assertIsInstance(result["model"], pm.arima.ARIMA)
 
@@ -140,14 +161,21 @@ class TestArimaEstimator(unittest.TestCase):
         supported_freq = ["W", "days", "hr", "min", "sec"]
         start_ds = pd.Timestamp("2020-07-05 00:00:00")
         for frequency in supported_freq:
-            ds = pd.date_range(start=start_ds, periods=12, freq=pd.DateOffset(
-                **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]])
-            )
+            ds = pd.date_range(
+                start=start_ds,
+                periods=12,
+                freq=pd.DateOffset(
+                    **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]))
             indices_to_drop = [5, 8]
-            df_missing = pd.DataFrame({"ds": ds, "y": range(12)}).drop(indices_to_drop).reset_index(drop=True)
-            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency)
+            df_missing = pd.DataFrame({
+                "ds": ds,
+                "y": range(12)
+            }).drop(indices_to_drop).reset_index(drop=True)
+            df_filled = ArimaEstimator._fill_missing_time_steps(
+                df_missing, frequency=frequency)
             for index in indices_to_drop:
-                self.assertTrue(df_filled["y"][index] == df_filled["y"][index - 1])
+                self.assertTrue(df_filled["y"][index] == df_filled["y"][index -
+                                                                        1])
             self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
 
     def test_validate_ds_freq_matched_frequency(self):

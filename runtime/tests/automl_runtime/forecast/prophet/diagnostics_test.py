@@ -25,15 +25,14 @@ from databricks.automl_runtime.forecast.prophet.diagnostics import cross_validat
 
 
 class TestDiagnostics(unittest.TestCase):
+
     def setUp(self) -> None:
         num_rows = 15
         self.X = pd.concat(
             [
                 pd.to_datetime(
                     pd.Series(range(num_rows), name="ds").apply(
-                        lambda i: f"{2020+i//12:04d}-{i%12+1:02d}-15"
-                    )
-                ),
+                        lambda i: f"{2020+i//12:04d}-{i%12+1:02d}-15")),
                 pd.Series(range(num_rows), name="y"),
             ],
             axis=1,
@@ -52,15 +51,14 @@ class TestDiagnostics(unittest.TestCase):
         model.fit(self.X)
 
         horizon = pd.DateOffset(months=3)
-        expected_ds = pd.concat(
-            [
-                self.X[(self.X["ds"] > cutoff) & (self.X["ds"] <= cutoff + horizon)][
-                    "ds"
-                ]
-                for cutoff in cutoffs
-            ]
-        )
-        expected_cols = ["ds", "y", "cutoff", "yhat", "yhat_lower", "yhat_upper"]
+        expected_ds = pd.concat([
+            self.X[(self.X["ds"] > cutoff)
+                   & (self.X["ds"] <= cutoff + horizon)]["ds"]
+            for cutoff in cutoffs
+        ])
+        expected_cols = [
+            "ds", "y", "cutoff", "yhat", "yhat_lower", "yhat_upper"
+        ]
         df_cv = cross_validation(model, horizon=horizon, cutoffs=cutoffs)
         self.assertEqual(df_cv["ds"].tolist(), expected_ds.tolist())
         self.assertEqual(set(df_cv.columns), set(expected_cols))

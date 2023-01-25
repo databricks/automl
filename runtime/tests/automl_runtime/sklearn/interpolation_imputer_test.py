@@ -21,10 +21,11 @@ import unittest
 from pandas.testing import assert_frame_equal
 from sklearn.pipeline import Pipeline
 
-
 from databricks.automl_runtime.sklearn import InterpolationImputer
 
+
 class TestInterpolationImputer(unittest.TestCase):
+
     def setUp(self) -> None:
         self.df = pd.DataFrame([(0.0, np.nan, -1.0, 1.0),
                                 (np.nan, 2.0, np.nan, np.nan),
@@ -36,9 +37,10 @@ class TestInterpolationImputer(unittest.TestCase):
                                          (2.0, 3.0, -3.0, 9.0),
                                          (2.0, 4.0, -4.0, 16.0)],
                                         columns=list('abcd'))
+
     def test_imputer(self):
-        assert_frame_equal(
-            InterpolationImputer().transform(self.df), self.expected_df)
+        assert_frame_equal(InterpolationImputer().transform(self.df),
+                           self.expected_df)
 
     def test_imputer_with_custom_method(self):
         expected_df = pd.DataFrame([(0.0, 2.0, -1.0, 1.0),
@@ -47,14 +49,17 @@ class TestInterpolationImputer(unittest.TestCase):
                                     (2.0, 4.0, -4.0, 16.0)],
                                    columns=list('abcd'))
         interpolate_param = {"method": 'pad', "limit": 2}
-        imputed_df = InterpolationImputer(impute_params=interpolate_param).transform(self.df)
+        imputed_df = InterpolationImputer(
+            impute_params=interpolate_param).transform(self.df)
         assert_frame_equal(imputed_df, expected_df)
 
     def test_pipeline(self):
-        imputed_df = Pipeline([("imputer", InterpolationImputer())]).fit_transform(self.df)
+        imputed_df = Pipeline([("imputer", InterpolationImputer())
+                               ]).fit_transform(self.df)
         assert_frame_equal(imputed_df, self.expected_df)
 
     def test_get_feature_names_out(self):
         imputer = InterpolationImputer()
         imputer.transform(self.df)
-        self.assertListEqual(imputer.get_feature_names_out(), self.df.columns.to_list())
+        self.assertListEqual(imputer.get_feature_names_out(),
+                             self.df.columns.to_list())

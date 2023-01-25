@@ -23,7 +23,8 @@ _logger_hyperopt = logging.getLogger("hyperopt-spark")
 _logger_hyperopt.setLevel(logging.ERROR)
 
 
-def get_early_stop_fn(no_early_stop_threshold=40, no_progress_stop_threshold=20):
+def get_early_stop_fn(no_early_stop_threshold=40,
+                      no_progress_stop_threshold=20):
     """
     Returns an `early_stop_fn` used by hyperopt.
 
@@ -33,7 +34,10 @@ def get_early_stop_fn(no_early_stop_threshold=40, no_progress_stop_threshold=20)
         loss doesn't improve after this number of iterations
     """
 
-    def early_stop_fn(trials, best_loss=None, no_progress_iters=0, completed_trial_ids=set()):
+    def early_stop_fn(trials,
+                      best_loss=None,
+                      no_progress_iters=0,
+                      completed_trial_ids=set()):
         """
         The function checks if hyperopt should stop searching given results from the runs. 
         See hyperopt documentation for more details on the API of this function:
@@ -52,13 +56,15 @@ def get_early_stop_fn(no_early_stop_threshold=40, no_progress_stop_threshold=20)
         new_completed_trial_ids = set()
         new_best_loss = float("inf")
         for trial in trials:
-            if trial["result"]["status"] == STATUS_OK and trial["tid"] not in completed_trial_ids:
+            if trial["result"]["status"] == STATUS_OK and trial[
+                    "tid"] not in completed_trial_ids:
                 new_completed_trial_ids.add(trial["tid"])
                 new_loss = trial["result"]["loss"]
                 if new_loss < new_best_loss:
                     new_best_loss = new_loss
 
-        completed_trial_ids = completed_trial_ids.union(new_completed_trial_ids)
+        completed_trial_ids = completed_trial_ids.union(
+            new_completed_trial_ids)
         if best_loss is None:
             return False, [new_best_loss, 0, completed_trial_ids]
         if new_best_loss < best_loss:
@@ -69,11 +75,11 @@ def get_early_stop_fn(no_early_stop_threshold=40, no_progress_stop_threshold=20)
             _logger.info(
                 f"No hyperparameter tuning progress made for {no_progress_iters} iterations."
                 f"Will early stop after {no_progress_stop_threshold} iterations."
-                f"best_loss={best_loss}, new_best_loss={new_best_loss}"
-            )
+                f"best_loss={best_loss}, new_best_loss={new_best_loss}")
 
         return (
-            no_progress_iters >= no_progress_stop_threshold and len(completed_trial_ids) >= no_early_stop_threshold,
+            no_progress_iters >= no_progress_stop_threshold
+            and len(completed_trial_ids) >= no_early_stop_threshold,
             [best_loss, no_progress_iters, completed_trial_ids],
         )
 

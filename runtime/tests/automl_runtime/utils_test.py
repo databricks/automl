@@ -24,6 +24,7 @@ def failed_function():
 
 
 class TestUtilFunctions(unittest.TestCase):
+
     def test_failed_functions(self):
         result = failed_function()
         self.assertEqual(result, 1)
