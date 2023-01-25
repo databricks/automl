@@ -22,6 +22,7 @@ import pandas as pd
 
 _logger = logging.getLogger(__name__)
 
+
 def make_future_dataframe(
         start_time: Union[pd.Timestamp, Dict[Tuple, pd.Timestamp]],
         end_time: Union[pd.Timestamp, Dict[Tuple, pd.Timestamp]],
