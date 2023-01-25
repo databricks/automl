@@ -65,7 +65,10 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
         cyclic_transformed : list of two array-like objects
             The sine and cosine transformed cyclic features.
         """
-        return [np.sin(2 * np.pi * unit / period), np.cos(2 * np.pi * unit / period)]
+        return [
+            np.sin(2 * np.pi * unit / period),
+            np.cos(2 * np.pi * unit / period)
+        ]
 
     @classmethod
     def _generate_datetime_features(cls, X, include_timestamp=True):
@@ -106,17 +109,25 @@ class BaseDatetimeTransformer(ABC, TransformerMixin, BaseEstimator):
         features = [
             unix_seconds,
             dt.dayofweek >= cls.WEEKEND_START,
-            *cls._cyclic_transform(dt.dayofweek * cls.HOURS_IN_DAY + dt.hour, cls.DAYS_IN_WEEK * cls.HOURS_IN_DAY),
-            *cls._cyclic_transform(dt.day * cls.HOURS_IN_DAY + dt.hour, cls.DAYS_IN_MONTH * cls.HOURS_IN_DAY),
-            *cls._cyclic_transform(dt.dayofyear * cls.HOURS_IN_DAY + dt.hour, cls.DAYS_IN_YEAR * cls.HOURS_IN_DAY),
+            *cls._cyclic_transform(dt.dayofweek * cls.HOURS_IN_DAY + dt.hour,
+                                   cls.DAYS_IN_WEEK * cls.HOURS_IN_DAY),
+            *cls._cyclic_transform(dt.day * cls.HOURS_IN_DAY + dt.hour,
+                                   cls.DAYS_IN_MONTH * cls.HOURS_IN_DAY),
+            *cls._cyclic_transform(dt.dayofyear * cls.HOURS_IN_DAY + dt.hour,
+                                   cls.DAYS_IN_YEAR * cls.HOURS_IN_DAY),
         ]
 
         # Extract additional features for columns with timestamps
         if include_timestamp:
-            features.extend([*cls._cyclic_transform(dt.hour, cls.HOURS_IN_DAY), dt.hour])
+            features.extend(
+                [*cls._cyclic_transform(dt.hour, cls.HOURS_IN_DAY), dt.hour])
 
-        for holiday_calendar in [holidays.UnitedStates(), holidays.EuropeanCentralBank()]:
-            features.append(X[col].apply(lambda datetime: datetime in holiday_calendar))
+        for holiday_calendar in [
+                holidays.UnitedStates(),
+                holidays.EuropeanCentralBank()
+        ]:
+            features.append(
+                X[col].apply(lambda datetime: datetime in holiday_calendar))
         ans = pd.concat(features, axis=1)
         # Give non-string column names to avoid duplicated feature names, sklearn 1.0 does not work on duplicated
         # feature nanmes.

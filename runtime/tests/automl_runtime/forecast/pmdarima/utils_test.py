@@ -22,15 +22,23 @@ from databricks.automl_runtime.forecast.pmdarima.utils import plot
 
 
 class TestPlot(unittest.TestCase):
+
     def test_plot_success(self):
         num_rows, horizon = 20, 4
         yhat = [i + 0.5 for i in range(num_rows)]
         history_pd = pd.DataFrame({
-            "ds": pd.date_range(start="2020-10-01", periods=num_rows - horizon, freq='d'),
-            "y": range(num_rows - horizon)})
+            "ds":
+            pd.date_range(start="2020-10-01",
+                          periods=num_rows - horizon,
+                          freq='d'),
+            "y":
+            range(num_rows - horizon)
+        })
         forecast_pd = pd.DataFrame({
-            "ds": pd.date_range(start="2020-10-01", periods=num_rows, freq='d'),
-            "yhat": yhat,
+            "ds":
+            pd.date_range(start="2020-10-01", periods=num_rows, freq='d'),
+            "yhat":
+            yhat,
             "yhat_lower": [i - 0.5 for i in yhat],
             "yhat_upper": [i + 1 for i in yhat]
         })

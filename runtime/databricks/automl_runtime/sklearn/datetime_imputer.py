@@ -17,6 +17,7 @@
 import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
 
+
 class DatetimeImputer(TransformerMixin, BaseEstimator):
     """Imputer for date and timestamp data."""
 
@@ -32,7 +33,8 @@ class DatetimeImputer(TransformerMixin, BaseEstimator):
         if strategy not in ('mean', 'median', 'most_frequent', 'constant'):
             raise ValueError(f'Unknown strategy: {strategy}')
         if strategy == 'constant' and not fill_value:
-            raise ValueError('A `fill_value` need to be provided for `constant` strategy.')
+            raise ValueError(
+                'A `fill_value` need to be provided for `constant` strategy.')
         self.strategy = strategy
         self.fill_value = fill_value
 
@@ -57,9 +59,9 @@ class DatetimeImputer(TransformerMixin, BaseEstimator):
             elif self.strategy == 'constant':
                 self.fill_values[col_name] = pd.to_datetime(self.fill_value)
             else:
-                raise ValueError(f'Unknown strategy: {self.strategy}')  # pragma: no cover
+                raise ValueError(
+                    f'Unknown strategy: {self.strategy}')  # pragma: no cover
         return self
-            
 
     def transform(self, X):
         """Convert the input to datetime object and then impute the missing values.
@@ -68,5 +70,5 @@ class DatetimeImputer(TransformerMixin, BaseEstimator):
         ----------
         X: a pandas DataFrame whose values are date or timestamp.
         """
-        return X.apply(pd.to_datetime, errors="coerce").fillna(self.fill_values)
-
+        return X.apply(pd.to_datetime,
+                       errors="coerce").fillna(self.fill_values)

@@ -18,6 +18,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 from scipy import sparse
 from category_encoders import one_hot
 
+
 class OneHotEncoder(TransformerMixin, BaseEstimator):
     """
     A wrapper around the category_encoder's `OneHotEncoder` with additional support for sparse output.

@@ -21,8 +21,9 @@ import numpy as np
 from databricks.automl_runtime.sklearn import PandasSimpleImputer
 from sklearn.pipeline import Pipeline
 
+
 class TestOneHotEncoder(unittest.TestCase):
-    
+
     def setUp(self) -> None:
         missing_values = np.nan
         feature_names = np.array(["a", "b", "c", "d"], dtype=object)
@@ -41,14 +42,18 @@ class TestOneHotEncoder(unittest.TestCase):
         output_df = imputer.transform(self.X)
         self.assertTrue(isinstance(output_df, pd.DataFrame))
         self.assertCountEqual(self.expected_columns, set(output_df.columns))
-        np.testing.assert_almost_equal(output_df.to_numpy(), self.expected_output_X)
+        np.testing.assert_almost_equal(output_df.to_numpy(),
+                                       self.expected_output_X)
 
     def test_pipeline(self):
-        output_df = Pipeline([("imputer", PandasSimpleImputer())]).fit_transform(self.X)
+        output_df = Pipeline([("imputer", PandasSimpleImputer())
+                              ]).fit_transform(self.X)
         self.assertTrue(isinstance(output_df, pd.DataFrame))
         self.assertCountEqual(self.expected_columns, set(output_df.columns))
-        np.testing.assert_almost_equal(output_df.to_numpy(), self.expected_output_X)
+        np.testing.assert_almost_equal(output_df.to_numpy(),
+                                       self.expected_output_X)
 
     def test_get_feature_names_out(self):
         imputer = PandasSimpleImputer().fit(self.X)
-        self.assertListEqual(imputer.get_feature_names_out(), self.X.columns.to_list())
+        self.assertListEqual(imputer.get_feature_names_out(),
+                             self.X.columns.to_list())

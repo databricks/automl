@@ -21,7 +21,8 @@ import numpy as np
 import pmdarima
 
 
-def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoffs: List[pd.Timestamp]) -> pd.DataFrame:
+def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame,
+                     cutoffs: List[pd.Timestamp]) -> pd.DataFrame:
     """
     Cross-Validation for time series forecasting.
 
@@ -35,10 +36,13 @@ def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoff
     bins = [df["ds"].min()] + cutoffs + [df["ds"].max()]
     labels = [df["ds"].min()] + cutoffs
     test_df = df[df['ds'] > cutoffs[0]].copy()
-    test_df["cutoff"] = pd.to_datetime(pd.cut(test_df["ds"], bins=bins, labels=labels))
+    test_df["cutoff"] = pd.to_datetime(
+        pd.cut(test_df["ds"], bins=bins, labels=labels))
 
-    predicts = [single_cutoff_forecast(arima_model, test_df, prev_cutoff, cutoff) for prev_cutoff, cutoff in
-                zip(labels, cutoffs)]
+    predicts = [
+        single_cutoff_forecast(arima_model, test_df, prev_cutoff, cutoff)
+        for prev_cutoff, cutoff in zip(labels, cutoffs)
+    ]
 
     # Update model with data in last cutoff
     last_df = test_df[test_df["cutoff"] == cutoffs[-1]]
@@ -47,7 +51,8 @@ def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoff
     return pd.concat(predicts, axis=0).reset_index(drop=True)
 
 
-def single_cutoff_forecast(arima_model: pmdarima.arima.ARIMA, test_df: pd.DataFrame, prev_cutoff: pd.Timestamp,
+def single_cutoff_forecast(arima_model: pmdarima.arima.ARIMA,
+                           test_df: pd.DataFrame, prev_cutoff: pd.Timestamp,
                            cutoff: pd.Timestamp) -> pd.DataFrame:
     """
     Forecast for single cutoff. Used in the cross validation function.
@@ -66,7 +71,8 @@ def single_cutoff_forecast(arima_model: pmdarima.arima.ARIMA, test_df: pd.DataFr
     # Predict with data in the new cutoff
     new_df = test_df[test_df["cutoff"] == cutoff].copy()
     n_periods = len(new_df["y"].values)
-    fc, conf_int = arima_model.predict(n_periods=n_periods, return_conf_int=True)
+    fc, conf_int = arima_model.predict(n_periods=n_periods,
+                                       return_conf_int=True)
     fc = fc.tolist()
     conf = np.asarray(conf_int).tolist()
 

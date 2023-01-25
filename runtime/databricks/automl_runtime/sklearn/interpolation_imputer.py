@@ -19,21 +19,19 @@ from typing import Any, Dict, List
 import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
 
-DEFAULT_PARAMS = dict(
-        method="linear",
-        limit_direction="both",
-        axis=0)
+DEFAULT_PARAMS = dict(method="linear", limit_direction="both", axis=0)
 
 
 class InterpolationImputer(TransformerMixin, BaseEstimator):
     """Null value Imputer by interpolation
     """
 
-    def __init__(self,
-                 *,
-                 impute_params: Dict[str, Any]=None,
-                 impute_all: bool=True,
-        ):
+    def __init__(
+        self,
+        *,
+        impute_params: Dict[str, Any] = None,
+        impute_all: bool = True,
+    ):
         """Create a `DatetimeImputer`.
 
         Parameters
@@ -50,7 +48,9 @@ class InterpolationImputer(TransformerMixin, BaseEstimator):
         self._impute_params = impute_params or DEFAULT_PARAMS
         self._impute_all = impute_all
 
-    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> InterpolationImputer:
+    def fit(self,
+            X: pd.DataFrame,
+            y: pd.DataFrame = None) -> InterpolationImputer:
         self.columns = X.columns
         return self
 
@@ -70,7 +70,7 @@ class InterpolationImputer(TransformerMixin, BaseEstimator):
 
         return X_imputed
 
-    def get_feature_names_out(self, input_features: List[str]=None):
+    def get_feature_names_out(self, input_features: List[str] = None):
         """Get output feature names for transformation.
         Parameters
         ----------

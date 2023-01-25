@@ -39,42 +39,47 @@ class TestColumnSelector(unittest.TestCase):
         X_out_expected = self.X_in[self.selected_cols]
         col_selector = ColumnSelector(self.selected_cols)
         X_out = col_selector.transform(self.X_in)
-        np.testing.assert_array_almost_equal(X_out, X_out_expected,
-                                             err_msg=f"Actual: {X_out}\nExpected: {X_out_expected}\n"
-                                                     f"Equality: {X_out == X_out_expected}")
+        np.testing.assert_array_almost_equal(
+            X_out,
+            X_out_expected,
+            err_msg=f"Actual: {X_out}\nExpected: {X_out_expected}\n"
+            f"Equality: {X_out == X_out_expected}")
         # select single column
         selected_cols = "a"
         X_out_expected = self.X_in[[selected_cols]]
         col_selector = ColumnSelector(selected_cols)
         X_out = col_selector.transform(self.X_in)
-        np.testing.assert_array_almost_equal(X_out, X_out_expected,
-                                             err_msg=f"Actual: {X_out}\nExpected: {X_out_expected}\n"
-                                                     f"Equality: {X_out == X_out_expected}")
+        np.testing.assert_array_almost_equal(
+            X_out,
+            X_out_expected,
+            err_msg=f"Actual: {X_out}\nExpected: {X_out_expected}\n"
+            f"Equality: {X_out == X_out_expected}")
 
     def test_select_column_in_pipeline(self):
-        y = pd.DataFrame(np.array([[1], [0], [1]]),
-                         columns=["label"])
+        y = pd.DataFrame(np.array([[1], [0], [1]]), columns=["label"])
         X_out_expected = np.array([1, 0, 1])
 
         standardizer = StandardScaler()
         col_selector = ColumnSelector(self.selected_cols)
-        preprocessor = ColumnTransformer([("standardizer", standardizer, self.selected_cols)], remainder="drop")
+        preprocessor = ColumnTransformer(
+            [("standardizer", standardizer, self.selected_cols)],
+            remainder="drop")
 
-        model = Pipeline([
-            ("column_selector", col_selector),
-            ("preprocessor", preprocessor),
-            ("decision_tree", DecisionTreeClassifier())
-        ])
+        model = Pipeline([("column_selector", col_selector),
+                          ("preprocessor", preprocessor),
+                          ("decision_tree", DecisionTreeClassifier())])
         model.fit(X=self.X_in, y=y)
         # Add one column so that the dataframe for prediction is different with the data for training
         X_test = self.X_in.copy()
         X_test["useless"] = 1
         X_out = model.predict(X_test)
-        np.testing.assert_array_almost_equal(X_out, X_out_expected,
-                                             err_msg=f"Actual: {X_out}\nExpected: {X_out_expected}\n"
-                                                     f"Equality: {X_out == X_out_expected}")
+        np.testing.assert_array_almost_equal(
+            X_out,
+            X_out_expected,
+            err_msg=f"Actual: {X_out}\nExpected: {X_out_expected}\n"
+            f"Equality: {X_out == X_out_expected}")
 
     def test_get_feature_names_out(self):
         col_selector = ColumnSelector(self.selected_cols)
-        self.assertListEqual(col_selector.get_feature_names_out(), self.selected_cols)
-
+        self.assertListEqual(col_selector.get_feature_names_out(),
+                             self.selected_cols)

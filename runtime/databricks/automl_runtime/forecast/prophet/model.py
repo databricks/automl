@@ -28,14 +28,11 @@ from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forec
 from databricks.automl_runtime import version
 from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe
 
-
-PROPHET_CONDA_ENV = _mlflow_conda_env(
-    additional_pip_deps=[
-        f"prophet=={prophet.__version__}",
-        f"cloudpickle=={cloudpickle.__version__}",
-        f"databricks-automl-runtime=={version.__version__}",
-    ]
-)
+PROPHET_CONDA_ENV = _mlflow_conda_env(additional_pip_deps=[
+    f"prophet=={prophet.__version__}",
+    f"cloudpickle=={cloudpickle.__version__}",
+    f"databricks-automl-runtime=={version.__version__}",
+])
 
 
 class ProphetModel(ForecastModel):
@@ -43,8 +40,8 @@ class ProphetModel(ForecastModel):
     Prophet mlflow model wrapper for univariate forecasting.
     """
 
-    def __init__(self, model_json: Union[Dict[Tuple, str], str], horizon: int, frequency: str,
-                 time_col: str) -> None:
+    def __init__(self, model_json: Union[Dict[Tuple, str], str], horizon: int,
+                 frequency: str, time_col: str) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: json string of the Prophet model or
@@ -60,7 +57,8 @@ class ProphetModel(ForecastModel):
         self._is_quaterly = is_quaterly_alias(frequency)
         super().__init__()
 
-    def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
+    def load_context(self,
+                     context: mlflow.pyfunc.model.PythonModelContext) -> None:
         """
         Loads artifacts from the specified :class:`~PythonModelContext` that can be used
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
@@ -81,7 +79,9 @@ class ProphetModel(ForecastModel):
         from prophet.serialize import model_from_json
         return model_from_json(self._model_json)
 
-    def _make_future_dataframe(self, horizon: int, include_history: bool = True) -> pd.DataFrame:
+    def _make_future_dataframe(self,
+                               horizon: int,
+                               include_history: bool = True) -> pd.DataFrame:
         """
         Generate future dataframe by calling the API from prophet
         :param horizon: Int number of periods to forecast forward.
@@ -90,12 +90,16 @@ class ProphetModel(ForecastModel):
         :return: pd.Dataframe that extends forward from the end of self.history for the
         requested number of periods.
         """
-        offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
-        return self.model().make_future_dataframe(periods=horizon,
-                                                  freq=pd.DateOffset(**offset_kwarg),
-                                                  include_history=include_history)
+        offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[
+            self._frequency]]
+        return self.model().make_future_dataframe(
+            periods=horizon,
+            freq=pd.DateOffset(**offset_kwarg),
+            include_history=include_history)
 
-    def _predict_impl(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def _predict_impl(self,
+                      horizon: int = None,
+                      include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the API from prophet model.
         :param horizon: Int number of periods to forecast forward.
@@ -103,10 +107,13 @@ class ProphetModel(ForecastModel):
             frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
-        future_pd = self._make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
+        future_pd = self._make_future_dataframe(
+            horizon=horizon or self._horizon, include_history=include_history)
         return self.model().predict(future_pd)
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def predict_timeseries(self,
+                           horizon: int = None,
+                           include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
@@ -116,7 +123,8 @@ class ProphetModel(ForecastModel):
         """
         return self._predict_impl(horizon, include_history)
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext,
+                model_input: pd.DataFrame) -> pd.Series:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
@@ -129,7 +137,8 @@ class ProphetModel(ForecastModel):
         predict_df = self.model().predict(test_df)
         return predict_df["yhat"]
 
-    def infer_signature(self, sample_input: pd.DataFrame = None) -> ModelSignature:
+    def infer_signature(self,
+                        sample_input: pd.DataFrame = None) -> ModelSignature:
         if sample_input is None:
             sample_input = self._make_future_dataframe(horizon=1)
             sample_input.rename(columns={"ds": self._time_col}, inplace=True)
@@ -141,9 +150,16 @@ class MultiSeriesProphetModel(ProphetModel):
     Prophet mlflow model wrapper for multi-series forecasting.
     """
 
-    def __init__(self, model_json: Dict[Tuple, str], timeseries_starts: Dict[Tuple, pd.Timestamp],
-                 timeseries_end: str, horizon: int, frequency: str, time_col: str, id_cols: List[str],
-                 ) -> None:
+    def __init__(
+        self,
+        model_json: Dict[Tuple, str],
+        timeseries_starts: Dict[Tuple, pd.Timestamp],
+        timeseries_end: str,
+        horizon: int,
+        frequency: str,
+        time_col: str,
+        id_cols: List[str],
+    ) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: the dictionary of json strings of Prophet model for multi-series forecasting
@@ -172,10 +188,10 @@ class MultiSeriesProphetModel(ProphetModel):
         return None
 
     def make_future_dataframe(
-            self,
-            horizon: Optional[int] = None,
-            include_history: bool = True,
-            groups: List[Tuple] = None,
+        self,
+        horizon: Optional[int] = None,
+        include_history: bool = True,
+        groups: List[Tuple] = None,
     ) -> pd.DataFrame:
         """
         Generate dataframe with future timestamps for all valid identities
@@ -185,27 +201,29 @@ class MultiSeriesProphetModel(ProphetModel):
         :param groups: the collection of group(s) to generate forecast predictions.
         :return: pd.DataFrame that extends forward
         """
-        horizon=horizon or self._horizon
+        horizon = horizon or self._horizon
         if groups is not None:
             model_keys = set(self._model_json.keys())
             if not set(groups).issubset(model_keys):
-                raise ValueError(f"Invalid groups: {set(groups) - model_keys}.")
+                raise ValueError(
+                    f"Invalid groups: {set(groups) - model_keys}.")
         else:
             groups = list(self._model_json.keys())
 
         end_time = pd.Timestamp(self._timeseries_end)
-        future_df = make_future_dataframe(
-            start_time=self._timeseries_starts,
-            end_time=end_time,
-            horizon=horizon,
-            frequency=self._frequency,
-            include_history=include_history,
-            groups=groups,
-            identity_column_names=self._id_cols
-        )
+        future_df = make_future_dataframe(start_time=self._timeseries_starts,
+                                          end_time=end_time,
+                                          horizon=horizon,
+                                          frequency=self._frequency,
+                                          include_history=include_history,
+                                          groups=groups,
+                                          identity_column_names=self._id_cols)
         return future_df
 
-    def _predict_impl(self, df: pd.DataFrame, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def _predict_impl(self,
+                      df: pd.DataFrame,
+                      horizon: int = None,
+                      include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the API from prophet model.
         :param df: input dataframe
@@ -219,7 +237,9 @@ class MultiSeriesProphetModel(ProphetModel):
         future_pd[self._id_cols] = df[self._id_cols].iloc[0]
         return future_pd
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def predict_timeseries(self,
+                           horizon: int = None,
+                           include_history: bool = True) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
@@ -227,19 +247,19 @@ class MultiSeriesProphetModel(ProphetModel):
             frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
-        horizon=horizon or self._horizon
+        horizon = horizon or self._horizon
         end_time = pd.Timestamp(self._timeseries_end)
-        future_df = make_future_dataframe(
-            start_time=self._timeseries_starts,
-            end_time=end_time,
-            horizon=horizon,
-            frequency=self._frequency,
-            include_history=include_history,
-            groups=self._model_json.keys(),
-            identity_column_names=self._id_cols
-        )
+        future_df = make_future_dataframe(start_time=self._timeseries_starts,
+                                          end_time=end_time,
+                                          horizon=horizon,
+                                          frequency=self._frequency,
+                                          include_history=include_history,
+                                          groups=self._model_json.keys(),
+                                          identity_column_names=self._id_cols)
         future_df["ts_id"] = future_df[self._id_cols].apply(tuple, axis=1)
-        return future_df.groupby(self._id_cols).apply(lambda df: self._predict_impl(df, horizon, include_history)).reset_index()
+        return future_df.groupby(
+            self._id_cols).apply(lambda df: self._predict_impl(
+                df, horizon, include_history)).reset_index()
 
     @staticmethod
     def get_reserved_cols() -> List[str]:
@@ -248,9 +268,17 @@ class MultiSeriesProphetModel(ProphetModel):
         :return: List of the reserved column names
         """
         reserved_names = [
-            "trend", "additive_terms", "daily", "weekly", "yearly",
-            "holidays", "zeros", "extra_regressors_additive", "yhat",
-            "extra_regressors_multiplicative", "multiplicative_terms",
+            "trend",
+            "additive_terms",
+            "daily",
+            "weekly",
+            "yearly",
+            "holidays",
+            "zeros",
+            "extra_regressors_additive",
+            "yhat",
+            "extra_regressors_multiplicative",
+            "multiplicative_terms",
         ]
         rn_l = [n + "_lower" for n in reserved_names]
         rn_u = [n + "_upper" for n in reserved_names]
@@ -259,7 +287,9 @@ class MultiSeriesProphetModel(ProphetModel):
         reserved_names.extend(["y", "cap", "floor", "y_scaled", "cap_scaled"])
         return reserved_names
 
-    def model_predict(self, df: pd.DataFrame, horizon: int = None) -> pd.DataFrame:
+    def model_predict(self,
+                      df: pd.DataFrame,
+                      horizon: int = None) -> pd.DataFrame:
         """
         Predict API used for pandas UDF.
         :param df: Input dataframe.
@@ -273,7 +303,8 @@ class MultiSeriesProphetModel(ProphetModel):
         result_df = pd.concat([result_df, forecast_df])
         return result_df[return_cols]
 
-    def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
+    def predict(self, context: mlflow.pyfunc.model.PythonModelContext,
+                model_input: pd.DataFrame) -> pd.Series:
         """
         Predict API from mlflow.pyfunc.PythonModel
         :param context: A :class:`~PythonModelContext` instance containing artifacts that the model
@@ -296,12 +327,17 @@ class MultiSeriesProphetModel(ProphetModel):
                 # for one-row model_input the id columns are missing from index.
                 predicts[self._id_cols] = df.name
                 return predicts
-        predict_df = test_df.groupby(self._id_cols).apply(model_prediction).reset_index(drop=True)
-        return_df = test_df.merge(predict_df, how="left", on=["ds"] + self._id_cols)
+
+        predict_df = test_df.groupby(
+            self._id_cols).apply(model_prediction).reset_index(drop=True)
+        return_df = test_df.merge(predict_df,
+                                  how="left",
+                                  on=["ds"] + self._id_cols)
         return return_df["yhat"]
 
 
-def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProphetModel],
+def mlflow_prophet_log_model(prophet_model: Union[ProphetModel,
+                                                  MultiSeriesProphetModel],
                              sample_input: pd.DataFrame = None) -> None:
     """
     Log the model to mlflow

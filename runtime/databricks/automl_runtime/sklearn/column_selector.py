@@ -44,7 +44,7 @@ class ColumnSelector(ABC, TransformerMixin, BaseEstimator):
         """
         return self
 
-    def transform(self, X:pd.DataFrame) -> pd.DataFrame:
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """
         Select the chosen columns
         :param X: pd.DataFrame of shape (n_samples, n_features)

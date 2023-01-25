@@ -19,12 +19,15 @@ from typing import List
 import pandas as pd
 from sklearn.impute import SimpleImputer
 
+
 class PandasSimpleImputer(SimpleImputer):
     """
     A wrapper of `SimpleImputer` with the support for pandas dataframe output.
     """
 
-    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> PandasSimpleImputer:
+    def fit(self,
+            X: pd.DataFrame,
+            y: pd.DataFrame = None) -> PandasSimpleImputer:
         """Fits the imputer on X
 
         Parameters
@@ -56,7 +59,7 @@ class PandasSimpleImputer(SimpleImputer):
         """
         return pd.DataFrame(super().transform(X), columns=self.columns)
 
-    def get_feature_names_out(self, input_features: List[str]=None):
+    def get_feature_names_out(self, input_features: List[str] = None):
         """Get output feature names for transformation.
         Parameters
         ----------

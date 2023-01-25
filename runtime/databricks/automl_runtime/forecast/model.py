@@ -24,6 +24,7 @@ from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 
 
 class ForecastModel(ABC, mlflow.pyfunc.PythonModel):
+
     @abstractmethod
     def __init__(self):
         super().__init__()
@@ -39,19 +40,21 @@ class ForecastModel(ABC, mlflow.pyfunc.PythonModel):
         required_cols_set = set(required_cols)
         if not required_cols_set.issubset(df_cols):
             raise MlflowException(
-                message=(
-                    f"Input data columns '{list(df_cols)}' do not contain the required columns '{required_cols}'"
-                ),
+                message=
+                (f"Input data columns '{list(df_cols)}' do not contain the required columns '{required_cols}'"
+                 ),
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
-    def infer_signature(self, sample_input: pd.DataFrame = None) -> ModelSignature:
-        signature = infer_signature(sample_input, self.predict(context=None, model_input=sample_input))
+    def infer_signature(self,
+                        sample_input: pd.DataFrame = None) -> ModelSignature:
+        signature = infer_signature(
+            sample_input, self.predict(context=None, model_input=sample_input))
         return signature
 
 
 def mlflow_forecast_log_model(forecast_model: ForecastModel,
-                             sample_input: pd.DataFrame = None) -> None:
+                              sample_input: pd.DataFrame = None) -> None:
     """
     Log the model to mlflow
     :param forecast_model: Forecast model wrapper
@@ -60,7 +63,9 @@ def mlflow_forecast_log_model(forecast_model: ForecastModel,
     # log the model without signature if infer_signature is failed.
     try:
         signature = forecast_model.infer_signature(sample_input)
-    except Exception: # noqa
+    except Exception:  # noqa
         signature = None
-    mlflow.pyfunc.log_model("model", conda_env=forecast_model.model_env,
-                            python_model=forecast_model, signature=signature)
+    mlflow.pyfunc.log_model("model",
+                            conda_env=forecast_model.model_env,
+                            python_model=forecast_model,
+                            signature=signature)

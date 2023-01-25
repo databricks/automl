@@ -77,15 +77,11 @@ DATE_OFFSET_KEYWORD_MAP = {
     }
 }
 
-QUATERLY_OFFSET_ALIAS = [
-    'Q', 'QS', 'BQ', 'BQS'
-]
+QUATERLY_OFFSET_ALIAS = ['Q', 'QS', 'BQ', 'BQS']
 
-NON_DAILY_OFFSET_ALIAS = [
-    'M', 'MS', 'Q', 'QS', 'Y', 'YS'
-]
+NON_DAILY_OFFSET_ALIAS = ['M', 'MS', 'Q', 'QS', 'Y', 'YS']
 
-# 
+#
 PERIOD_ALIAS_MAP = {
     "W": "W",
     "D": "D",

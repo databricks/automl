@@ -55,7 +55,8 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
 
     def __init__(self, classifier, *, transformer=None):
         self.classifier_ = clone(classifier)
-        self.transformer_ = FunctionTransformer() if transformer is None else clone(transformer)
+        self.transformer_ = FunctionTransformer(
+        ) if transformer is None else clone(transformer)
 
     @property
     def classifier(self):
@@ -88,7 +89,8 @@ class TransformedTargetClassifier(ClassifierMixin, BaseEstimator):
 
         self.classifier_.fit(X, y_trans, **fit_params)
         classes_in_classifier = self.classifier_.classes_
-        self.classes_ = self.transformer_.inverse_transform(classes_in_classifier)
+        self.classes_ = self.transformer_.inverse_transform(
+            classes_in_classifier)
         return self
 
     def predict(self, X, **predict_params):

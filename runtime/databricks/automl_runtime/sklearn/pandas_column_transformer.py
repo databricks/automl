@@ -19,12 +19,15 @@ from typing import List
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 
+
 class PandasColumnTransformer(ColumnTransformer):
     """
     A wrapper of `ColumnTransformer` with the support for pandas dataframe output.
     """
 
-    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> PandasColumnTransformer:
+    def fit(self,
+            X: pd.DataFrame,
+            y: pd.DataFrame = None) -> PandasColumnTransformer:
         """Fits the imputer on X
 
         Parameters
@@ -36,7 +39,7 @@ class PandasColumnTransformer(ColumnTransformer):
         y : Not used, present here for API consistency by convention.
         """
         super().fit(X, y)
-        self.columns=super().get_feature_names_out()
+        self.columns = super().get_feature_names_out()
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -55,17 +58,17 @@ class PandasColumnTransformer(ColumnTransformer):
         pd.DataFrame of shape (n_samples, n_features_encoded)
             Transformed features.
         """
-        self.columns=super().get_feature_names_out()
+        self.columns = super().get_feature_names_out()
         return pd.DataFrame(super().transform(X), columns=self.columns)
 
-    def fit_transform(self, X: pd.DataFrame, y: pd.DataFrame=None):
+    def fit_transform(self, X: pd.DataFrame, y: pd.DataFrame = None):
         """Learn a list of feature name -> indices mappings and transform X.
         """
         transformed_X = super().fit_transform(X, y)
-        self.columns=super().get_feature_names_out()
+        self.columns = super().get_feature_names_out()
         return pd.DataFrame(transformed_X, columns=self.columns)
 
-    def get_feature_names_out(self, input_features: List[str]=None):
+    def get_feature_names_out(self, input_features: List[str] = None):
         """Get output feature names for transformation.
         Parameters
         ----------

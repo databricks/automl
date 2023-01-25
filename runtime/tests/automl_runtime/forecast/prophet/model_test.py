@@ -38,34 +38,31 @@ PROPHET_MODEL_JSON = '{"growth": "linear", "n_changepoints": 6, "specified_chang
 
 
 class TestProphetModel(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls) -> None:
         num_rows = 9
         cls.X = pd.concat(
             [
                 pd.to_datetime(
-                    pd.Series(range(num_rows), name="ds").apply(
-                        lambda i: f"2020-10-{3*i+1}"
-                    )
-                ),
+                    pd.Series(range(num_rows),
+                              name="ds").apply(lambda i: f"2020-10-{3*i+1}")),
                 pd.Series(range(num_rows), name="y"),
             ],
             axis=1,
         )
-        cls.expected_y = np.array(
-            [
-                6.399995e-07,
-                1.000005e00,
-                2.000010e00,
-                3.000014e00,
-                4.000019e00,
-                5.000024e00,
-                6.000029e00,
-                7.000035e00,
-                8.000039e00,
-                8.794826e00,
-            ]
-        )
+        cls.expected_y = np.array([
+            6.399995e-07,
+            1.000005e00,
+            2.000010e00,
+            3.000014e00,
+            4.000019e00,
+            5.000024e00,
+            6.000029e00,
+            7.000035e00,
+            8.000039e00,
+            8.794826e00,
+        ])
         cls.model_json = PROPHET_MODEL_JSON
         cls.model = model_from_json(cls.model_json)
 
@@ -80,13 +77,12 @@ class TestProphetModel(unittest.TestCase):
 
         # Check the prediction with the saved model
         prophet_model.predict(self.X)
-        forecast_pd = prophet_model._model_impl.python_model.predict_timeseries()
-        np.testing.assert_array_almost_equal(
-            np.array(forecast_pd["yhat"]), self.expected_y
+        forecast_pd = prophet_model._model_impl.python_model.predict_timeseries(
         )
+        np.testing.assert_array_almost_equal(np.array(forecast_pd["yhat"]),
+                                             self.expected_y)
         forecast_future_pd = prophet_model._model_impl.python_model.predict_timeseries(
-            include_history=False
-        )
+            include_history=False)
         self.assertEqual(len(forecast_future_pd), 1)
 
     def test_make_future_dataframe(self):
@@ -98,22 +94,24 @@ class TestProphetModel(unittest.TestCase):
             prophet_model = ProphetModel(self.model_json, 1, feq_unit, "ds")
             future_df = prophet_model._make_future_dataframe(1)
             offset_kw_arg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[feq_unit]]
-            expected_time = pd.Timestamp("2020-10-25") + pd.DateOffset(**offset_kw_arg)
-            self.assertEqual(future_df.iloc[-1]["ds"], expected_time,
-                             f"Wrong future dataframe generated with frequency {feq_unit}:"
-                             f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
+            expected_time = pd.Timestamp("2020-10-25") + pd.DateOffset(
+                **offset_kw_arg)
+            self.assertEqual(
+                future_df.iloc[-1]["ds"], expected_time,
+                f"Wrong future dataframe generated with frequency {feq_unit}:"
+                f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
 
     def test_predict_success_datetime_date(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
         test_df = pd.DataFrame(
-            {"ds": [datetime.date(2020, 10, 8), datetime.date(2020, 12, 10)]}
-        )
+            {"ds": [datetime.date(2020, 10, 8),
+                    datetime.date(2020, 12, 10)]})
         expected_test_df = test_df.copy()
         yhat = prophet_model.predict(None, test_df)
         self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(
-            test_df, expected_test_df
-        )  # check the input dataframe is unchanged
+            test_df,
+            expected_test_df)  # check the input dataframe is unchanged
 
     def test_predict_success_string(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
@@ -122,36 +120,41 @@ class TestProphetModel(unittest.TestCase):
         yhat = prophet_model.predict(None, test_df)
         self.assertEqual(2, len(yhat))
         pd.testing.assert_frame_equal(
-            test_df, expected_test_df
-        )  # check the input dataframe is unchanged
+            test_df,
+            expected_test_df)  # check the input dataframe is unchanged
 
     def test_validate_predict_cols(self):
         prophet_model = ProphetModel(self.model_json, 1, "d", "time")
-        test_df = pd.DataFrame(
-            {
-                "date": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
-                "id": ["1", "2"],
-            }
-        )
+        test_df = pd.DataFrame({
+            "date":
+            [pd.to_datetime("2020-11-01"),
+             pd.to_datetime("2020-11-04")],
+            "id": ["1", "2"],
+        })
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
         # Load the saved model from mlflow
         run_id = run.info.run_id
         prophet_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
-        with pytest.raises(MlflowException, match="Model is missing inputs") as e:
+        with pytest.raises(MlflowException,
+                           match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
         assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)
 
 
 class TestMultiSeriesProphetModel(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.model_json = PROPHET_MODEL_JSON
-        cls.multi_series_model_json = {("1",): cls.model_json, ("2",): cls.model_json}
+        cls.multi_series_model_json = {
+            ("1", ): cls.model_json,
+            ("2", ): cls.model_json
+        }
         cls.multi_series_start = {
-            ("1",): pd.Timestamp("2020-07-01"),
-            ("2",): pd.Timestamp("2020-07-01"),
+            ("1", ): pd.Timestamp("2020-07-01"),
+            ("2", ): pd.Timestamp("2020-07-01"),
         }
         cls.prophet_model = MultiSeriesProphetModel(
             model_json=cls.multi_series_model_json,
@@ -164,17 +167,15 @@ class TestMultiSeriesProphetModel(unittest.TestCase):
         )
 
     def test_model_save_and_load(self):
-        test_df = pd.DataFrame(
-            {
-                "time": [
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-04"),
-                    pd.to_datetime("2020-11-04"),
-                ],
-                "id": ["1", "2", "1", "2"],
-            }
-        )
+        test_df = pd.DataFrame({
+            "time": [
+                pd.to_datetime("2020-11-01"),
+                pd.to_datetime("2020-11-01"),
+                pd.to_datetime("2020-11-04"),
+                pd.to_datetime("2020-11-04"),
+            ],
+            "id": ["1", "2", "1", "2"],
+        })
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(self.prophet_model, sample_input=test_df)
 
@@ -183,26 +184,28 @@ class TestMultiSeriesProphetModel(unittest.TestCase):
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
         # Check the prediction with the saved model
-        future_df = loaded_model._model_impl.python_model.make_future_dataframe(include_history=False)
+        future_df = loaded_model._model_impl.python_model.make_future_dataframe(
+            include_history=False)
         # Check model_predict functions
-        forecast_pd = loaded_model._model_impl.python_model.model_predict(future_df)
+        forecast_pd = loaded_model._model_impl.python_model.model_predict(
+            future_df)
         expected_columns = {"id", "ds", "yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
-        forecast_pd = loaded_model._model_impl.python_model.predict_timeseries()
+        forecast_pd = loaded_model._model_impl.python_model.predict_timeseries(
+        )
         expected_columns = {"id", "ds", "yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
 
         forecast_future_pd = loaded_model._model_impl.python_model.predict_timeseries(
-            include_history=False
-        )
+            include_history=False)
         self.assertEqual(len(forecast_future_pd), 2)
 
         # Check predict API
         expected_test_df = test_df.copy()
         forecast_y = loaded_model.predict(test_df)
         np.testing.assert_array_almost_equal(
-            np.array(forecast_y), np.array([10.794835, 10.794835, 12.65636, 12.65636])
-        )
+            np.array(forecast_y),
+            np.array([10.794835, 10.794835, 12.65636, 12.65636]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
 
@@ -210,7 +213,10 @@ class TestMultiSeriesProphetModel(unittest.TestCase):
         loaded_model.predict(test_df[0:1])
 
     def test_model_save_and_load_multi_ids(self):
-        multi_series_model_json = {("1", "1"): self.model_json, ("2", "1"): self.model_json}
+        multi_series_model_json = {
+            ("1", "1"): self.model_json,
+            ("2", "1"): self.model_json
+        }
         multi_series_start = {
             ("1", "1"): pd.Timestamp("2020-07-01"),
             ("2", "1"): pd.Timestamp("2020-07-01"),
@@ -225,18 +231,16 @@ class TestMultiSeriesProphetModel(unittest.TestCase):
             ["id1", "id2"],
         )
         # The id of the last row does not match to any saved model. It should return nan.
-        test_df = pd.DataFrame(
-            {
-                "time": [
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-04"),
-                    pd.to_datetime("2020-11-04"),
-                ],
-                "id1": ["1", "2", "1", "1"],
-                "id2": ["1", "1", "1", "2"],
-            }
-        )
+        test_df = pd.DataFrame({
+            "time": [
+                pd.to_datetime("2020-11-01"),
+                pd.to_datetime("2020-11-01"),
+                pd.to_datetime("2020-11-04"),
+                pd.to_datetime("2020-11-04"),
+            ],
+            "id1": ["1", "2", "1", "1"],
+            "id2": ["1", "1", "1", "2"],
+        })
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model, sample_input=test_df)
 
@@ -245,30 +249,39 @@ class TestMultiSeriesProphetModel(unittest.TestCase):
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
         # Check the prediction with the saved model
-        future_df = loaded_model._model_impl.python_model.make_future_dataframe(include_history=False)
+        future_df = loaded_model._model_impl.python_model.make_future_dataframe(
+            include_history=False)
         # Check model_predict functions
-        forecast_pd = loaded_model._model_impl.python_model.model_predict(future_df)
-        expected_columns = {"id1", "id2", "ds", "yhat", "yhat_lower", "yhat_upper"}
+        forecast_pd = loaded_model._model_impl.python_model.model_predict(
+            future_df)
+        expected_columns = {
+            "id1", "id2", "ds", "yhat", "yhat_lower", "yhat_upper"
+        }
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
-        forecast_pd = loaded_model._model_impl.python_model.predict_timeseries()
-        expected_columns = {"id1", "id2", "ds", "yhat", "yhat_lower", "yhat_upper"}
+        forecast_pd = loaded_model._model_impl.python_model.predict_timeseries(
+        )
+        expected_columns = {
+            "id1", "id2", "ds", "yhat", "yhat_lower", "yhat_upper"
+        }
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         forecast_future_pd = loaded_model._model_impl.python_model.predict_timeseries(
-            include_history=False
-        )
+            include_history=False)
         self.assertEqual(len(forecast_future_pd), 2)
 
         # Check predict API
         expected_test_df = test_df.copy()
         forecast_y = loaded_model.predict(test_df)
         np.testing.assert_array_almost_equal(
-            np.array(forecast_y), np.array([10.794835, 10.794835, 12.65636, np.nan])
-        )
+            np.array(forecast_y),
+            np.array([10.794835, 10.794835, 12.65636, np.nan]))
         # Make sure that the input dataframe is unchanged
         assert_frame_equal(test_df, expected_test_df)
 
     def test_predict_success_one_row(self):
-        test_df = pd.DataFrame({"time": [pd.to_datetime("2020-11-01")], "id": ["1"]})
+        test_df = pd.DataFrame({
+            "time": [pd.to_datetime("2020-11-01")],
+            "id": ["1"]
+        })
         yhat = self.prophet_model.predict(None, test_df)
         self.assertEqual(1, len(yhat))
 
@@ -282,40 +295,43 @@ class TestMultiSeriesProphetModel(unittest.TestCase):
             time_col="ds",
             id_cols=["id1"],
         )
-        sample_df = pd.DataFrame(
-            {
-                "ds": [
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-01"),
-                    pd.to_datetime("2020-11-04"),
-                    pd.to_datetime("2020-11-04"),
-                ],
-                "id1": ["1", "2", "1", "2"],
-            }
-        )
-        test_df = pd.DataFrame(
-            {
-                "time": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
-                "id": ["1", "2"],
-            }
-        )
+        sample_df = pd.DataFrame({
+            "ds": [
+                pd.to_datetime("2020-11-01"),
+                pd.to_datetime("2020-11-01"),
+                pd.to_datetime("2020-11-04"),
+                pd.to_datetime("2020-11-04"),
+            ],
+            "id1": ["1", "2", "1", "2"],
+        })
+        test_df = pd.DataFrame({
+            "time":
+            [pd.to_datetime("2020-11-01"),
+             pd.to_datetime("2020-11-04")],
+            "id": ["1", "2"],
+        })
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model, sample_input=sample_df)
         # Load the saved model from mlflow
         run_id = run.info.run_id
         prophet_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
-        with pytest.raises(MlflowException, match="Model is missing inputs") as e:
+        with pytest.raises(MlflowException,
+                           match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
         assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)
 
     def test_make_future_dataframe(self):
-        future_df = self.prophet_model.make_future_dataframe(include_history=False)
+        future_df = self.prophet_model.make_future_dataframe(
+            include_history=False)
         self.assertCountEqual(future_df.columns, {"ds", "id"})
         self.assertEqual(2, future_df.shape[0])
 
     def test_make_future_dataframe_multi_ids(self):
-        multi_series_model_json = {(1, "1"): self.model_json, (2, "1"): self.model_json}
+        multi_series_model_json = {
+            (1, "1"): self.model_json,
+            (2, "1"): self.model_json
+        }
         multi_series_start = {
             (1, "1"): pd.Timestamp("2020-07-01"),
             (2, "1"): pd.Timestamp("2020-07-01"),
@@ -338,4 +354,5 @@ class TestMultiSeriesProphetModel(unittest.TestCase):
 
     def test_make_future_dataframe_invalid_group(self):
         with pytest.raises(ValueError, match="Invalid groups:"):
-            future_df = self.prophet_model.make_future_dataframe(groups=[(1,)])
+            future_df = self.prophet_model.make_future_dataframe(
+                groups=[(1, )])

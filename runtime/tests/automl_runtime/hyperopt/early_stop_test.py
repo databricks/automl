@@ -21,8 +21,8 @@ from hyperopt import STATUS_OK
 
 from databricks.automl_runtime.hyperopt.early_stop import get_early_stop_fn
 
-
-early_stop_fn = get_early_stop_fn(no_early_stop_threshold=40, no_progress_stop_threshold=20)
+early_stop_fn = get_early_stop_fn(no_early_stop_threshold=40,
+                                  no_progress_stop_threshold=20)
 
 
 def mock_trial(tid, ok=False, loss=None):
@@ -45,25 +45,40 @@ class TestEarlyStopping(unittest.TestCase):
     def test_early_stop_no_early_stop_threshold(self):
         # don't early stop if NO_EARLY_STOP_THRESHOLD has not been reached
         mock_trials = mock.MagicMock()
-        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=50, completed_trial_ids=set(range(39)))
+        stop, _ = early_stop_fn(mock_trials,
+                                best_loss=100,
+                                no_progress_iters=50,
+                                completed_trial_ids=set(range(39)))
         self.assertFalse(stop)
 
     def test_early_stop_no_progress_stop_threshold(self):
         # don't early stop if NO_PROGRESS_STOP_THRESHOLD has not been reached
         mock_trials = mock.MagicMock()
-        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=19, completed_trial_ids=set(range(100)))
+        stop, _ = early_stop_fn(mock_trials,
+                                best_loss=100,
+                                no_progress_iters=19,
+                                completed_trial_ids=set(range(100)))
         self.assertFalse(stop)
 
     def test_early_stop(self):
         # early stop if both conditions reached
         mock_trials = mock.MagicMock()
-        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=20, completed_trial_ids=set(range(40)))
+        stop, _ = early_stop_fn(mock_trials,
+                                best_loss=100,
+                                no_progress_iters=20,
+                                completed_trial_ids=set(range(40)))
         self.assertTrue(stop)
-        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=200, completed_trial_ids=set(range(400)))
+        stop, _ = early_stop_fn(mock_trials,
+                                best_loss=100,
+                                no_progress_iters=200,
+                                completed_trial_ids=set(range(400)))
         self.assertTrue(stop)
 
         mock_trials.__iter__.return_value = [mock_trial(39, ok=True, loss=100)]
-        stop, _ = early_stop_fn(mock_trials, best_loss=100, no_progress_iters=19, completed_trial_ids=set(range(39)))
+        stop, _ = early_stop_fn(mock_trials,
+                                best_loss=100,
+                                no_progress_iters=19,
+                                completed_trial_ids=set(range(39)))
         self.assertTrue(stop)
 
     def test_early_stop_one_trial(self):
@@ -104,7 +119,8 @@ class TestEarlyStopping(unittest.TestCase):
             mock_trial(2, ok=True, loss=25),
             mock_trial(3),
         ]
-        stop, new_args = early_stop_fn(mock_trials, best_loss, no_progress_iters, completed_trial_ids)
+        stop, new_args = early_stop_fn(mock_trials, best_loss,
+                                       no_progress_iters, completed_trial_ids)
         best_loss, no_progress_iters, completed_trial_ids = new_args
         self.assertFalse(stop)
         self.assertEqual(best_loss, 25)
@@ -136,7 +152,8 @@ class TestEarlyStopping(unittest.TestCase):
             mock_trial(3, ok=True, loss=25),
             mock_trial(4, ok=True, loss=25),
         ]
-        stop, new_args = early_stop_fn(mock_trials, best_loss, no_progress_iters, completed_trial_ids)
+        stop, new_args = early_stop_fn(mock_trials, best_loss,
+                                       no_progress_iters, completed_trial_ids)
         best_loss, no_progress_iters, completed_trial_ids = new_args
         self.assertFalse(stop)
         self.assertEqual(best_loss, 25)

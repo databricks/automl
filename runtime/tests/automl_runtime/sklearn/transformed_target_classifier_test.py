@@ -26,13 +26,15 @@ from databricks.automl_runtime.sklearn import TransformedTargetClassifier
 
 
 class TestTransformedTargetClassifier(unittest.TestCase):
+
     def setUp(self):
         iris = datasets.load_iris(as_frame=True)
         self.X = iris.data
         self.y = iris.target.apply(lambda x: iris.target_names[x])
 
     def test_fit(self):
-        model = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())
+        model = TransformedTargetClassifier(classifier=LogisticRegression(),
+                                            transformer=LabelEncoder())
         model.fit(self.X, self.y)
         y_trans = model.transformer_.transform(self.y)
         y_trans_inversed = model.transformer_.inverse_transform(y_trans)
@@ -43,7 +45,8 @@ class TestTransformedTargetClassifier(unittest.TestCase):
         self.assertTrue((self.y == y_trans_inversed).all())
 
     def test_predict(self):
-        model = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())
+        model = TransformedTargetClassifier(classifier=LogisticRegression(),
+                                            transformer=LabelEncoder())
         model.fit(self.X, self.y)
         y_pred = model.predict(self.X)
 
@@ -61,7 +64,8 @@ class TestTransformedTargetClassifier(unittest.TestCase):
         self.assertTrue((self.y == y_trans).all())
 
     def test_predict_prob(self):
-        model = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())
+        model = TransformedTargetClassifier(classifier=LogisticRegression(),
+                                            transformer=LabelEncoder())
         model.fit(self.X, self.y)
         proba = model.predict_proba(self.X)
 
@@ -73,13 +77,15 @@ class TestTransformedTargetClassifier(unittest.TestCase):
         np.testing.assert_array_almost_equal(proba, proba_lr)
 
     def test_predict_prob_not_implemented_error(self):
-        model = TransformedTargetClassifier(classifier=LinearSVC(), transformer=LabelEncoder())
+        model = TransformedTargetClassifier(classifier=LinearSVC(),
+                                            transformer=LabelEncoder())
         model.fit(self.X, self.y)
         with self.assertRaises(NotImplementedError):
             model.predict_proba(self.X)
 
     def test_decision_function(self):
-        model = TransformedTargetClassifier(classifier=LogisticRegression(), transformer=LabelEncoder())
+        model = TransformedTargetClassifier(classifier=LogisticRegression(),
+                                            transformer=LabelEncoder())
         model.fit(self.X, self.y)
         decision_function = model.decision_function(self.X)
 
@@ -88,10 +94,12 @@ class TestTransformedTargetClassifier(unittest.TestCase):
         y_encoded = le.fit_transform(self.y)
         lr.fit(self.X, y_encoded)
         decision_function_lr = lr.decision_function(self.X)
-        np.testing.assert_array_almost_equal(decision_function, decision_function_lr)
+        np.testing.assert_array_almost_equal(decision_function,
+                                             decision_function_lr)
 
     def test_decision_function_not_implemented_error(self):
-        model = TransformedTargetClassifier(classifier=DecisionTreeClassifier(), transformer=LabelEncoder())
+        model = TransformedTargetClassifier(
+            classifier=DecisionTreeClassifier(), transformer=LabelEncoder())
         model.fit(self.X, self.y)
         with self.assertRaises(NotImplementedError):
             model.decision_function(self.X)

@@ -24,7 +24,7 @@ from databricks.automl_runtime.sklearn import PandasColumnTransformer, PandasTra
 
 
 class TestPandasColumnTransformer(unittest.TestCase):
-    
+
     def setUp(self) -> None:
         missing_values = np.nan
         feature_names = np.array(["a", "b", "c", "d"], dtype=object)
@@ -39,32 +39,40 @@ class TestPandasColumnTransformer(unittest.TestCase):
         self.expected_columns = {"a", "b", "c", "d"}
 
     def test_fit_and_transform(self):
-        transformer = [("imputer", PandasTransformerWrapper(SimpleImputer()), ["a", "b", "c", "d"])]
+        transformer = [("imputer", PandasTransformerWrapper(SimpleImputer()),
+                        ["a", "b", "c", "d"])]
         transformers = PandasColumnTransformer(transformer, remainder='passthrough', verbose_feature_names_out=False)\
             .fit(self.X)
         output_df = transformers.transform(self.X)
         self.assertTrue(isinstance(output_df, pd.DataFrame))
         self.assertCountEqual(self.expected_columns, set(output_df.columns))
-        np.testing.assert_almost_equal(output_df.to_numpy(), self.expected_output_X)
+        np.testing.assert_almost_equal(output_df.to_numpy(),
+                                       self.expected_output_X)
 
     def test_pipeline(self):
-        transformer = [("imputer", PandasTransformerWrapper(SimpleImputer()), ["a", "b", "c", "d"])]
+        transformer = [("imputer", PandasTransformerWrapper(SimpleImputer()),
+                        ["a", "b", "c", "d"])]
         transformers = PandasColumnTransformer(transformer, remainder='passthrough', verbose_feature_names_out=False) \
             .fit(self.X)
         output_df = Pipeline([("imputer", transformers)]).fit_transform(self.X)
         self.assertTrue(isinstance(output_df, pd.DataFrame))
         self.assertCountEqual(self.expected_columns, set(output_df.columns))
-        np.testing.assert_almost_equal(output_df.to_numpy(), self.expected_output_X)
+        np.testing.assert_almost_equal(output_df.to_numpy(),
+                                       self.expected_output_X)
 
     def test_get_feature_names_out(self):
-        transformer = [("imputer", PandasTransformerWrapper(SimpleImputer()), ["a", "b", "c", "d"])]
+        transformer = [("imputer", PandasTransformerWrapper(SimpleImputer()),
+                        ["a", "b", "c", "d"])]
         transformers = PandasColumnTransformer(transformer, remainder='passthrough', verbose_feature_names_out=False) \
             .fit(self.X)
         transformers = transformers.fit(self.X)
-        self.assertListEqual(transformers.get_feature_names_out(), self.X.columns.to_list())
+        self.assertListEqual(transformers.get_feature_names_out(),
+                             self.X.columns.to_list())
 
-        transformer = [("imputer", PandasTransformerWrapper(SimpleImputer()), ["a", "d"])]
+        transformer = [("imputer", PandasTransformerWrapper(SimpleImputer()),
+                        ["a", "d"])]
         transformers = PandasColumnTransformer(transformer, remainder='passthrough', verbose_feature_names_out=False) \
             .fit(self.X)
         transformers = transformers.fit(self.X)
-        self.assertListEqual(transformers.get_feature_names_out(), ["a", "d", "b", "c"])
+        self.assertListEqual(transformers.get_feature_names_out(),
+                             ["a", "d", "b", "c"])

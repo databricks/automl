@@ -19,6 +19,7 @@ from typing import List
 import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
 
+
 class PandasTransformerWrapper(TransformerMixin, BaseEstimator):
     """
     A wrapper of `SimpleImputer` with the support for pandas dataframe output.
@@ -27,7 +28,9 @@ class PandasTransformerWrapper(TransformerMixin, BaseEstimator):
     def __init__(self, estimator: BaseEstimator) -> None:
         self.estimator = estimator
 
-    def fit(self, X: pd.DataFrame, y: pd.DataFrame=None) -> PandasTransformerWrapper:
+    def fit(self,
+            X: pd.DataFrame,
+            y: pd.DataFrame = None) -> PandasTransformerWrapper:
         """Fits the imputer on X
 
         Parameters
@@ -60,13 +63,13 @@ class PandasTransformerWrapper(TransformerMixin, BaseEstimator):
         """
         return pd.DataFrame(self.estimator.transform(X), columns=self.columns)
 
-    def fit_transform(self, X: pd.DataFrame, y: pd.DataFrame=None):
+    def fit_transform(self, X: pd.DataFrame, y: pd.DataFrame = None):
         """Learn a list of feature name -> indices mappings and transform X.
         """
         self.fit(X, y)
         return self.transform(X)
 
-    def get_feature_names_out(self, input_features: List[str]=None):
+    def get_feature_names_out(self, input_features: List[str] = None):
         """Get output feature names for transformation.
         Parameters
         ----------

@@ -42,7 +42,9 @@ class TimestampTransformer(BaseDatetimeTransformer):
             Transformed features.
         """
         # Convert column to datetime if data type is string and standardize to UTC
-        X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime, errors="coerce", utc=True).dt.tz_localize(None)
+        X.iloc[:, 0] = X.iloc[:, 0].apply(pd.to_datetime,
+                                          errors="coerce",
+                                          utc=True).dt.tz_localize(None)
         X = X.fillna(pd.Timestamp(self.EPOCH))  # Fill NaT with the Unix epoch
 
         return self._generate_datetime_features(X, include_timestamp=True)

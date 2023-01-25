@@ -21,8 +21,11 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import AutoDateLocator, AutoDateFormatter
 
 
-def plot(history_pd: pd.DataFrame, forecast_pd: pd.DataFrame,
-         xlabel: str = 'ds', ylabel: str = 'y', figsize: Tuple[int, int] = (10, 6)):
+def plot(history_pd: pd.DataFrame,
+         forecast_pd: pd.DataFrame,
+         xlabel: str = 'ds',
+         ylabel: str = 'y',
+         figsize: Tuple[int, int] = (10, 6)):
     """
     Plot the forecast. Adapted from prophet.plot.plot. See
     https://github.com/facebook/prophet/blob/ba9a5a2c6e2400206017a5ddfd71f5042da9f65b/python/prophet/plot.py#L42.
@@ -38,11 +41,18 @@ def plot(history_pd: pd.DataFrame, forecast_pd: pd.DataFrame,
     fig = plt.figure(facecolor='w', figsize=figsize)
     ax = fig.add_subplot(111)
     fcst_t = forecast_pd['ds'].dt.to_pydatetime()
-    ax.plot(history_pd['ds'].dt.to_pydatetime(), history_pd['y'], 'k.', label='Observed data points')
+    ax.plot(history_pd['ds'].dt.to_pydatetime(),
+            history_pd['y'],
+            'k.',
+            label='Observed data points')
     ax.plot(fcst_t, forecast_pd['yhat'], ls='-', c='#0072B2', label='Forecast')
     if "yhat_lower" in forecast_pd and "yhat_upper" in forecast_pd:
-        ax.fill_between(fcst_t, forecast_pd['yhat_lower'], forecast_pd['yhat_upper'],
-                        color='#0072B2', alpha=0.2, label='Uncertainty interval')
+        ax.fill_between(fcst_t,
+                        forecast_pd['yhat_lower'],
+                        forecast_pd['yhat_upper'],
+                        color='#0072B2',
+                        alpha=0.2,
+                        label='Uncertainty interval')
     # Specify formatting to workaround matplotlib issue #12925
     locator = AutoDateLocator(interval_multiples=False)
     formatter = AutoDateFormatter(locator)

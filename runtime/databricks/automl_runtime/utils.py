@@ -20,6 +20,7 @@ def fail_safe_with_default(default_result):
     """
     Decorator to ensure that individual failures don't fail training
     """
+
     @wrapt.decorator
     def fail_safe(func, self, args, kwargs):
         try:
@@ -27,4 +28,5 @@ def fail_safe_with_default(default_result):
         except Exception as e:
             print(f"Encountered an exception: {repr(e)}")
             return default_result
+
     return fail_safe

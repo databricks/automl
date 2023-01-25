@@ -26,7 +26,8 @@ with open(path.join(this_directory, "README.md"), encoding="utf-8") as f:
     LONG_DESCRIPTION = f.read()
 
 # Read the requirements
-with open(path.join(this_directory, "requirements.txt"), encoding="utf-8") as f:
+with open(path.join(this_directory, "requirements.txt"),
+          encoding="utf-8") as f:
     requirements = f.readlines()
 
 # Load the version from `version.py` in the package
@@ -43,13 +44,13 @@ setup(
     version=VERSION,
     author="Databricks",
     packages=[
-        "databricks",
-        "databricks.automl_runtime",
+        "databricks", "databricks.automl_runtime",
         "databricks.automl_runtime.forecast",
         "databricks.automl_runtime.forecast.pmdarima",
         "databricks.automl_runtime.forecast.prophet",
         "databricks.automl_runtime.hyperopt",
-        "databricks.automl_runtime.sklearn"],
+        "databricks.automl_runtime.sklearn"
+    ],
     license="http://www.apache.org/licenses/LICENSE-2.0",
     url="https://github.com/databricks/automl",
     description=DESCRIPTION,
@@ -60,5 +61,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
     ],
-    options={"bdist_wheel": {"universal": True}},
+    options={"bdist_wheel": {
+        "universal": True
+    }},
 )

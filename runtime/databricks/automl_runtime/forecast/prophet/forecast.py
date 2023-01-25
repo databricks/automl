@@ -37,11 +37,16 @@ class ProphetHyperParams(Enum):
     SEASONALITY_MODE = "seasonality_mode"
 
 
-def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
-                         horizon: int, frequency: str, cutoffs: List[pd.Timestamp],
-                         interval_width: int, primary_metric: str,
+def _prophet_fit_predict(params: Dict[str, Any],
+                         history_pd: pd.DataFrame,
+                         horizon: int,
+                         frequency: str,
+                         cutoffs: List[pd.Timestamp],
+                         interval_width: int,
+                         primary_metric: str,
                          country_holidays: Optional[str] = None,
-                         regressors = None, **prophet_kwargs) -> Dict[str, Any]:
+                         regressors=None,
+                         **prophet_kwargs) -> Dict[str, Any]:
     """
     Training function for hyperparameter tuning with hyperopt
 
@@ -68,7 +73,7 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
 
     model.fit(history_pd, iter=200)
     offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
-    horizon_offset = pd.DateOffset(**offset_kwarg)*horizon
+    horizon_offset = pd.DateOffset(**offset_kwarg) * horizon
     # Evaluate Metrics
     df_cv = cross_validation(
         model, horizon=horizon_offset, cutoffs=cutoffs, disable_tqdm=True
@@ -77,21 +82,36 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
 
     metrics = df_metrics.mean().drop("horizon").to_dict()
 
-    return {"loss": metrics[primary_metric], "metrics": metrics, "status": hyperopt.STATUS_OK}
+    return {
+        "loss": metrics[primary_metric],
+        "metrics": metrics,
+        "status": hyperopt.STATUS_OK
+    }
 
 
 class ProphetHyperoptEstimator(ABC):
     """
     Class to do hyper-parameter tunings for prophet with hyperopt
     """
-    SUPPORTED_METRICS = ["mse", "rmse", "mae", "mape", "mdape", "smape", "coverage"]
+    SUPPORTED_METRICS = [
+        "mse", "rmse", "mae", "mape", "mdape", "smape", "coverage"
+    ]
 
-    def __init__(self, horizon: int, frequency_unit: str, metric: str, interval_width: int,
-                 country_holidays: str, search_space: Dict[str, Any],
-                 algo=hyperopt.tpe.suggest, num_folds: int = 5,
-                 max_eval: int = 10, trial_timeout: int = None,
-                 random_state: int = 0, is_parallel: bool = True,
-                 regressors = None, **prophet_kwargs) -> None:
+    def __init__(self,
+                 horizon: int,
+                 frequency_unit: str,
+                 metric: str,
+                 interval_width: int,
+                 country_holidays: str,
+                 search_space: Dict[str, Any],
+                 algo=hyperopt.tpe.suggest,
+                 num_folds: int = 5,
+                 max_eval: int = 10,
+                 trial_timeout: int = None,
+                 random_state: int = 0,
+                 is_parallel: bool = True,
+                 regressors=None,
+                 **prophet_kwargs) -> None:
         """
         Initialization
 
@@ -138,7 +158,8 @@ class ProphetHyperoptEstimator(ABC):
 
         seasonality_mode = ["additive", "multiplicative"]
 
-        validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency_unit)
+        validation_horizon = utils.get_validation_horizon(
+            df, self._horizon, self._frequency_unit)
         cutoffs = utils.generate_cutoffs(
             df.reset_index(drop=True),
             horizon=validation_horizon,
@@ -146,37 +167,47 @@ class ProphetHyperoptEstimator(ABC):
             num_folds=self._num_folds,
         )
 
-        train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=validation_horizon,
-                           frequency=self._frequency_unit, cutoffs=cutoffs,
+        train_fn = partial(_prophet_fit_predict,
+                           history_pd=df,
+                           horizon=validation_horizon,
+                           frequency=self._frequency_unit,
+                           cutoffs=cutoffs,
                            interval_width=self._interval_width,
-                           primary_metric=self._metric, country_holidays=self._country_holidays,
-                           regressors=self._regressors, **self._prophet_kwargs)
+                           primary_metric=self._metric,
+                           country_holidays=self._country_holidays,
+                           regressors=self._regressors,
+                           **self._prophet_kwargs)
 
         if self._is_parallel:
-            trials = SparkTrials() # pragma: no cover
+            trials = SparkTrials()  # pragma: no cover
         else:
             trials = Trials()
 
-        best_result = fmin(
-            fn=train_fn,
-            space=self._search_space,
-            algo=self._algo,
-            max_evals=self._max_eval,
-            trials=trials,
-            timeout=self._timeout,
-            rstate=self._random_state)
+        best_result = fmin(fn=train_fn,
+                           space=self._search_space,
+                           algo=self._algo,
+                           max_evals=self._max_eval,
+                           trials=trials,
+                           timeout=self._timeout,
+                           rstate=self._random_state)
 
         # Retrain the model with all history data.
-        model = Prophet(changepoint_prior_scale=best_result.get(ProphetHyperParams.CHANGEPOINT_PRIOR_SCALE.value, 0.05),
-                        seasonality_prior_scale=best_result.get(ProphetHyperParams.SEASONALITY_PRIOR_SCALE.value, 10.0),
-                        holidays_prior_scale=best_result.get(ProphetHyperParams.HOLIDAYS_PRIOR_SCALE.value, 10.0),
-                        seasonality_mode=seasonality_mode[best_result.get(ProphetHyperParams.SEASONALITY_MODE.value, 0)],
+        model = Prophet(changepoint_prior_scale=best_result.get(
+            ProphetHyperParams.CHANGEPOINT_PRIOR_SCALE.value, 0.05),
+                        seasonality_prior_scale=best_result.get(
+                            ProphetHyperParams.SEASONALITY_PRIOR_SCALE.value,
+                            10.0),
+                        holidays_prior_scale=best_result.get(
+                            ProphetHyperParams.HOLIDAYS_PRIOR_SCALE.value,
+                            10.0),
+                        seasonality_mode=seasonality_mode[best_result.get(
+                            ProphetHyperParams.SEASONALITY_MODE.value, 0)],
                         interval_width=self._interval_width,
                         **self._prophet_kwargs)
 
         if self._country_holidays:
             model.add_country_holidays(country_name=self._country_holidays)
-        
+
         if self._regressors:
             for regressor in self._regressors:
                 model.add_regressor(regressor)
