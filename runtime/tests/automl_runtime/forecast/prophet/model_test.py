@@ -96,7 +96,7 @@ class TestProphetModel(unittest.TestCase):
             if OFFSET_ALIAS_MAP[feq_unit] in ['YS', 'MS', 'QS']:
                 continue
             prophet_model = ProphetModel(self.model_json, 1, feq_unit, "ds")
-            future_df = prophet_model._make_future_dataframe(1)
+            future_df = prophet_model.make_future_dataframe(1)
             offset_kw_arg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[feq_unit]]
             expected_time = pd.Timestamp("2020-10-25") + pd.DateOffset(**offset_kw_arg)
             self.assertEqual(future_df.iloc[-1]["ds"], expected_time,

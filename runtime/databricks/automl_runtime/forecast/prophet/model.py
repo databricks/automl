@@ -81,7 +81,7 @@ class ProphetModel(ForecastModel):
         from prophet.serialize import model_from_json
         return model_from_json(self._model_json)
 
-    def _make_future_dataframe(self, horizon: int, include_history: bool = True) -> pd.DataFrame:
+    def make_future_dataframe(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
         Generate future dataframe by calling the API from prophet
         :param horizon: Int number of periods to forecast forward.
@@ -91,7 +91,7 @@ class ProphetModel(ForecastModel):
         requested number of periods.
         """
         offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
-        return self.model().make_future_dataframe(periods=horizon,
+        return self.model().make_future_dataframe(periods=horizon or self._horizon,
                                                   freq=pd.DateOffset(**offset_kwarg),
                                                   include_history=include_history)
 
@@ -103,7 +103,7 @@ class ProphetModel(ForecastModel):
             frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
-        future_pd = self._make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
+        future_pd = self.make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
         return self.model().predict(future_pd)
 
     def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
@@ -131,7 +131,7 @@ class ProphetModel(ForecastModel):
 
     def infer_signature(self, sample_input: pd.DataFrame = None) -> ModelSignature:
         if sample_input is None:
-            sample_input = self._make_future_dataframe(horizon=1)
+            sample_input = self.make_future_dataframe(horizon=1)
             sample_input.rename(columns={"ds": self._time_col}, inplace=True)
         return super().infer_signature(sample_input)
 

@@ -51,6 +51,11 @@ class TestArimaModel(unittest.TestCase):
                                       end_ds=pd.Timestamp("2020-11-26"),
                                       time_col="date")
 
+    def test_make_future_dataframe(self):
+        future_df = self.arima_model.make_future_dataframe(include_history=False)
+        self.assertCountEqual(future_df.columns, {"ds"})
+        self.assertEqual(1, future_df.shape[0])
+
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries()
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}

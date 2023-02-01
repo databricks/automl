@@ -27,7 +27,7 @@ from mlflow.utils.environment import _mlflow_conda_env
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency, \
-    make_future_dataframe
+    make_future_dataframe, make_single_future_dataframe
 
 
 ARIMA_CONDA_ENV = _mlflow_conda_env(
@@ -133,6 +133,23 @@ class ArimaModel(AbstractArimaModel):
             return pd.concat([in_sample_pd, future_pd]).reset_index(drop=True)
         else:
             return future_pd
+
+    def make_future_dataframe(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+        """
+        Generate future dataframe by calling the API from prophet
+        :param horizon: Int number of periods to forecast forward.
+        :param include_history: Boolean to include the historical dates in the data
+            frame for predictions.
+        :return: pd.Dataframe that extends forward from the end of self.history for the
+        requested number of periods.
+        """
+        return make_single_future_dataframe(
+            start_time=self._start_ds,
+            end_time=self._end_ds,
+            horizon=horizon or self._horizon,
+            frequency=self._frequency,
+            include_history=include_history
+        )
 
     def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
