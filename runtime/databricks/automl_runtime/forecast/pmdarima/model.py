@@ -238,8 +238,8 @@ class ArimaModel(AbstractArimaModel):
             start=start_idx,
             end=end_idx,
             return_conf_int=True)
-        periods = calculate_period_differences(start_ds, end_ds, self._frequency) + 1
-        ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
+        periods = calculate_period_differences(self._start_ds, end_ds, self._frequency) + 1
+        ds_indices = self._get_ds_indices(start_ds=self._start_ds, periods=periods, frequency=self._frequency)[start_idx:]
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
         return in_sample_pd
