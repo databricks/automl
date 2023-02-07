@@ -231,6 +231,8 @@ class ArimaModel(AbstractArimaModel):
             start_ds = self._start_ds
             end_ds = self._end_ds
             start_idx, end_idx = None, None
+        d = self.model().order[1]
+        start_idx = max(start_idx, d)
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             X=X,
             start=start_idx,
