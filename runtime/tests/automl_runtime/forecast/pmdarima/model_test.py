@@ -172,6 +172,7 @@ class TestArimaModelWithExogenous(unittest.TestCase):
         ], axis=1)
         train_df = self.df.set_index("date")
         self.X = train_df.drop(["y"], axis=1)
+        self.exogenous_cols = ["x1", "x2"]
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
         model.fit(train_df[["y"]], X=self.X)
         pickled_model = pickle.dumps(model)
@@ -180,7 +181,8 @@ class TestArimaModelWithExogenous(unittest.TestCase):
                                       frequency=self.freq,
                                       start_ds=self.start_ds,
                                       end_ds=pd.Timestamp("2020-11-26"),
-                                      time_col="date")
+                                      time_col="date",
+                                      exogenous_cols=self.exogenous_cols)
 
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries(df=self.df)
@@ -332,7 +334,9 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
             pd.Series(range(num_rows), name="x2")
         ], axis=1)
         train_df = self.df.set_index("date")
-        self.X = train_df.drop(["y"], axis=1)
+        self.exogenous_cols = ["x1", "x2"]
+        self.X = train_df[self.exogenous_cols]
+
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
         model.fit(train_df[["y"]], X=self.X)
         pickled_model = pickle.dumps(model)
@@ -345,7 +349,8 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
                                                  start_ds_dict=start_ds_dict,
                                                  end_ds_dict=end_ds_dict,
                                                  time_col="date",
-                                                 id_cols=["id"])
+                                                 id_cols=["id"],
+                                                 exogenous_cols=self.exogenous_cols)
 
     def test_predict_timeseries_success(self):
         forecast_pd = self.arima_model.predict_timeseries(df=self.df)

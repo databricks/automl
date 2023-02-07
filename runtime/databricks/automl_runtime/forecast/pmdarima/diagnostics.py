@@ -14,14 +14,15 @@
 # limitations under the License.
 #
 
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import numpy as np
 import pmdarima
 
 
-def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoffs: List[pd.Timestamp]) -> pd.DataFrame:
+def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame,
+                     cutoffs: List[pd.Timestamp], exogenous_cols: Optional[List[str]] = None) -> pd.DataFrame:
     """
     Cross-Validation for time series forecasting.
 
@@ -30,6 +31,8 @@ def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoff
     :param arima_model: pmdarima.arima.ARIMA object. Fitted ARIMA model.
     :param df: pd.DataFrame of the historical data
     :param cutoffs: list of pd.Timestamp specifying cutoffs to be used during cross validation.
+    :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
+        used as additional features in arima model.
     :return: a pd.DataFrame with the forecast, confidence interval, actual value, and cutoff.
     """
     bins = [df["ds"].min()] + cutoffs + [df["ds"].max()]
@@ -37,23 +40,23 @@ def cross_validation(arima_model: pmdarima.arima.ARIMA, df: pd.DataFrame, cutoff
     test_df = df[df['ds'] > cutoffs[0]].copy()
     test_df["cutoff"] = pd.to_datetime(pd.cut(test_df["ds"], bins=bins, labels=labels))
 
-    predicts = [single_cutoff_forecast(arima_model, test_df, prev_cutoff, cutoff) for prev_cutoff, cutoff in
+    predicts = [single_cutoff_forecast(arima_model, test_df, prev_cutoff, cutoff, exogenous_cols) for prev_cutoff, cutoff in
                 zip(labels, cutoffs)]
 
     # Update model with data in last cutoff
     last_df = test_df[test_df["cutoff"] == cutoffs[-1]]
     last_df.set_index("ds", inplace=True)
     y_update = last_df[["y"]]
-    X_update = last_df.drop(["y", "cutoff"], axis=1)
+    X_update = last_df[exogenous_cols] if exogenous_cols else None
     arima_model.update(
         y_update,
-        X=X_update if len(X_update.columns) > 0 else None)
+        X=X_update)
 
     return pd.concat(predicts, axis=0).reset_index(drop=True)
 
 
 def single_cutoff_forecast(arima_model: pmdarima.arima.ARIMA, test_df: pd.DataFrame, prev_cutoff: pd.Timestamp,
-                           cutoff: pd.Timestamp) -> pd.DataFrame:
+                           cutoff: pd.Timestamp, exogenous_cols: Optional[List[str]] = None) -> pd.DataFrame:
     """
     Forecast for single cutoff. Used in the cross validation function.
     :param arima_model: pmdarima.arima.ARIMA object. Fitted ARIMA model.
@@ -61,6 +64,8 @@ def single_cutoff_forecast(arima_model: pmdarima.arima.ARIMA, test_df: pd.DataFr
     :param prev_cutoff: the pd.Timestamp cutoff of the previous forecast.
                         Data between prev_cutoff and cutoff will be used to update the model.
     :param cutoff: pd.Timestamp cutoff of this forecast. The simulated forecast will start from this date.
+    :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
+        used as additional features in arima model.
     :return: a pd.DataFrame with the forecast, confidence interval, actual value, and cutoff.
     """
     # Update the model with data in the previous cutoff
@@ -68,17 +73,17 @@ def single_cutoff_forecast(arima_model: pmdarima.arima.ARIMA, test_df: pd.DataFr
     if not prev_df.empty:
         prev_df.set_index("ds", inplace=True)
         y_update = prev_df[["y"]]
-        X_update = prev_df.drop(["y", "cutoff"], axis=1)
+        X_update = prev_df[exogenous_cols] if exogenous_cols else None
         arima_model.update(
             y_update,
-            X=X_update if len(X_update.columns) > 0 else None)
+            X=X_update)
     # Predict with data in the new cutoff
     new_df = test_df[test_df["cutoff"] == cutoff].copy()
-    X_predict = new_df.drop(["y", "cutoff"], axis=1).set_index("ds")
+    X_predict = new_df[exogenous_cols] if exogenous_cols else None
     n_periods = len(new_df["y"].values)
     fc, conf_int = arima_model.predict(
         n_periods=n_periods,
-        X=X_predict if len(X_predict.columns) > 0 else None,
+        X=X_predict,
         return_conf_int=True)
     fc = fc.tolist()
     conf = np.asarray(conf_int).tolist()

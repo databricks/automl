@@ -15,6 +15,7 @@
 #
 
 import unittest
+from parameterized import parameterized
 
 import pandas as pd
 from pmdarima.arima import auto_arima, StepwiseContext
@@ -23,57 +24,62 @@ from databricks.automl_runtime.forecast.utils import generate_cutoffs
 from databricks.automl_runtime.forecast.pmdarima.diagnostics import cross_validation, single_cutoff_forecast
 
 
+num_rows = 15
+df = pd.concat([
+    pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
+    pd.Series(range(num_rows), name="y")
+], axis=1)
+df_with_exogenous = pd.concat([
+    pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
+    pd.Series(range(num_rows), name="y"),
+    pd.Series(range(num_rows), name="x1"),
+    pd.Series(range(num_rows), name="x2")
+], axis=1)
+
+
 class TestDiagnostics(unittest.TestCase):
+    @parameterized.expand([
+        (df, None),
+        (df_with_exogenous, ["x1", "x2"])
+    ])
+    def test_cross_validation_success(self, df, exogenous_cols):
+        cutoffs = generate_cutoffs(df, horizon=3, unit="D", seasonal_period=1, seasonal_unit="D", num_folds=3)
+        train_df = df[df["ds"] <= cutoffs[0]].set_index("ds")
+        y_train = train_df[["y"]]
+        X_train = train_df.drop(["y"], axis=1)
+        with StepwiseContext(max_steps=1):
+            model = auto_arima(
+                y=y_train,
+                X=X_train[exogenous_cols] if exogenous_cols else None,
+                m=1)
 
-    def setUp(self) -> None:
-        num_rows = 15
-        self.df = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
-            pd.Series(range(num_rows), name="y")
-        ], axis=1)
-        self.df_with_exogenous = pd.concat([
-            pd.to_datetime(pd.Series(range(num_rows), name="ds").apply(lambda i: f"2020-07-{i + 1}")),
-            pd.Series(range(num_rows), name="y"),
-            pd.Series(range(num_rows), name="x1"),
-            pd.Series(range(num_rows), name="x2")
-        ], axis=1)
+        expected_ds = df[df["ds"] > cutoffs[0]]["ds"]
+        added_cols = ["cutoff", "yhat", "yhat_lower", "yhat_upper"]
+        df_cv = cross_validation(model, df, cutoffs, exogenous_cols)
+        self.assertEqual(df_cv["ds"].tolist(), expected_ds.tolist())
+        self.assertEqual(set(df_cv.columns), set(df.columns.tolist() + added_cols))
 
-    def test_cross_validation_success(self):
-        for df in [self.df, self.df_with_exogenous]:
-            cutoffs = generate_cutoffs(df, horizon=3, unit="D", seasonal_period=1, seasonal_unit="D", num_folds=3)
-            train_df = df[df["ds"] <= cutoffs[0]].set_index("ds")
-            y_train = train_df[["y"]]
-            X_train = train_df.drop(["y"], axis=1)
-            with StepwiseContext(max_steps=1):
-                model = auto_arima(
-                    y=y_train,
-                    X=X_train if len(X_train.columns) > 0 else None,
-                    m=1)
+    @parameterized.expand([
+        (df, None),
+        (df_with_exogenous, ["x1", "x2"])
+    ])
+    def test_single_cutoff_forecast_success(self, df, exogenous_cols):
+        cutoff_zero = df["ds"].min()
+        cutoff_one = pd.Timestamp("2020-07-10 12:00:00")
+        cutoff_two = pd.Timestamp("2020-07-12 00:00:00")
+        train_df = df[df["ds"] <= cutoff_one].set_index("ds")
+        y_train = train_df[["y"]]
+        X_train = train_df.drop(["y"], axis=1)
+        test_df = df[df['ds'] > cutoff_one].copy()
+        test_df["cutoff"] = [cutoff_one] * 2 + [cutoff_two] * 3
+        with StepwiseContext(max_steps=1):
+            model = auto_arima(
+                y=y_train,
+                X=X_train[exogenous_cols] if exogenous_cols else None,
+                m=1)
 
-            expected_ds = df[df["ds"] > cutoffs[0]]["ds"]
-            added_cols = ["cutoff", "yhat", "yhat_lower", "yhat_upper"]
-            df_cv = cross_validation(model, df, cutoffs)
-            self.assertEqual(df_cv["ds"].tolist(), expected_ds.tolist())
-            self.assertEqual(set(df_cv.columns), set(df.columns.tolist() + added_cols))
-
-    def test_single_cutoff_forecast_success(self):
-        for df in [self.df, self.df_with_exogenous]:
-            cutoff_zero = df["ds"].min()
-            cutoff_one = pd.Timestamp("2020-07-10 12:00:00")
-            cutoff_two = pd.Timestamp("2020-07-12 00:00:00")
-            train_df = df[df["ds"] <= cutoff_one].set_index("ds")
-            y_train = train_df[["y"]]
-            X_train = train_df.drop(["y"], axis=1)
-            test_df = df[df['ds'] > cutoff_one].copy()
-            test_df["cutoff"] = [cutoff_one] * 2 + [cutoff_two] * 3
-            with StepwiseContext(max_steps=1):
-                model = auto_arima(
-                    y=y_train,
-                    X=X_train if len(X_train.columns) > 0 else None,
-                    m=1)
-
-            expected_ds = test_df["ds"][:2]
-            added_cols = ["cutoff", "yhat", "yhat_lower", "yhat_upper"]
-            forecast_df = single_cutoff_forecast(model, test_df, cutoff_zero, cutoff_one)
-            self.assertEqual(forecast_df["ds"].tolist(), expected_ds.tolist())
-            self.assertEqual(set(forecast_df.columns), set(df.columns.tolist() + added_cols))
+        expected_ds = test_df["ds"][:2]
+        added_cols = ["cutoff", "yhat", "yhat_lower", "yhat_upper"]
+        forecast_df = single_cutoff_forecast(model, test_df, cutoff_zero, cutoff_one, exogenous_cols)
+        self.assertEqual(forecast_df["ds"].tolist(), expected_ds.tolist())
+        self.assertEqual(set(forecast_df.columns), set(df.columns.tolist() + added_cols))

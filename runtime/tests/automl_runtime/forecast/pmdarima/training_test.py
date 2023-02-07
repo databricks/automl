@@ -50,7 +50,7 @@ class TestArimaEstimator(unittest.TestCase):
         ], axis=1)
 
     def test_fit_success(self):
-        for freq, df in [['d', self.df], ['d', self.df_string_time], ['month', self.df_monthly], ['d', self.df_with_exogenous]]:
+        for freq, df in [['d', self.df], ['d', self.df_string_time], ['month', self.df_monthly]]:
             arima_estimator = ArimaEstimator(horizon=1,
                                              frequency_unit=freq,
                                              metric="smape",
@@ -60,6 +60,18 @@ class TestArimaEstimator(unittest.TestCase):
             results_pd = arima_estimator.fit(df)
             self.assertIn("smape", results_pd)
             self.assertIn("pickled_model", results_pd)
+
+    def test_fit_success_with_exogenous(self):
+        arima_estimator = ArimaEstimator(horizon=1,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[1, 7],
+                                         num_folds=2,
+                                         exogenous_cols=["x1", "x2"])
+
+        results_pd = arima_estimator.fit(self.df_with_exogenous)
+        self.assertIn("smape", results_pd)
+        self.assertIn("pickled_model", results_pd)
 
     def test_fit_skip_too_long_seasonality(self):
         arima_estimator = ArimaEstimator(horizon=1,
@@ -138,7 +150,12 @@ class TestArimaEstimator(unittest.TestCase):
 
     def test_fit_predict_success(self):
         cutoffs = [pd.to_datetime("2020-07-11")]
-        result = ArimaEstimator._fit_predict(self.df, cutoffs, seasonal_period=1)
+        arima_estimator = ArimaEstimator(horizon=1,
+                                         frequency_unit="d",
+                                         metric="smape",
+                                         seasonal_periods=[30],
+                                         num_folds=2)
+        result = arima_estimator._fit_predict(self.df, cutoffs, seasonal_period=1)
         self.assertIn("metrics", result)
         self.assertIsInstance(result["model"], pm.arima.ARIMA)
 
