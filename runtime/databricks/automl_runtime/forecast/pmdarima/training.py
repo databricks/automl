@@ -15,7 +15,7 @@
 #
 import logging
 import traceback
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import pickle
@@ -35,7 +35,7 @@ class ArimaEstimator:
     """
 
     def __init__(self, horizon: int, frequency_unit: str, metric: str, seasonal_periods: List[int],
-                 num_folds: int = 20, max_steps: int = 150) -> None:
+                 num_folds: int = 20, max_steps: int = 150, exogenous_cols: Optional[List[str]] = None) -> None:
         """
         :param horizon: Number of periods to forecast forward
         :param frequency_unit: Frequency of the time series
@@ -43,6 +43,8 @@ class ArimaEstimator:
         :param seasonal_periods: A list of seasonal periods for tuning. Units are frequency_unit.
         :param num_folds: Number of folds for cross validation
         :param max_steps: Max steps for stepwise auto_arima
+        :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
+        used as additional features in arima model.
         """
         self._horizon = horizon
         self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
@@ -50,6 +52,7 @@ class ArimaEstimator:
         self._seasonal_periods = seasonal_periods
         self._num_folds = num_folds
         self._max_steps = max_steps
+        self._exogenous_cols = exogenous_cols
 
     def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -107,24 +110,23 @@ class ArimaEstimator:
         results_pd["pickled_model"] = pickle.dumps(best_result["model"])
         return results_pd
 
-    @staticmethod
-    def _fit_predict(df: pd.DataFrame, cutoffs: List[pd.Timestamp], seasonal_period: int, max_steps: int = 150):
+    def _fit_predict(self, df: pd.DataFrame, cutoffs: List[pd.Timestamp], seasonal_period: int, max_steps: int = 150):
         train_df = df[df['ds'] <= cutoffs[0]]
         train_df.set_index("ds", inplace=True)
         y_train = train_df[["y"]]
-        X_train = train_df.drop(["y"], axis=1)
+        X_train = train_df[self._exogenous_cols] if self._exogenous_cols else None
 
         # Train with the initial interval
         with StepwiseContext(max_steps=max_steps):
             arima_model = pm.auto_arima(
                 y=y_train,
-                X=X_train if len(X_train.columns) > 0 else None,
+                X=X_train,
                 m=seasonal_period,
                 stepwise=True,
             )
 
         # Evaluate with cross validation
-        df_cv = cross_validation(arima_model, df, cutoffs)
+        df_cv = cross_validation(arima_model, df, cutoffs, self._exogenous_cols)
         df_metrics = performance_metrics(df_cv)
         metrics = df_metrics.drop("horizon", axis=1).mean().to_dict()
         # performance_metrics doesn't calculate mape if any y is close to 0

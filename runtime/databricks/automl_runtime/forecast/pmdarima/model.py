@@ -87,7 +87,8 @@ class ArimaModel(AbstractArimaModel):
     """
 
     def __init__(self, pickled_model: bytes, horizon: int, frequency: str,
-                 start_ds: pd.Timestamp, end_ds: pd.Timestamp, time_col: str) -> None:
+                 start_ds: pd.Timestamp, end_ds: pd.Timestamp,
+                 time_col: str, exogenous_cols: Optional[List[str]] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for ARIMA.
         :param pickled_model: the pickled ARIMA model as a bytes object.
@@ -96,6 +97,8 @@ class ArimaModel(AbstractArimaModel):
         :param start_ds: the start time of training data
         :param end_ds: the end time of training data
         :param time_col: the column name of the time column
+        :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
+        used as additional features in arima model.
         """
         super().__init__()
         self._pickled_model = pickled_model
@@ -104,6 +107,7 @@ class ArimaModel(AbstractArimaModel):
         self._start_ds = pd.to_datetime(start_ds)
         self._end_ds = pd.to_datetime(end_ds)
         self._time_col = time_col
+        self._exogenous_cols = exogenous_cols
 
     def model(self) -> pmdarima.arima.ARIMA:
         """
@@ -126,7 +130,7 @@ class ArimaModel(AbstractArimaModel):
         :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
         horizon = horizon or self._horizon
-        X = None if df is None else df[df[self._time_col] > self._end_ds].set_index(self._time_col).drop(["y"], axis=1)
+        X = None if df is None else (df[df[self._time_col] > self._end_ds].set_index(self._time_col))[self._exogenous_cols]
         future_pd = self._forecast(horizon, X)
         if include_history:
             in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, X=X)
@@ -198,7 +202,7 @@ class ArimaModel(AbstractArimaModel):
             X_future = df[df["ds"] > self._end_ds].set_index("ds")
             future_pd = self._forecast(
                 horizon,
-                X=X_future if len(X_future.columns) > 0 else None)
+                X=X_future[self._exogenous_cols] if self._exogenous_cols else None)
             preds_pds.append(future_pd)
         # In-sample prediction if needed
         if pred_start_ds <= self._end_ds:
@@ -206,7 +210,7 @@ class ArimaModel(AbstractArimaModel):
             in_sample_pd = self._predict_in_sample(
                 start_ds=pred_start_ds,
                 end_ds=self._end_ds,
-                X=X_in_sample if len(X_in_sample.columns) > 0 else None)
+                X=X_in_sample[self._exogenous_cols] if self._exogenous_cols else None)
             preds_pds.append(in_sample_pd)
         # Map predictions back to given timestamps
         preds_pd = pd.concat(preds_pds).set_index("ds")
@@ -258,7 +262,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
 
     def __init__(self, pickled_model_dict: Dict[Tuple, bytes], horizon: int, frequency: str,
                  start_ds_dict: Dict[Tuple, pd.Timestamp], end_ds_dict: Dict[Tuple, pd.Timestamp],
-                 time_col: str, id_cols: List[str]) -> None:
+                 time_col: str, id_cols: List[str], exogenous_cols: Optional[List[str]] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for multiseries ARIMA.
         :param pickled_model_dict: the dictionary of binarized ARIMA models for different time series.
@@ -268,6 +272,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         :param end_ds_dict: the dictionary of the end time of each time series in training data.
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
+        :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
+        used as additional features in arima model.
         """
         super().__init__()
         self._pickled_models = pickled_model_dict
@@ -277,6 +283,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         self._ends = end_ds_dict
         self._time_col = time_col
         self._id_cols = id_cols
+        self._exogenous_cols = exogenous_cols
 
     def model(self, id_: Tuple) -> pmdarima.arima.ARIMA:
         """
@@ -346,7 +353,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         include_history: bool = True,
         df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency,
-                                           self._starts[id_], self._ends[id_], self._time_col)
+                                           self._starts[id_], self._ends[id_], self._time_col, self._exogenous_cols)
         preds_df = arima_model_single_id.predict_timeseries(horizon, include_history, df)
         for id, col_name in zip(id_, self._id_cols):
             preds_df[col_name] = id
@@ -389,8 +396,9 @@ class MultiSeriesArimaModel(AbstractArimaModel):
                                            self._frequency,
                                            self._starts[id_],
                                            self._ends[id_],
-                                           self._time_col)
-        df["yhat"] = arima_model_single_id.predict(context=None, model_input=df.drop(["id", "ts_id"], axis=1)).to_list()
+                                           self._time_col,
+                                           self._exogenous_cols)
+        df["yhat"] = arima_model_single_id.predict(context=None, model_input=df).to_list()
         return df
 
 
