@@ -130,7 +130,9 @@ class ArimaModel(AbstractArimaModel):
         :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
         horizon = horizon or self._horizon
-        X = None if df is None else (df[df[self._time_col] > self._end_ds].set_index(self._time_col))[self._exogenous_cols]
+        X = None
+        if self._exogenous_cols and df is not None:
+            X = (df[df[self._time_col] > self._end_ds].set_index(self._time_col))[self._exogenous_cols]
         future_pd = self._forecast(horizon, X)
         if include_history:
             in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, X=X)
