@@ -337,7 +337,7 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
         self.exogenous_cols = ["x1", "x2"]
         self.X = train_df[self.exogenous_cols]
 
-        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model = ARIMA(order=(2, 1, 2), suppress_warnings=True)
         model.fit(train_df[["y"]], X=self.X)
         pickled_model = pickle.dumps(model)
         pickled_model_dict = {("1",): pickled_model, ("2",): pickled_model}
@@ -356,7 +356,7 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
         forecast_pd = self.arima_model.predict_timeseries(df=self.df)
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
-        self.assertEqual(20, forecast_pd.shape[0])
+        self.assertEqual(18, forecast_pd.shape[0])
         # Test forecast without history data
         forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, df=self.df)
         self.assertEqual(len(forecast_future_pd), 2)

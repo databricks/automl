@@ -130,7 +130,10 @@ class ArimaModel(AbstractArimaModel):
         :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
         horizon = horizon or self._horizon
-        X = None if df is None else (df[df[self._time_col] > self._end_ds].set_index(self._time_col))[self._exogenous_cols]
+        X = None
+        if self._exogenous_cols and df is not None:
+            time_col = self._time_col if self._time_col in df.columns else "ds"
+            X = (df[df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
         future_pd = self._forecast(horizon, X)
         if include_history:
             in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, X=X)
@@ -229,13 +232,15 @@ class ArimaModel(AbstractArimaModel):
             start_ds = self._start_ds
             end_ds = self._end_ds
             start_idx, end_idx = None, None
+        d = self.model().order[1]
+        start_idx = max(start_idx, d)
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
             X=X,
             start=start_idx,
             end=end_idx,
             return_conf_int=True)
-        periods = calculate_period_differences(start_ds, end_ds, self._frequency) + 1
-        ds_indices = self._get_ds_indices(start_ds=start_ds, periods=periods, frequency=self._frequency)
+        periods = calculate_period_differences(self._start_ds, end_ds, self._frequency) + 1
+        ds_indices = self._get_ds_indices(start_ds=self._start_ds, periods=periods, frequency=self._frequency)[start_idx:]
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
         return in_sample_pd
