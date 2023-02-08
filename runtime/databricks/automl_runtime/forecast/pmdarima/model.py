@@ -131,8 +131,9 @@ class ArimaModel(AbstractArimaModel):
         """
         horizon = horizon or self._horizon
         X = None
+        time_col = self._time_col if self._time_col in df.columns else "ds"
         if self._exogenous_cols and df is not None:
-            X = (df[df[self._time_col] > self._end_ds].set_index(self._time_col))[self._exogenous_cols]
+            X = (df[df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
         future_pd = self._forecast(horizon, X)
         if include_history:
             in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, X=X)
