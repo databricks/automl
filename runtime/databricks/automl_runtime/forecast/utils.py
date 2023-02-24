@@ -107,9 +107,10 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     :param unit: frequency unit of the time series, which must be a pandas offset alias
     :return: horizon used for validation, in terms of the input `unit`
     """
-    MIN_HORIZONS = 4 # minimum number of horizons in the datafram
+    MIN_HORIZONS = 4 # minimum number of horizons in the dataframe
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon
-    max_horizon_dateoffset = pd.Timestamp.max - df["ds"].min()
+    max_horizon_timedelta = pd.Timestamp.max - df["ds"].min()
+    max_horizon_dateoffset = pd.DateOffset(seconds=max_horizon_timedelta.components.seconds)
     if horizon_dateoffset > max_horizon_dateoffset:
         horizon_dateoffset = max_horizon_dateoffset
 
