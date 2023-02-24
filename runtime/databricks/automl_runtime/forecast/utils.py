@@ -96,6 +96,23 @@ def make_single_future_dataframe(
     )
     return pd.DataFrame(date_rng, columns=[column_name])
 
+def _get_date_offset_from_seconds(seconds: int, unit: str, num_unit: int):
+    # Reference: https://pandas.pydata.org/docs/reference/api/pandas.tseries.offsets.DateOffset.html
+    if unit == "seconds":
+        return pd.DateOffset(seconds=seconds//num_unit)
+    if unit == "minutes":
+        return pd.DateOffset(minutes=seconds//(60*num_unit))
+    if unit == "hours":
+        return pd.DateOffset(hours=seconds//(60*60*num_unit))
+    if unit == "days":
+        return pd.DateOffset(days=seconds//(60*60*24*num_unit))
+    if unit == "weeks":
+        return pd.DateOffset(weeks=seconds//(60*60*24*7*num_unit))
+    if unit == "months":
+        return pd.DateOffset(months=seconds//(60*60*24*7*30*num_unit))
+    if unit == "years":
+        return pd.DateOffset(years=seconds//(60*60*24*7*30*365*num_unit))
+
 def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     """
     Return validation_horizon, which is the lesser of `horizon` and one quarter of the dataframe's timedelta
@@ -107,12 +124,14 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     :param unit: frequency unit of the time series, which must be a pandas offset alias
     :return: horizon used for validation, in terms of the input `unit`
     """
-    MIN_HORIZONS = 4 # minimum number of horizons in the dataframe
-    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon
+    date_offset_unit_kwargs = DATE_OFFSET_KEYWORD_MAP[unit]
+    horizon_dateoffset = pd.DateOffset(**date_offset_unit_kwargs) * horizon
     max_horizon_timedelta = pd.Timestamp.max - df["ds"].min()
-    max_horizon_dateoffset = pd.DateOffset(seconds=max_horizon_timedelta.components.seconds)
-    if horizon_dateoffset > max_horizon_dateoffset:
-        horizon_dateoffset = max_horizon_dateoffset
+    if horizon_dateoffset.to_timedelta() > max_horizon_timedelta:
+        unit, num_unit = list(DATE_OFFSET_KEYWORD_MAP[unit].items())[0]
+        horizon_dateoffset = _get_date_offset_from_seconds(max_horizon_timedelta.total_seconds(), unit, num_unit)
+
+    MIN_HORIZONS = 4  # minimum number of horizons in the dataframe
 
     if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
         return horizon
@@ -120,7 +139,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
         # In order to calculate the validation horizon, we incrementally add offset
         # to the start time to the quater of total timedelta. We did this since
         # pd.DateOffset does not support divide by operation.
-        unit_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])
+        unit_dateoffset = pd.DateOffset(**date_offset_unit_kwargs)
         max_horizon = 0
         cur_timestamp = df["ds"].min()
         while cur_timestamp + unit_dateoffset <= df["ds"].max():
