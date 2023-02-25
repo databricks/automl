@@ -75,6 +75,12 @@ class TestGetValidationHorizon(unittest.TestCase):
         validation_horizon = get_validation_horizon(df, 17, "QS")
         self.assertEqual(validation_horizon, 3)
 
+        # prevent date overflow. There are 20 days of data, so maximum horizon is 5 days
+        df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-21", freq="D"), columns=["ds"])
+        # pd.Timestamp.max = Timestamp('2262-04-11 23:47:16.854775807')
+        validation_horizon = get_validation_horizon(df, 1000000, "D")
+        self.assertEqual(validation_horizon, 5)
+
     def test_truncate_logs(self):
         with self.assertLogs(logger="databricks.automl_runtime.forecast", level="INFO") as cm:
             df = pd.DataFrame(pd.date_range(start="2020-08-01", end="2020-08-20", freq="D"), columns=["ds"])

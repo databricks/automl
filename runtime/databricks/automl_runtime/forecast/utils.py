@@ -96,18 +96,6 @@ def make_single_future_dataframe(
     )
     return pd.DataFrame(date_rng, columns=[column_name])
 
-def _create_timedelta(horizon: int, unit:str):
-    # Reference: https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html#pandas-timedelta
-    date_offset_unit_kwargs = DATE_OFFSET_KEYWORD_MAP[unit]
-    unit, num_unit = list(date_offset_unit_kwargs.items())[0]
-    if unit == "weeks":
-        return pd.Timedelta(value=7*horizon*num_unit, unit="days")
-    if unit == "months":
-        return pd.Timedelta(value=30*horizon*num_unit, unit="days")
-    if unit == "years":
-        return pd.Timedelta(value=365*horizon*num_unit, unit="days")
-    return pd.Timedelta(value=horizon*num_unit, unit=unit)
-
 def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     """
     Return validation_horizon, which is the lesser of `horizon` and one quarter of the dataframe's timedelta
@@ -120,15 +108,15 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     :return: horizon used for validation, in terms of the input `unit`
     """
     MIN_HORIZONS = 4  # minimum number of horizons in the dataframe
-
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon
-    max_horizon_timedelta = (pd.Timestamp.max - df["ds"].min()) / MIN_HORIZONS
-    if _create_timedelta(horizon, unit) > max_horizon_timedelta:
-        horizon_dateoffset = pd.DateOffset(seconds=max_horizon_timedelta.total_seconds())
 
-    if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
-        return horizon
-    else:
+    try:
+        validation_horizon = MIN_HORIZONS * horizon_dateoffset + df["ds"].min()
+    except OverflowError:
+        validation_horizon = None
+    finally:
+        if validation_horizon and validation_horizon <= df["ds"].max():
+            return horizon
         # In order to calculate the validation horizon, we incrementally add offset
         # to the start time to the quarter of total timedelta. We did this since
         # pd.DateOffset does not support divide by operation.
