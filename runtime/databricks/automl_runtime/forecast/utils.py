@@ -111,24 +111,23 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon
 
     try:
-        validation_horizon = MIN_HORIZONS * horizon_dateoffset + df["ds"].min()
-    except OverflowError:
-        validation_horizon = None
-    finally:
-        if validation_horizon and validation_horizon <= df["ds"].max():
+        if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
             return horizon
-        # In order to calculate the validation horizon, we incrementally add offset
-        # to the start time to the quarter of total timedelta. We did this since
-        # pd.DateOffset does not support divide by operation.
-        unit_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])
-        max_horizon = 0
-        cur_timestamp = df["ds"].min()
-        while cur_timestamp + unit_dateoffset <= df["ds"].max():
-            cur_timestamp += unit_dateoffset
-            max_horizon += 1
-        _logger.info(f"Horizon {horizon_dateoffset} too long relative to dataframe's "
-        f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*unit_dateoffset}.")
-        return max_horizon // MIN_HORIZONS
+    except OverflowError:
+        pass
+
+    # In order to calculate the validation horizon, we incrementally add offset
+    # to the start time to the quarter of total timedelta. We did this since
+    # pd.DateOffset does not support divide by operation.
+    unit_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])
+    max_horizon = 0
+    cur_timestamp = df["ds"].min()
+    while cur_timestamp + unit_dateoffset <= df["ds"].max():
+        cur_timestamp += unit_dateoffset
+        max_horizon += 1
+    _logger.info(f"Horizon {horizon_dateoffset} too long relative to dataframe's "
+    f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*unit_dateoffset}.")
+    return max_horizon // MIN_HORIZONS
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
                      num_folds: int, seasonal_period: int = 0, 
