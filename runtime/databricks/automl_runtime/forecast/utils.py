@@ -107,24 +107,27 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     :param unit: frequency unit of the time series, which must be a pandas offset alias
     :return: horizon used for validation, in terms of the input `unit`
     """
-    MIN_HORIZONS = 4 # minimum number of horizons in the datafram
-    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])* horizon
+    MIN_HORIZONS = 4  # minimum number of horizons in the dataframe
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon
 
-    if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
-        return horizon
-    else:
-        # In order to calculate the validation horizon, we incrementally add offset
-        # to the start time to the quater of total timedelta. We did this since
-        # pd.DateOffset does not support divide by operation.
-        unit_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])
-        max_horizon = 0
-        cur_timestamp = df["ds"].min()
-        while cur_timestamp + unit_dateoffset <= df["ds"].max():
-            cur_timestamp += unit_dateoffset
-            max_horizon += 1
-        _logger.info(f"Horizon {horizon_dateoffset} too long relative to dataframe's "
-        f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*unit_dateoffset}.")
-        return max_horizon // MIN_HORIZONS
+    try:
+        if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
+            return horizon
+    except OverflowError:
+        pass
+
+    # In order to calculate the validation horizon, we incrementally add offset
+    # to the start time to the quarter of total timedelta. We did this since
+    # pd.DateOffset does not support divide by operation.
+    unit_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])
+    max_horizon = 0
+    cur_timestamp = df["ds"].min()
+    while cur_timestamp + unit_dateoffset <= df["ds"].max():
+        cur_timestamp += unit_dateoffset
+        max_horizon += 1
+    _logger.info(f"Horizon {horizon_dateoffset} too long relative to dataframe's "
+    f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*unit_dateoffset}.")
+    return max_horizon // MIN_HORIZONS
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
                      num_folds: int, seasonal_period: int = 0, 
