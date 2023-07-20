@@ -2,6 +2,7 @@
 # Instructions:
 # * Keep dependencies sorted.
 parameterized~=0.7.4
+pyspark~=3.4.0
 pytest~=6.2.1
 pytest-cov~=2.11.1
 flake8~=4.0.1

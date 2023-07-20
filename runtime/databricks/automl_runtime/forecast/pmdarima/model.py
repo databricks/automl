@@ -33,7 +33,6 @@ from databricks.automl_runtime.forecast.utils import calculate_period_difference
 ARIMA_CONDA_ENV = _mlflow_conda_env(
     additional_pip_deps=[
         f"pmdarima=={pmdarima.__version__}",
-        f"pickle=={pickle.format_version}",
         f"pandas=={pd.__version__}",
     ]
 )

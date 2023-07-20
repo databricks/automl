@@ -444,6 +444,26 @@ class TestLogModel(unittest.TestCase):
         loaded_model.predict(self.df.drop("y", axis=1))
         loaded_model._model_impl.python_model.predict_timeseries()
 
+    @pytest.mark.slow
+    def test_mlflow_arima_log_model_spark_udf(self):
+        from pyspark.sql import SparkSession
+        from pyspark.sql.functions import struct
+
+        arima_model = ArimaModel(self.pickled_model, horizon=1, frequency='d',
+                                 start_ds=pd.to_datetime("2020-10-01"), end_ds=pd.to_datetime("2020-10-09"),
+                                 time_col="date")
+        with mlflow.start_run() as run:
+            mlflow_arima_log_model(arima_model)
+
+        # Load the saved model as Spark UDF from mlflow
+        spark = SparkSession.builder.master("local[*]").getOrCreate()
+        run_id = run.info.run_id
+        loaded_model = mlflow.pyfunc.spark_udf(spark, f"runs:/{run_id}/model", env_manager="conda")
+
+        # Make sure can make forecasts with the saved model
+        spark_df = spark.createDataFrame(self.df)
+        spark_df.withColumn("pred", loaded_model(struct(*spark_df.columns)))
+
     def test_mlflow_arima_log_model_multiseries(self):
         pickled_model_dict = {("1",): self.pickled_model, ("2",): self.pickled_model}
         start_ds_dict = {("1",): pd.Timestamp("2020-10-01"), ("2",): pd.Timestamp("2020-10-01")}
