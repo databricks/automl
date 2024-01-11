@@ -46,7 +46,7 @@ class DatetimeImputer(TransformerMixin, BaseEstimator):
         y: not used
         """
         self.fill_values = {}
-        for col_name, col_value in X.iteritems():
+        for col_name, col_value in X.items():
             col_value = pd.to_datetime(col_value, errors="coerce")
             if self.strategy == 'mean':
                 self.fill_values[col_name] = col_value.mean(skipna=True)
