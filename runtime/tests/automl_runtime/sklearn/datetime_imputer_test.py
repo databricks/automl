@@ -29,10 +29,10 @@ class TestDatetimeImputer(unittest.TestCase):
     def test_imputer_mean(self):
         assert_frame_equal(
                 DatetimeImputer().fit_transform(self.get_test_df()),
-                self.get_test_df("2021-01-04 14:24", "2022-01-01 00:04:36").apply(pd.to_datetime))
+                self.get_test_df("2021-01-04 14:24", "2022-01-01 00:04:36").apply(lambda x: pd.to_datetime(x, format='mixed')))
         assert_frame_equal(
                 DatetimeImputer(strategy="mean").fit_transform(self.get_test_df()),
-                self.get_test_df("2021-01-04 14:24", "2022-01-01 00:04:36").apply(pd.to_datetime))
+                self.get_test_df("2021-01-04 14:24", "2022-01-01 00:04:36").apply(lambda x: pd.to_datetime(x, format='mixed')))
 
     def test_imputer_median(self):
         assert_frame_equal(
