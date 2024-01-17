@@ -239,7 +239,10 @@ class MultiSeriesProphetModel(ProphetModel):
             identity_column_names=self._id_cols
         )
         future_df["ts_id"] = future_df[self._id_cols].apply(tuple, axis=1)
-        return future_df.groupby(self._id_cols).apply(lambda df: self._predict_impl(df, horizon, include_history)).reset_index()
+        print(f"predict_timeseries::future_df:\n {future_df}")
+        return future_df.groupby(self._id_cols).apply(
+                lambda df: self._predict_impl(df, horizon, include_history)
+            ).reset_index(drop=True)
 
     @staticmethod
     def get_reserved_cols() -> List[str]:
