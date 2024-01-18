@@ -111,6 +111,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon
 
     try:
+        df["ds"] = pd.to_datetime(df["ds"])
         if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
             return horizon
     except OverflowError:
