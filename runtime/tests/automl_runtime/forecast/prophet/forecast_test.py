@@ -151,7 +151,6 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                   trial_timeout=1000,
                                                   random_state=0,
                                                   is_parallel=False,
-                                                  regressors=["f1", "f2"],
                                                   split_cutoff=pd.Timestamp('2020-07-10 00:00:00'))
 
         for df in [self.df, self.df_datetime_date, self.df_string_time]:
