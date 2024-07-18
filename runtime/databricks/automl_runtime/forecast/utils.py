@@ -190,14 +190,12 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
 def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
                      split_cutoff: pd.Timestamp) -> List[pd.Timestamp]:
     """
-    Generate cutoff times for cross validation with the control of number of folds.
+    Generate custom cutoff times for cross validation based on user-specified split cutoff.
+    Period (step size) is 1.
     :param df: pd.DataFrame of the historical data.
     :param horizon: int number of time into the future for forecasting.
     :param unit: frequency unit of the time series, which must be a pandas offset alias.
-    :param num_folds: int number of cutoffs for cross validation.
-    :param seasonal_period: length of the seasonality period.
-    :param seasonal_unit: Optional frequency unit for the seasonal period. If not specified, the function will use
-                          the same frequency unit as the time series.
+    :param split_cutoff: the user-specified cutoff, as the starting point of cutoffs
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     period = 1 

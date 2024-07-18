@@ -179,6 +179,7 @@ class TestGenerateCutoffs(unittest.TestCase):
 
 
 class TestTestGenerateCustomCutoffs(unittest.TestCase):
+
     def test_generate_custom_cutoffs_success_hourly(self):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", periods=168, freq='h'), columns=["ds"]
