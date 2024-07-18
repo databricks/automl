@@ -140,6 +140,34 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         model_json = json.loads(results["model_json"][0])
         self.assertListEqual(model_json["extra_regressors"][0], ["f1", "f2"])
 
+    def test_training_with_split_cutoff(self):
+        hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
+                                                  frequency_unit="d",
+                                                  metric="smape",
+                                                  interval_width=0.8,
+                                                  country_holidays="US",
+                                                  search_space=self.search_space,
+                                                  num_folds=2,
+                                                  trial_timeout=1000,
+                                                  random_state=0,
+                                                  is_parallel=False,
+                                                  regressors=["f1", "f2"],
+                                                  split_cutoff=pd.Timestamp('2020-07-10 00:00:00'))
+
+        for df in [self.df, self.df_datetime_date, self.df_string_time]:
+            results = hyperopt_estim.fit(df)
+            self.assertAlmostEqual(results["mse"][0], 0)
+            self.assertAlmostEqual(results["rmse"][0], 0, delta=1e-6)
+            self.assertAlmostEqual(results["mae"][0], 0, delta=1e-6)
+            self.assertAlmostEqual(results["mape"][0], 0)
+            self.assertAlmostEqual(results["mdape"][0], 0)
+            self.assertAlmostEqual(results["smape"][0], 0)
+            self.assertAlmostEqual(results["coverage"][0], 1)
+            # check the best result parameter is inside the search space
+            model_json = json.loads(results["model_json"][0])
+            self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
+            self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
+
     @patch("databricks.automl_runtime.forecast.prophet.forecast.fmin")
     @patch("databricks.automl_runtime.forecast.prophet.forecast.Trials")
     @patch("databricks.automl_runtime.forecast.prophet.forecast.partial")
