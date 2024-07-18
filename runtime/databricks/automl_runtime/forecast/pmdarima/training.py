@@ -35,7 +35,8 @@ class ArimaEstimator:
     """
 
     def __init__(self, horizon: int, frequency_unit: str, metric: str, seasonal_periods: List[int],
-                 num_folds: int = 20, max_steps: int = 150, exogenous_cols: Optional[List[str]] = None) -> None:
+                 num_folds: int = 20, max_steps: int = 150, exogenous_cols: Optional[List[str]] = None,
+                 split_cutoff: Optional[pd.Timestamp] = None) -> None:
         """
         :param horizon: Number of periods to forecast forward
         :param frequency_unit: Frequency of the time series
@@ -53,6 +54,7 @@ class ArimaEstimator:
         self._num_folds = num_folds
         self._max_steps = max_steps
         self._exogenous_cols = exogenous_cols
+        self._split_cutoff = split_cutoff
 
     def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -88,12 +90,20 @@ class ArimaEstimator:
                 # so the minimum valid seasonality period is always 1
 
                 validation_horizon = utils.get_validation_horizon(history_pd, self._horizon, self._frequency_unit)
-                cutoffs = utils.generate_cutoffs(
-                    history_pd,
-                    horizon=validation_horizon,
-                    unit=self._frequency_unit,
-                    num_folds=self._num_folds,
-                )
+                if self._split_cutoff:
+                    cutoffs = utils.generate_custom_cutoffs(
+                        history_pd,
+                        horizon=validation_horizon,
+                        unit=self._frequency_unit,
+                        split_cutoff=self._split_cutoff
+                    )
+                else:
+                    cutoffs = utils.generate_cutoffs(
+                        history_pd,
+                        horizon=validation_horizon,
+                        unit=self._frequency_unit,
+                        num_folds=self._num_folds,
+                    )
 
                 result = self._fit_predict(history_pd, cutoffs=cutoffs, seasonal_period=m, max_steps=self._max_steps)
                 metric = result["metrics"]["smape"]

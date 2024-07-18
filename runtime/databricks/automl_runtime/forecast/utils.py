@@ -187,6 +187,35 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
         )
     return list(reversed(result))
 
+def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
+                     split_cutoff: pd.Timestamp) -> List[pd.Timestamp]:
+    """
+    Generate cutoff times for cross validation with the control of number of folds.
+    :param df: pd.DataFrame of the historical data.
+    :param horizon: int number of time into the future for forecasting.
+    :param unit: frequency unit of the time series, which must be a pandas offset alias.
+    :param num_folds: int number of cutoffs for cross validation.
+    :param seasonal_period: length of the seasonality period.
+    :param seasonal_unit: Optional frequency unit for the seasonal period. If not specified, the function will use
+                          the same frequency unit as the time series.
+    :return: list of pd.Timestamp cutoffs for cross-validation.
+    """
+    period = 1 
+    period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
+
+    cutoff = split_cutoff
+    result = [cutoff]
+    while result[-1] <= max(df["ds"]) - horizon_dateoffset:
+        cutoff += period_dateoffset
+        if not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon_dateoffset)).any()):
+            if cutoff < df["ds"].max():
+                closest_date = df[df["ds"] > cutoff].min()["ds"]
+                cutoff = closest_date - horizon_dateoffset
+        result.append(cutoff) 
+    result = result[:-1]
+    return result
+
 def is_quaterly_alias(freq: str):
     return freq in QUATERLY_OFFSET_ALIAS
 

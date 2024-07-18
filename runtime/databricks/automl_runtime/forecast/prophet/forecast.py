@@ -91,7 +91,8 @@ class ProphetHyperoptEstimator(ABC):
                  algo=hyperopt.tpe.suggest, num_folds: int = 5,
                  max_eval: int = 10, trial_timeout: int = None,
                  random_state: int = 0, is_parallel: bool = True,
-                 regressors = None, **prophet_kwargs) -> None:
+                 regressors = None, 
+                 split_cutoff: Optional[pd.Timestamp] = None, **prophet_kwargs) -> None:
         """
         Initialization
 
@@ -125,6 +126,7 @@ class ProphetHyperoptEstimator(ABC):
         self._timeout = trial_timeout
         self._is_parallel = is_parallel
         self._regressors = regressors
+        self._split_cutoff = split_cutoff
         self._prophet_kwargs = prophet_kwargs
 
     def fit(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -139,12 +141,20 @@ class ProphetHyperoptEstimator(ABC):
         seasonality_mode = ["additive", "multiplicative"]
 
         validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency_unit)
-        cutoffs = utils.generate_cutoffs(
-            df.reset_index(drop=True),
-            horizon=validation_horizon,
-            unit=self._frequency_unit,
-            num_folds=self._num_folds,
-        )
+        if self._split_cutoff:
+            cutoffs = utils.generate_custom_cutoffs(
+                df.reset_index(drop=True),
+                horizon=validation_horizon,
+                unit=self._frequency_unit,
+                split_cutoff=self._split_cutoff
+            )
+        else:
+            cutoffs = utils.generate_cutoffs(
+                df.reset_index(drop=True),
+                horizon=validation_horizon,
+                unit=self._frequency_unit,
+                num_folds=self._num_folds,
+            )
 
         train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=validation_horizon,
                            frequency=self._frequency_unit, cutoffs=cutoffs,
