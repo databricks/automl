@@ -15,7 +15,7 @@
 #
 import logging
 import traceback
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import pickle
@@ -35,8 +35,8 @@ class ArimaEstimator:
     """
 
     def __init__(self, horizon: int, frequency_unit: str, metric: str, seasonal_periods: List[int],
-                 num_folds: int = 20, max_steps: int = 150, exogenous_cols: List[str] | None = None,
-                 split_cutoff: pd.Timestamp | None = None) -> None:
+                 num_folds: int = 20, max_steps: int = 150, exogenous_cols: Optional[List[str]] = None,
+                 split_cutoff: Optional[pd.Timestamp] = None) -> None:
         """
         :param horizon: Number of periods to forecast forward
         :param frequency_unit: Frequency of the time series

@@ -92,7 +92,7 @@ class ProphetHyperoptEstimator(ABC):
                  max_eval: int = 10, trial_timeout: int = None,
                  random_state: int = 0, is_parallel: bool = True,
                  regressors = None, 
-                 split_cutoff: pd.Timestamp | None = None, **prophet_kwargs) -> None:
+                 split_cutoff: Optional[pd.Timestamp] = None, **prophet_kwargs) -> None:
         """
         Initialization
 
