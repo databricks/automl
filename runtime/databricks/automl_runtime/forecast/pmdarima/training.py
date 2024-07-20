@@ -15,7 +15,7 @@
 #
 import logging
 import traceback
-from typing import List, Optional
+from typing import List
 
 import pandas as pd
 import pickle
