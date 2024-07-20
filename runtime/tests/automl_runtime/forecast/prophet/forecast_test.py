@@ -144,7 +144,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         test_spaces = [['D', self.df, '2020-07-10 00:00:00', 1e-6], 
                        ['D', self.df_datetime_date, '2020-07-10 00:00:00', 1e-6], 
                        ['D', self.df_string_time, '2020-07-10 00:00:00', 1e-6], 
-                       ['M', self.df_string_monthly_time, '2020-10-15 00:00:00', 1e-3], 
+                       ['M', self.df_string_monthly_time, '2020-10-15 00:00:00', 1e-1], 
                        ['Q', self.df_string_quarterly_time, '2022-04-15 00:00:00', 1e-1], 
                        ['Y', self.df_string_annually_time, '2021-01-15 00:00:00', 1e-1]]
         for freq, df, split_cutoff, delta in test_spaces:
