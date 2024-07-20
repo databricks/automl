@@ -35,8 +35,8 @@ class ArimaEstimator:
     """
 
     def __init__(self, horizon: int, frequency_unit: str, metric: str, seasonal_periods: List[int],
-                 num_folds: int = 20, max_steps: int = 150, exogenous_cols: Optional[List[str]] = None,
-                 split_cutoff: Optional[pd.Timestamp] = None) -> None:
+                 num_folds: int = 20, max_steps: int = 150, exogenous_cols: List[str] | None = None,
+                 split_cutoff: pd.Timestamp | None = None) -> None:
         """
         :param horizon: Number of periods to forecast forward
         :param frequency_unit: Frequency of the time series
@@ -46,6 +46,10 @@ class ArimaEstimator:
         :param max_steps: Max steps for stepwise auto_arima
         :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
         used as additional features in arima model.
+        :param split_cutoff: Optional cutoff specified by user. If provided, 
+        it is the starting point of cutoffs for cross validation.
+        For tuning job, it is the cutoff between train and validate split.
+        For training job, it is the cutoff bewteen validate and test split.
         """
         self._horizon = horizon
         self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]

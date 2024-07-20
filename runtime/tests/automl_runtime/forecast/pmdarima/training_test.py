@@ -74,15 +74,18 @@ class TestArimaEstimator(unittest.TestCase):
         self.assertIn("pickled_model", results_pd)
     
     def test_fit_success_with_split_cutoff(self):
-        arima_estimator = ArimaEstimator(horizon=1,
-                                         frequency_unit="d",
-                                         metric="smape",
-                                         seasonal_periods=[1, 7],
-                                         num_folds=2,
-                                         split_cutoff=pd.Timestamp('2020-07-17 00:00:00'))
-        results_pd = arima_estimator.fit(self.df)
-        self.assertIn("smape", results_pd)
-        self.assertIn("pickled_model", results_pd)
+        for freq, df, split_cutoff in [['d', self.df, '2020-07-17 00:00:00'], 
+                         ['d', self.df_string_time, '2020-07-17 00:00:00'], 
+                         ['month', self.df_monthly, '2020-09-07 00:00:00']]:
+            arima_estimator = ArimaEstimator(horizon=1,
+                                            frequency_unit=freq,
+                                            metric="smape",
+                                            seasonal_periods=[1, 7],
+                                            num_folds=2,
+                                            split_cutoff=pd.Timestamp(split_cutoff))
+            results_pd = arima_estimator.fit(df)
+            self.assertIn("smape", results_pd)
+            self.assertIn("pickled_model", results_pd)
 
     def test_fit_skip_too_long_seasonality(self):
         arima_estimator = ArimaEstimator(horizon=1,

@@ -141,8 +141,15 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         self.assertListEqual(model_json["extra_regressors"][0], ["f1", "f2"])
 
     def test_training_with_split_cutoff(self):
-        hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
-                                                  frequency_unit="d",
+        test_spaces = [['D', self.df, '2020-07-09 00:00:00'], 
+                       ['D', self.df_datetime_date, '2020-07-09 00:00:00'], 
+                       ['D', self.df_string_time, '2020-07-09 00:00:00'], 
+                       ['M', self.df_string_monthly_time, '2020-09-15 00:00:00'], 
+                       ['Q', self.df_string_quarterly_time, '2022-01-15 00:00:00'], 
+                       ['Y', self.df_string_annually_time, '2020-01-15 00:00:00']]
+        for freq, df, split_cutoff in test_spaces:
+            hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
+                                                  frequency_unit=freq,
                                                   metric="smape",
                                                   interval_width=0.8,
                                                   country_holidays="US",
@@ -151,9 +158,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                   trial_timeout=1000,
                                                   random_state=0,
                                                   is_parallel=False,
-                                                  split_cutoff=pd.Timestamp('2020-07-10 00:00:00'))
-
-        for df in [self.df, self.df_datetime_date, self.df_string_time]:
+                                                  split_cutoff=pd.Timestamp(split_cutoff))
             results = hyperopt_estim.fit(df)
             self.assertAlmostEqual(results["mse"][0], 0)
             self.assertAlmostEqual(results["rmse"][0], 0, delta=1e-6)

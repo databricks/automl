@@ -195,21 +195,27 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     :param df: pd.DataFrame of the historical data.
     :param horizon: int number of time into the future for forecasting.
     :param unit: frequency unit of the time series, which must be a pandas offset alias.
-    :param split_cutoff: the user-specified cutoff, as the starting point of cutoffs
+    :param split_cutoff: the user-specified cutoff, as the starting point of cutoffs.
+    For tuning job, it is the cutoff between train and validate split.
+    For training job, it is the cutoff bewteen validate and test split.
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     period = 1 
     period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
 
+    # First cutoff is the cutoff bewteen splits
     cutoff = split_cutoff
     result = [cutoff]
-    while result[-1] <= max(df["ds"]) - horizon_dateoffset:
+    max_cutoff = max(df["ds"]) - horizon_dateoffset
+    while result[-1] <= max_cutoff:
         cutoff += period_dateoffset
-        if not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon_dateoffset)).any()):
-            if cutoff < df["ds"].max():
-                closest_date = df[df["ds"] > cutoff].min()["ds"]
-                cutoff = closest_date - horizon_dateoffset
+        # If data does not exist in data range (cutoff, cutoff + horizon_dateoffset]
+        if (not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon_dateoffset)).any())) and (cutoff < df["ds"].max()):
+            # Next cutoff point is "next date after cutoff in data - horizon_dateoffset"
+            closest_date = df[df["ds"] > cutoff].min()["ds"]
+            cutoff = closest_date - horizon_dateoffset
+        # else no data left, leave cutoff as is, it will be dropped.
         result.append(cutoff) 
     result = result[:-1]
     return result

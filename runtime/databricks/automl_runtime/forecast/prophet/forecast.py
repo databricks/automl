@@ -92,7 +92,7 @@ class ProphetHyperoptEstimator(ABC):
                  max_eval: int = 10, trial_timeout: int = None,
                  random_state: int = 0, is_parallel: bool = True,
                  regressors = None, 
-                 split_cutoff: Optional[pd.Timestamp] = None, **prophet_kwargs) -> None:
+                 split_cutoff: pd.Timestamp | None = None, **prophet_kwargs) -> None:
         """
         Initialization
 
@@ -109,6 +109,10 @@ class ProphetHyperoptEstimator(ABC):
         :param random_state: random seed for hyperopt
         :param is_parallel: Indicators to decide that whether run hyperopt in 
         :param regressors: list of column names of external regressors
+        :param split_cutoff: Optional cutoff specified by user. If provided, 
+        it is the starting point of cutoffs for cross validation.
+        For tuning job, it is the cutoff between train and validate split.
+        For training job, it is the cutoff bewteen validate and test split.
         :param prophet_kwargs: Optional keyword arguments for Prophet model.
             For information about the parameters see:
             `The Prophet source code <https://github.com/facebook/prophet/blob/master/python/prophet/forecaster.py>`_.
