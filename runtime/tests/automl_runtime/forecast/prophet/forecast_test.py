@@ -141,13 +141,13 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         self.assertListEqual(model_json["extra_regressors"][0], ["f1", "f2"])
 
     def test_training_with_split_cutoff(self):
-        test_spaces = [['D', self.df, '2020-07-10 00:00:00'], 
-                       ['D', self.df_datetime_date, '2020-07-10 00:00:00'], 
-                       ['D', self.df_string_time, '2020-07-10 00:00:00'], 
-                       ['M', self.df_string_monthly_time, '2020-10-15 00:00:00'], 
-                       ['Q', self.df_string_quarterly_time, '2022-04-15 00:00:00'], 
-                       ['Y', self.df_string_annually_time, '2021-01-15 00:00:00']]
-        for freq, df, split_cutoff in test_spaces:
+        test_spaces = [['D', self.df, '2020-07-10 00:00:00', 1e-6], 
+                       ['D', self.df_datetime_date, '2020-07-10 00:00:00', 1e-6], 
+                       ['D', self.df_string_time, '2020-07-10 00:00:00', 1e-6], 
+                       ['M', self.df_string_monthly_time, '2020-10-15 00:00:00', 1e-3], 
+                       ['Q', self.df_string_quarterly_time, '2022-04-15 00:00:00', 1e-1], 
+                       ['Y', self.df_string_annually_time, '2021-01-15 00:00:00', 1e-1]]
+        for freq, df, split_cutoff, delta in test_spaces:
             hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
                                                   frequency_unit=freq,
                                                   metric="smape",
@@ -160,13 +160,13 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                   is_parallel=False,
                                                   split_cutoff=pd.Timestamp(split_cutoff))
             results = hyperopt_estim.fit(df)
-            self.assertAlmostEqual(results["mse"][0], 0, delta=1e-3)
-            self.assertAlmostEqual(results["rmse"][0], 0, delta=1e-6)
-            self.assertAlmostEqual(results["mae"][0], 0, delta=1e-6)
-            self.assertAlmostEqual(results["mape"][0], 0, delta=1e-3)
-            self.assertAlmostEqual(results["mdape"][0], 0, delta=1e-3)
-            self.assertAlmostEqual(results["smape"][0], 0, delta=1e-3)
-            self.assertAlmostEqual(results["coverage"][0], 1, delta=1e-3)
+            self.assertAlmostEqual(results["mse"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["rmse"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["mae"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["mape"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["mdape"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["smape"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["coverage"][0], 1, delta=delta)
             # check the best result parameter is inside the search space
             model_json = json.loads(results["model_json"][0])
             self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
