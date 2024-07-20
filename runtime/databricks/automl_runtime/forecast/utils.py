@@ -200,6 +200,7 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     For training job, it is the cutoff bewteen validate and test split.
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
+    # TODO: [ML-43528] expose period as input.
     period = 1 
     period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
