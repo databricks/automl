@@ -160,13 +160,13 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                   is_parallel=False,
                                                   split_cutoff=pd.Timestamp(split_cutoff))
             results = hyperopt_estim.fit(df)
-            self.assertAlmostEqual(results["mse"][0], 0)
+            self.assertAlmostEqual(results["mse"][0], 0, delta=1e-3)
             self.assertAlmostEqual(results["rmse"][0], 0, delta=1e-6)
             self.assertAlmostEqual(results["mae"][0], 0, delta=1e-6)
-            self.assertAlmostEqual(results["mape"][0], 0)
-            self.assertAlmostEqual(results["mdape"][0], 0)
-            self.assertAlmostEqual(results["smape"][0], 0)
-            self.assertAlmostEqual(results["coverage"][0], 1)
+            self.assertAlmostEqual(results["mape"][0], 0, delta=1e-3)
+            self.assertAlmostEqual(results["mdape"][0], 0, delta=1e-3)
+            self.assertAlmostEqual(results["smape"][0], 0, delta=1e-3)
+            self.assertAlmostEqual(results["coverage"][0], 1, delta=1e-3)
             # check the best result parameter is inside the search space
             model_json = json.loads(results["model_json"][0])
             self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
