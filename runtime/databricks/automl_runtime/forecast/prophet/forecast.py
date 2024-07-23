@@ -70,6 +70,7 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
     horizon_offset = pd.DateOffset(**offset_kwarg)*horizon
     # Evaluate Metrics
+    print("find me 2:", history_pd, cutoffs, model)
     df_cv = cross_validation(
         model, horizon=horizon_offset, cutoffs=cutoffs, disable_tqdm=True
     )  # disable tqdm to make it work with ipykernel and reduce the output size
