@@ -202,7 +202,7 @@ class TestTestGenerateCustomCutoffs(unittest.TestCase):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", end="2020-08-30", freq='2d'), columns=["ds"]
         ).rename_axis("y").reset_index()
-        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="D", split_cutoff=pd.Timestamp('2020-08-26 00:00:00'))
+        cutoffs = generate_custom_cutoffs(df, horizon=1, unit="D", split_cutoff=pd.Timestamp('2020-08-26 00:00:00'))
         self.assertEqual([pd.Timestamp('2020-08-27 00:00:00'), pd.Timestamp('2020-08-29 00:00:00')], cutoffs)
 
     def test_generate_custom_cutoffs_success_weekly(self):
@@ -246,8 +246,9 @@ class TestTestGenerateCustomCutoffs(unittest.TestCase):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", periods=30, freq='9d'), columns=["ds"]
         ).rename_axis("y").reset_index()
-        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="D", split_cutoff=pd.Timestamp('2021-03-10 00:00:00'))
-        self.assertEqual([pd.Timestamp('2021-03-10 00:00:00'),
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="D", split_cutoff=pd.Timestamp('2021-03-08 00:00:00'))
+        self.assertEqual([pd.Timestamp('2021-03-08 00:00:00'),
+                          pd.Timestamp('2021-03-09 00:00:00'),
                           pd.Timestamp('2021-03-12 00:00:00')], cutoffs)
 
 
