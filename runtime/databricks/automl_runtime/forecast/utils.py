@@ -218,7 +218,6 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
         # else no data left, leave cutoff as is, it will be dropped.
         result.append(cutoff)
         cutoff += period_dateoffset
-    result = result[:-1]
     return result
 
 def is_quaterly_alias(freq: str):
