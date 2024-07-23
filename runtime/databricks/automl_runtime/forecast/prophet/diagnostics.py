@@ -155,7 +155,6 @@ def cross_validation(model, horizon, period=None, initial=None, parallel=None, c
             predicts = pool.gather(predicts)
 
     else:
-        print("find me 1:", df, cutoffs)
         predicts = [
             single_cutoff_forecast(df, model, cutoff, horizon, predict_columns) 
             for cutoff in (tqdm(cutoffs) if not disable_tqdm else cutoffs)
