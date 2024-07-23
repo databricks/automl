@@ -207,17 +207,17 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
 
     # First cutoff is the cutoff bewteen splits
     cutoff = split_cutoff
-    result = [cutoff]
+    result = []
     max_cutoff = max(df["ds"]) - horizon_dateoffset
-    while result[-1] <= max_cutoff:
-        cutoff += period_dateoffset
+    while cutoff <= max_cutoff:
         # If data does not exist in data range (cutoff, cutoff + horizon_dateoffset]
         if (not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon_dateoffset)).any())) and (cutoff < df["ds"].max()):
             # Next cutoff point is "next date after cutoff in data - horizon_dateoffset"
             closest_date = df[df["ds"] > cutoff].min()["ds"]
             cutoff = closest_date - horizon_dateoffset
         # else no data left, leave cutoff as is, it will be dropped.
-        result.append(cutoff) 
+        result.append(cutoff)
+        cutoff += period_dateoffset
     result = result[:-1]
     return result
 

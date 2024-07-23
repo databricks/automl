@@ -197,6 +197,13 @@ class TestTestGenerateCustomCutoffs(unittest.TestCase):
         ).rename_axis("y").reset_index()
         cutoffs = generate_custom_cutoffs(df, horizon=7, unit="D", split_cutoff=pd.Timestamp('2020-08-21 00:00:00'))
         self.assertEqual([pd.Timestamp('2020-08-21 00:00:00'), pd.Timestamp('2020-08-22 00:00:00'), pd.Timestamp('2020-08-23 00:00:00')], cutoffs)
+    
+    def test_generate_custom_cutoffs_success_small_horizon(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01", end="2020-08-30", freq='2d'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="D", split_cutoff=pd.Timestamp('2020-08-26 00:00:00'))
+        self.assertEqual([pd.Timestamp('2020-08-27 00:00:00'), pd.Timestamp('2020-08-29 00:00:00')], cutoffs)
 
     def test_generate_custom_cutoffs_success_weekly(self):
         df = pd.DataFrame(
