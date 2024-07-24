@@ -215,7 +215,6 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
             # Next cutoff point is "next date after cutoff in data - horizon_dateoffset"
             closest_date = df[df["ds"] > cutoff].min()["ds"]
             cutoff = closest_date - horizon_dateoffset
-        # else no data left, leave cutoff as is, it will be dropped.
         result.append(cutoff)
         cutoff += period_dateoffset
     return result
