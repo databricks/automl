@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-__version__ = "0.2.20"  # pragma: no cover
+__version__ = "0.2.20.1"  # pragma: no cover
