@@ -140,6 +140,38 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         model_json = json.loads(results["model_json"][0])
         self.assertListEqual(model_json["extra_regressors"][0], ["f1", "f2"])
 
+    def test_training_with_split_cutoff(self):
+        test_spaces = [['D', self.df, '2020-07-10 00:00:00', 1e-6], 
+                       ['D', self.df_datetime_date, '2020-07-10 00:00:00', 1e-6], 
+                       ['D', self.df_string_time, '2020-07-10 00:00:00', 1e-6], 
+                       ['M', self.df_string_monthly_time, '2020-10-15 00:00:00', 1e-1], 
+                       ['Q', self.df_string_quarterly_time, '2022-04-15 00:00:00', 1e-1], 
+                       ['Y', self.df_string_annually_time, '2021-01-15 00:00:00', 5e-1]]
+        for freq, df, split_cutoff, delta in test_spaces:
+            hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
+                                                  frequency_unit=freq,
+                                                  metric="smape",
+                                                  interval_width=0.8,
+                                                  country_holidays="US",
+                                                  search_space=self.search_space,
+                                                  num_folds=2,
+                                                  trial_timeout=1000,
+                                                  random_state=0,
+                                                  is_parallel=False,
+                                                  split_cutoff=pd.Timestamp(split_cutoff))
+            results = hyperopt_estim.fit(df)
+            self.assertAlmostEqual(results["mse"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["rmse"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["mae"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["mape"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["mdape"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["smape"][0], 0, delta=delta)
+            self.assertAlmostEqual(results["coverage"][0], 1, delta=delta)
+            # check the best result parameter is inside the search space
+            model_json = json.loads(results["model_json"][0])
+            self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
+            self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
+
     @patch("databricks.automl_runtime.forecast.prophet.forecast.fmin")
     @patch("databricks.automl_runtime.forecast.prophet.forecast.Trials")
     @patch("databricks.automl_runtime.forecast.prophet.forecast.partial")

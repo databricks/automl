@@ -22,7 +22,8 @@ import pandas as pd
 from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.utils import \
     generate_cutoffs, get_validation_horizon, calculate_period_differences, \
-    is_frequency_consistency, make_future_dataframe, make_single_future_dataframe
+    is_frequency_consistency, make_future_dataframe, make_single_future_dataframe, \
+    generate_custom_cutoffs
 
 
 class TestGetValidationHorizon(unittest.TestCase):
@@ -175,6 +176,80 @@ class TestGenerateCutoffs(unittest.TestCase):
         ).rename_axis("y").reset_index()
         cutoffs = generate_cutoffs(df, horizon=1, unit="YS", num_folds=3, seasonal_period=1)
         self.assertEqual([pd.Timestamp('2018-07-14 00:00:00'), pd.Timestamp('2019-07-14 00:00:00'), pd.Timestamp('2020-07-14 00:00:00')], cutoffs)
+
+
+class TestTestGenerateCustomCutoffs(unittest.TestCase):
+
+    def test_generate_custom_cutoffs_success_hourly(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01", periods=168, freq='h'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        expected_cutoffs = [pd.Timestamp('2020-07-07 13:00:00'),
+                            pd.Timestamp('2020-07-07 14:00:00'),
+                            pd.Timestamp('2020-07-07 15:00:00'),
+                            pd.Timestamp('2020-07-07 16:00:00')]
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="H", split_cutoff=pd.Timestamp('2020-07-07 13:00:00'))
+        self.assertEqual(expected_cutoffs, cutoffs)
+
+    def test_generate_custom_cutoffs_success_daily(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01", end="2020-08-30", freq='d'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="D", split_cutoff=pd.Timestamp('2020-08-21 00:00:00'))
+        self.assertEqual([pd.Timestamp('2020-08-21 00:00:00'), pd.Timestamp('2020-08-22 00:00:00'), pd.Timestamp('2020-08-23 00:00:00')], cutoffs)
+    
+    def test_generate_custom_cutoffs_success_small_horizon(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01", end="2020-08-30", freq='2d'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=1, unit="D", split_cutoff=pd.Timestamp('2020-08-26 00:00:00'))
+        self.assertEqual([pd.Timestamp('2020-08-27 00:00:00'), pd.Timestamp('2020-08-29 00:00:00')], cutoffs)
+
+    def test_generate_custom_cutoffs_success_weekly(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01", periods=52, freq='W'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="W", split_cutoff=pd.Timestamp('2021-04-25 00:00:00'))
+        self.assertEqual([pd.Timestamp('2021-04-25 00:00:00'), pd.Timestamp('2021-05-02 00:00:00'), pd.Timestamp('2021-05-09 00:00:00')], cutoffs)
+
+    def test_generate_custom_cutoffs_success_monthly(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-01-12", periods=24, freq=pd.DateOffset(months=1)), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="MS", split_cutoff=pd.Timestamp('2021-03-12 00:00:00'))
+        self.assertEqual([pd.Timestamp('2021-03-12 00:00:00'), pd.Timestamp('2021-04-12 00:00:00'), pd.Timestamp('2021-05-12 00:00:00')], cutoffs)
+
+    def test_generate_custom_cutoffs_success_quaterly(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-12", periods=9, freq=pd.DateOffset(months=3)), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="QS", split_cutoff=pd.Timestamp('2020-07-12 00:00:00'))
+        self.assertEqual([pd.Timestamp('2020-07-12 00:00:00'), pd.Timestamp('2020-10-12 00:00:00')], cutoffs)
+
+    def test_generate_custom_cutoffs_success_annualy(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2012-07-14", periods=10, freq=pd.DateOffset(years=1)), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="YS", split_cutoff=pd.Timestamp('2012-07-14 00:00:00'))
+        self.assertEqual([pd.Timestamp('2012-07-14 00:00:00'), pd.Timestamp('2013-07-14 00:00:00'), pd.Timestamp('2014-07-14 00:00:00')], cutoffs)
+
+    def test_generate_custom_cutoffs_success_with_small_gaps(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01", periods=30, freq='3d'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="D", split_cutoff=pd.Timestamp('2020-09-17 00:00:00'))
+        self.assertEqual([pd.Timestamp('2020-09-17 00:00:00'),
+                          pd.Timestamp('2020-09-18 00:00:00'),
+                          pd.Timestamp('2020-09-19 00:00:00')], cutoffs)
+    
+    def test_generate_custom_cutoffs_success_with_large_gaps(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01", periods=30, freq='9d'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=7, unit="D", split_cutoff=pd.Timestamp('2021-03-08 00:00:00'))
+        self.assertEqual([pd.Timestamp('2021-03-08 00:00:00'),
+                          pd.Timestamp('2021-03-09 00:00:00'),
+                          pd.Timestamp('2021-03-12 00:00:00')], cutoffs)
 
 
 class TestCalculatePeriodsAndFrequency(unittest.TestCase):

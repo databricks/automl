@@ -187,6 +187,38 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
         )
     return list(reversed(result))
 
+def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
+                     split_cutoff: pd.Timestamp) -> List[pd.Timestamp]:
+    """
+    Generate custom cutoff times for cross validation based on user-specified split cutoff.
+    Period (step size) is 1.
+    :param df: pd.DataFrame of the historical data.
+    :param horizon: int number of time into the future for forecasting.
+    :param unit: frequency unit of the time series, which must be a pandas offset alias.
+    :param split_cutoff: the user-specified cutoff, as the starting point of cutoffs.
+    For tuning job, it is the cutoff between train and validate split.
+    For training job, it is the cutoff bewteen validate and test split.
+    :return: list of pd.Timestamp cutoffs for cross-validation.
+    """
+    # TODO: [ML-43528] expose period as input.
+    period = 1 
+    period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
+
+    # First cutoff is the cutoff bewteen splits
+    cutoff = split_cutoff
+    result = []
+    max_cutoff = max(df["ds"]) - horizon_dateoffset
+    while cutoff <= max_cutoff:
+        # If data does not exist in data range (cutoff, cutoff + horizon_dateoffset]
+        if (not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon_dateoffset)).any())):
+            # Next cutoff point is "next date after cutoff in data - horizon_dateoffset"
+            closest_date = df[df["ds"] > cutoff].min()["ds"]
+            cutoff = closest_date - horizon_dateoffset
+        result.append(cutoff)
+        cutoff += period_dateoffset
+    return result
+
 def is_quaterly_alias(freq: str):
     return freq in QUATERLY_OFFSET_ALIAS
 
