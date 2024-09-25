@@ -2,8 +2,10 @@
 # * Keep dependencies sorted.
 
 category_encoders==2.6.0
+gluonts[torch]==0.15.1
 holidays==0.28
 hyperopt==0.2.7
+lightning==2.0.1
 mlflow==2.0.1
 numpy==1.23.5
 pandas==1.5.3
@@ -11,4 +13,5 @@ pmdarima==2.0.3
 prophet==1.1.4
 pyarrow==8.0.0
 scikit-learn==1.1.1
+torch==2.0.1+cpu
 wrapt==1.14.1
