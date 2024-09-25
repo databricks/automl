@@ -2,6 +2,7 @@
 # * Keep dependencies sorted.
 
 category_encoders
+gluonts
 holidays
 hyperopt
 mlflow
@@ -13,4 +14,6 @@ prophet
 pyarrow
 requests
 scikit-learn
+torch
+lightning
 wrapt
