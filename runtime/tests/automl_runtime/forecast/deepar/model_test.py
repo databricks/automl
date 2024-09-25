@@ -18,19 +18,15 @@ import unittest
 
 import mlflow
 import pandas as pd
-import pytest
 import torch
 import torch.nn as nn
-from deepdiff.helper import times
 from gluonts.dataset.field_names import FieldName
 from gluonts.transform import InstanceSplitter, TestSplitSampler
 from gluonts.torch.model.predictor import PyTorchPredictor
-from mlflow.exceptions import MlflowException
 
 from databricks.automl_runtime.forecast.deepar.model import (
     DeepARModel, mlflow_deepar_log_model,
 )
-from scipy.linalg.interpolative import id_to_svd
 
 
 class TestDeepARModel(unittest.TestCase):
