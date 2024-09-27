@@ -77,7 +77,7 @@ class DeepARModel(ForecastModel):
         :return: predicted pd.DataFrame that starts after the last timestamp in the input dataframe,
                                 and predicts the horizon using the mean of the samples
         """
-        required_cols = [self._target_col, self._time_col]
+        required_cols = [self._time_col]
         if self._id_cols:
             required_cols += self._id_cols
         self._validate_cols(model_input, required_cols)
