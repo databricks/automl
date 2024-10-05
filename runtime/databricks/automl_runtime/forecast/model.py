@@ -64,7 +64,7 @@ def mlflow_forecast_log_model(forecast_model: ForecastModel,
     except Exception: # noqa
         signature = None
     mlflow.pyfunc.log_model(
-        artificat_path="model", 
+        artifact_path="model", 
         conda_env=forecast_model.model_env,
         extra_pip_requirements=[f"databricks-automl-runtime=={__version__}"],
         python_model=forecast_model,
