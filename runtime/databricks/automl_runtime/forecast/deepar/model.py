@@ -23,11 +23,13 @@ from gluonts.torch.model.predictor import PyTorchPredictor
 from mlflow.utils.environment import _mlflow_conda_env
 
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+from databricks.automl_runtime.version import __version__
 
 DEEPAR_CONDA_ENV = _mlflow_conda_env(
     additional_pip_deps=[
         f"gluonts[torch]=={gluonts.__version__}",
         f"pandas=={pd.__version__}",
+        f"databricks-automl-runtime=={__version__}"
     ]
 )
 

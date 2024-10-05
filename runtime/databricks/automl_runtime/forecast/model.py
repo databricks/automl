@@ -15,7 +15,6 @@
 #
 from abc import ABC, abstractmethod
 from typing import List
-from databricks.automl_runtime.version import __version__
 
 import pandas as pd
 import mlflow
@@ -66,7 +65,6 @@ def mlflow_forecast_log_model(forecast_model: ForecastModel,
     mlflow.pyfunc.log_model(
         artifact_path="model", 
         conda_env=forecast_model.model_env,
-        extra_pip_requirements=[f"databricks-automl-runtime=={__version__}"],
         python_model=forecast_model,
         signature=signature
     )
