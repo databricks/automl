@@ -15,6 +15,7 @@
 #
 from abc import ABC, abstractmethod
 from typing import List
+from databricks.automl_runtime.version import __version__
 
 import pandas as pd
 import mlflow
@@ -57,10 +58,15 @@ def mlflow_forecast_log_model(forecast_model: ForecastModel,
     :param forecast_model: Forecast model wrapper
     :param sample_input: sample input Dataframes for model inference
     """
-    # log the model without signature if infer_signature is failed.
+    # TODO: we should not be logging without a signature since it cannot be registered to UC then
     try:
         signature = forecast_model.infer_signature(sample_input)
     except Exception: # noqa
         signature = None
-    mlflow.pyfunc.log_model("model", conda_env=forecast_model.model_env,
-                            python_model=forecast_model, signature=signature)
+    mlflow.pyfunc.log_model(
+        artificat_path="model", 
+        conda_env=forecast_model.model_env,
+        extra_pip_requirements=[f"databricks-automl-runtime=={__version__}"],
+        python_model=forecast_model,
+        signature=signature
+    )
