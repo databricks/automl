@@ -25,12 +25,15 @@ from mlflow.utils.environment import _mlflow_conda_env
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime import version
 
+
+DEEPAR_ADDITIONAL_PIP_DEPS = [
+    f"gluonts[torch]=={gluonts.__version__}",
+    f"pandas=={pd.__version__}",
+    f"databricks-automl-runtime=={version.__version__}"
+]
+
 DEEPAR_CONDA_ENV = _mlflow_conda_env(
-    additional_pip_deps=[
-        f"gluonts[torch]=={gluonts.__version__}",
-        f"pandas=={pd.__version__}",
-        f"databricks-automl-runtime=={version.__version__}"
-    ]
+    additional_pip_deps=DEEPAR_ADDITIONAL_PIP_DEPS
 )
 
 

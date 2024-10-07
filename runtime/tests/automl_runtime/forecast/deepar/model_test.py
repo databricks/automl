@@ -25,7 +25,7 @@ from gluonts.transform import InstanceSplitter, TestSplitSampler
 from gluonts.torch.model.predictor import PyTorchPredictor
 
 from databricks.automl_runtime.forecast.deepar.model import (
-    DeepARModel, mlflow_deepar_log_model,
+    DeepARModel, mlflow_deepar_log_model, DEEPAR_ADDITIONAL_PIP_DEPS
 )
 
 
@@ -104,8 +104,12 @@ class TestDeepARModel(unittest.TestCase):
             mlflow_deepar_log_model(deepar_model, sample_input)
 
         run_id = run.info.run_id
-        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
+        # check if all additional dependencies are logged
+        self._check_requirements(run_id)
+
+        # load the model and predict
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
         pred_df = loaded_model.predict(sample_input)
 
         assert pred_df.columns.tolist() == [time_col, "yhat"]
@@ -145,10 +149,23 @@ class TestDeepARModel(unittest.TestCase):
             mlflow_deepar_log_model(deepar_model, sample_input)
 
         run_id = run.info.run_id
-        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
+        # check if all additional dependencies are logged
+        self._check_requirements(run_id)
+
+        # load the model and predict
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
         pred_df = loaded_model.predict(sample_input)
 
         assert pred_df.columns.tolist() == [time_col, "yhat", id_col]
         assert len(pred_df) == self.prediction_length * 2
         assert pred_df[time_col].min() > sample_input[time_col].max()
+
+    def _check_requirements(self, run_id: str):
+        # read requirements.txt from the run
+        requirements_path = mlflow.artifacts.download_artifacts(f"runs:/{run_id}/model/requirements.txt")
+        with open(requirements_path, "r") as f:
+            requirements = f.read()
+        # check if all additional dependencies are logged
+        for dependency in DEEPAR_ADDITIONAL_PIP_DEPS:
+            self.assertIn(dependency, requirements, f"requirements.txt should contain {dependency} but got {requirements}")
