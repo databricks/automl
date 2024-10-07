@@ -108,7 +108,7 @@ class TestDeepARModel(unittest.TestCase):
         run_id = run.info.run_id
 
         # check if all additional dependencies are logged
-        self.check_requirements(run_id)
+        self._check_requirements(run_id)
 
         # load the model and predict
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
