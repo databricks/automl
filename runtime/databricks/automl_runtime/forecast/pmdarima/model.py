@@ -28,13 +28,17 @@ from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEY
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency, \
     make_future_dataframe, make_single_future_dataframe
+from databricks.automl_runtime import version
 
+
+ARIMA_ADDITIONAL_PIP_DEPS = [
+    f"pmdarima=={pmdarima.__version__}",
+    f"pandas=={pd.__version__}",
+    f"databricks-automl-runtime=={version.__version__}"
+]
 
 ARIMA_CONDA_ENV = _mlflow_conda_env(
-    additional_pip_deps=[
-        f"pmdarima=={pmdarima.__version__}",
-        f"pandas=={pd.__version__}",
-    ]
+    additional_pip_deps=ARIMA_ADDITIONAL_PIP_DEPS
 )
 
 

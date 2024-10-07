@@ -57,10 +57,14 @@ def mlflow_forecast_log_model(forecast_model: ForecastModel,
     :param forecast_model: Forecast model wrapper
     :param sample_input: sample input Dataframes for model inference
     """
-    # log the model without signature if infer_signature is failed.
+    # TODO: [ML-46185] we should not be logging without a signature since it cannot be registered to UC then
     try:
         signature = forecast_model.infer_signature(sample_input)
     except Exception: # noqa
         signature = None
-    mlflow.pyfunc.log_model("model", conda_env=forecast_model.model_env,
-                            python_model=forecast_model, signature=signature)
+    mlflow.pyfunc.log_model(
+        artifact_path="model", 
+        conda_env=forecast_model.model_env,
+        python_model=forecast_model,
+        signature=signature
+    )
