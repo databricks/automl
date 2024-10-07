@@ -487,7 +487,7 @@ class TestLogModel(unittest.TestCase):
 
     def _check_requirements(self, run_id: str):
         # read requirements.txt from the run
-        requirements_path = f"runs:/{run_id}/model/requirements.txt"
+        requirements_path = mlflow.artifacts.download_artifacts(f"runs:/{run_id}/model/requirements.txt")
         with open(requirements_path, "r") as f:
             requirements = f.read()
         # check if all additional dependencies are logged
