@@ -27,6 +27,7 @@ from pmdarima.arima import ARIMA
 
 from databricks.automl_runtime.forecast.pmdarima.model import ArimaModel, MultiSeriesArimaModel, AbstractArimaModel, \
     mlflow_arima_log_model
+from databricks.automl_runtime.forecast.pmdarima.model import ARIMA_ADDITIONAL_PIP_DEPS
 
 
 class TestArimaModel(unittest.TestCase):
@@ -438,6 +439,11 @@ class TestLogModel(unittest.TestCase):
 
         # Load the saved model from mlflow
         run_id = run.info.run_id
+
+        # Check additonal requirements logged correctly
+        self._check_requirements(run_id)
+
+        # Load the model
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
         # Make sure can make forecasts with the saved model
@@ -460,6 +466,11 @@ class TestLogModel(unittest.TestCase):
 
         # Load the saved model from mlflow
         run_id = run.info.run_id
+
+        # Check additonal requirements logged correctly
+        self._check_requirements(run_id)
+        
+        # Load the model
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
 
         # Make sure can make forecasts with the saved model
@@ -473,3 +484,12 @@ class TestLogModel(unittest.TestCase):
 
         # Make sure can make forecasts for one-row dataframe
         loaded_model.predict(test_df[0:1])
+
+    def _check_requirements(self, run_id: str):
+        # read requirements.txt from the run
+        requirements_path = f"runs:/{run_id}/model/requirements.txt"
+        with open(requirements_path, "r") as f:
+            requirements = f.read()
+        # check if all additional dependencies are logged
+        for dependency in ARIMA_ADDITIONAL_PIP_DEPS:
+            self.assertIn(dependency, requirements, f"requirements.txt should contain {dependency} but got {requirements}")
