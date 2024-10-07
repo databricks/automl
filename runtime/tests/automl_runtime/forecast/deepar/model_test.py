@@ -25,7 +25,9 @@ from gluonts.transform import InstanceSplitter, TestSplitSampler
 from gluonts.torch.model.predictor import PyTorchPredictor
 
 from databricks.automl_runtime.forecast.deepar.model import (
-    DeepARModel, mlflow_deepar_log_model, DEEPAR_ADDITIONAL_PIP_DEPS
+    DeepARModel, 
+    mlflow_deepar_log_model, 
+    DEEPAR_ADDITIONAL_PIP_DEPS
 )
 
 
@@ -106,7 +108,7 @@ class TestDeepARModel(unittest.TestCase):
         run_id = run.info.run_id
 
         # check if all additional dependencies are logged
-        self._check_requirements(run_id)
+        self.check_requirements(run_id)
 
         # load the model and predict
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")

@@ -57,7 +57,7 @@ def mlflow_forecast_log_model(forecast_model: ForecastModel,
     :param forecast_model: Forecast model wrapper
     :param sample_input: sample input Dataframes for model inference
     """
-    # TODO: we should not be logging without a signature since it cannot be registered to UC then
+    # TODO: [ML-46185] we should not be logging without a signature since it cannot be registered to UC then
     try:
         signature = forecast_model.infer_signature(sample_input)
     except Exception: # noqa
