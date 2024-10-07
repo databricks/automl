@@ -29,12 +29,14 @@ from databricks.automl_runtime import version
 from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe
 
 
-PROPHET_CONDA_ENV = _mlflow_conda_env(
-    additional_pip_deps=[
+PROPHET_ADDITIONAL_PIP_DEPS = [
         f"prophet=={prophet.__version__}",
         f"cloudpickle=={cloudpickle.__version__}",
         f"databricks-automl-runtime=={version.__version__}",
     ]
+
+PROPHET_CONDA_ENV = _mlflow_conda_env(
+    additional_pip_deps=PROPHET_ADDITIONAL_PIP_DEPS
 )
 
 
