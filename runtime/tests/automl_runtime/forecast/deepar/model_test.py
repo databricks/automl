@@ -84,6 +84,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
+            frequency="d",
             num_samples=1,
             target_col=target_col,
             time_col=time_col,
@@ -127,6 +128,7 @@ class TestDeepARModel(unittest.TestCase):
             model=self.model,
             horizon=self.prediction_length,
             num_samples=1,
+            frequency="d",
             target_col=target_col,
             time_col=time_col,
             id_cols=[id_col],

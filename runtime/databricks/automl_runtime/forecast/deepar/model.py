@@ -22,9 +22,9 @@ from gluonts.dataset.pandas import PandasDataset
 from gluonts.torch.model.predictor import PyTorchPredictor
 from mlflow.utils.environment import _mlflow_conda_env
 
-from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime import version
-
+from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+from databricks.automl_runtime.forecast.deepar.utils import set_index_and_fill_missing_time_steps
 
 DEEPAR_ADDITIONAL_PIP_DEPS = [
     f"gluonts[torch]=={gluonts.__version__}",
@@ -42,13 +42,15 @@ class DeepARModel(ForecastModel):
     DeepAR mlflow model wrapper for forecasting.
     """
 
-    def __init__(self, model: PyTorchPredictor, horizon: int, num_samples: int,
+    def __init__(self, model: PyTorchPredictor, horizon: int, frequency: str,
+                 num_samples: int,
                  target_col: str, time_col: str,
                  id_cols: Optional[List[str]] = None) -> None:
         """
         Initialize the DeepAR mlflow Python model wrapper
         :param model: DeepAR model
         :param horizon: the number of periods to forecast forward
+        :param frequency: the frequency of the time series
         :param num_samples: the number of samples to draw from the distribution
         :param target_col: the target column name
         :param time_col: the time column name
@@ -62,6 +64,7 @@ class DeepARModel(ForecastModel):
         super().__init__()
         self._model = model
         self._horizon = horizon
+        self._frequency = frequency
         self._num_samples = num_samples
         self._target_col = target_col
         self._time_col = time_col
@@ -119,7 +122,11 @@ class DeepARModel(ForecastModel):
         if num_samples is None:
             num_samples = self._num_samples
 
-        model_input = model_input.set_index(self._time_col)
+        model_input = set_index_and_fill_missing_time_steps(model_input,
+                                                            self._time_col,
+                                                            self._frequency,
+                                                            self._id_cols)
+
         if self._id_cols:
             test_ds = PandasDataset.from_long_dataframe(model_input, target=self._target_col,
                                                         item_id=self._id_cols[0], unchecked=True)
