@@ -124,10 +124,7 @@ class DeepARModel(ForecastModel):
                                                                         self._frequency,
                                                                         self._id_cols)
 
-        if self._id_cols:
-            test_ds = PandasDataset(model_input_transformed, target=self._target_col)
-        else:
-            test_ds = PandasDataset(model_input_transformed, target=self._target_col)
+        test_ds = PandasDataset(model_input_transformed, target=self._target_col)
 
         forecast_iter = self._model.predict(test_ds, num_samples=num_samples)
         forecast_sample_list = list(forecast_iter)

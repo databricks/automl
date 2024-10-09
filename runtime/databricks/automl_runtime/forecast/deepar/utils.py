@@ -34,8 +34,6 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
     :return: single-series - transformed dataframe;
              multi-series - dictionary of transformed dataframes, each key is the (concatenated) id of the time series
     """
-    # TODO (ML-46009): Compare with the ARIMA implementation
-
     total_min, total_max = df[time_col].min(), df[time_col].max()
     new_index_full = pd.date_range(total_min, total_max, freq=frequency)
 
