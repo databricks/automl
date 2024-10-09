@@ -21,8 +21,7 @@ import pandas as pd
 def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
                                           frequency: str,
                                           id_cols: Optional[List[str]] = None):
-    # TODO (ML-46009): Compare with the ARIMA implementation, and fill
-    #                  the missing time steps for multi-series time series too
+    # TODO (ML-46009): Compare with the ARIMA implementation
 
     total_min, total_max = df[time_col].min(), df[time_col].max()
     new_index_full = pd.date_range(total_min, total_max, freq=frequency)
