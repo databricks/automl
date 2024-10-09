@@ -29,9 +29,12 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
     if id_cols is not None:
         df_dict = {}
         for grouped_id, grouped_df in df.groupby(id_cols):
-            ts_id = "-".join([str(x) for x in grouped_id])
-            df_dict[ts_id] = grouped_df.set_index(time_col).sort_index()
-            df_dict[ts_id] = df_dict[ts_id].reindex(new_index_full).drop(id_cols, axis=1)
+            if isinstance(grouped_id, tuple):
+                ts_id = "-".join([str(x) for x in grouped_id])
+            else:
+                ts_id = str(grouped_id)
+            df_dict[ts_id] = (grouped_df.set_index(time_col).sort_index()
+                              .reindex(new_index_full).drop(id_cols, axis=1))
 
         return df_dict
 
