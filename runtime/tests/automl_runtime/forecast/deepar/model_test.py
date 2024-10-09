@@ -84,6 +84,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
+            frequency="d",
             num_samples=1,
             target_col=target_col,
             time_col=time_col,
@@ -114,9 +115,9 @@ class TestDeepARModel(unittest.TestCase):
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
         pred_df = loaded_model.predict(sample_input)
 
-        assert pred_df.columns.tolist() == [time_col, "yhat"]
-        assert len(pred_df) == self.prediction_length
-        assert pred_df[time_col].min() > sample_input[time_col].max()
+        self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat"])
+        self.assertEqual(len(pred_df), self.prediction_length)
+        self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())
 
     def test_model_save_and_load_multi_series(self):
         target_col = "sales"
@@ -127,25 +128,26 @@ class TestDeepARModel(unittest.TestCase):
             model=self.model,
             horizon=self.prediction_length,
             num_samples=1,
+            frequency="d",
             target_col=target_col,
             time_col=time_col,
             id_cols=[id_col],
         )
 
-        num_rows = 10
+        num_rows_per_ts = 10
         sample_input_base = pd.concat(
             [
                 pd.to_datetime(
-                    pd.Series(range(num_rows), name=time_col).apply(
+                    pd.Series(range(num_rows_per_ts), name=time_col).apply(
                         lambda i: f"2020-10-{3 * i + 1}"
                     )
                 ),
-                pd.Series(range(num_rows), name=target_col),
+                pd.Series(range(num_rows_per_ts), name=target_col),
             ],
             axis=1,
         )
         sample_input = pd.concat([sample_input_base.copy(), sample_input_base.copy()], ignore_index=True)
-        sample_input[id_col] = [1] * num_rows + [2] * num_rows
+        sample_input[id_col] = [1] * num_rows_per_ts + [2] * num_rows_per_ts
 
         with mlflow.start_run() as run:
             mlflow_deepar_log_model(deepar_model, sample_input)
@@ -157,11 +159,56 @@ class TestDeepARModel(unittest.TestCase):
 
         # load the model and predict
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+
         pred_df = loaded_model.predict(sample_input)
 
-        assert pred_df.columns.tolist() == [time_col, "yhat", id_col]
-        assert len(pred_df) == self.prediction_length * 2
-        assert pred_df[time_col].min() > sample_input[time_col].max()
+        self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat", id_col])
+        self.assertEqual(len(pred_df), self.prediction_length * 2)
+        self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())
+
+    def test_model_save_and_load_multi_series_multi_id_cols(self):
+        target_col = "sales"
+        time_col = "date"
+        id_cols = ["store", "dept"]
+
+        deepar_model = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            num_samples=1,
+            frequency="d",
+            target_col=target_col,
+            time_col=time_col,
+            id_cols=id_cols,
+        )
+
+        num_rows_per_ts = 5
+        sample_input_base = pd.concat(
+            [
+                pd.to_datetime(
+                    pd.Series(range(num_rows_per_ts), name=time_col).apply(
+                        lambda i: f"2020-10-{3 * i + 1}"
+                    )
+                ),
+                pd.Series(range(num_rows_per_ts), name=target_col),
+            ],
+            axis=1,
+        )
+        sample_input = pd.concat([sample_input_base.copy(), sample_input_base.copy(),
+                                  sample_input_base.copy(), sample_input_base.copy(),], ignore_index=True)
+        sample_input[id_cols[0]] = ['A'] * (2 * num_rows_per_ts) + ['B'] * (2 * num_rows_per_ts)
+        sample_input[id_cols[1]] = (['X'] * num_rows_per_ts + ['Y'] * num_rows_per_ts) * 2
+
+        with mlflow.start_run() as run:
+            mlflow_deepar_log_model(deepar_model, sample_input)
+        run_id = run.info.run_id
+
+        # load the model and predict
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+        pred_df = loaded_model.predict(sample_input)
+
+        self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat", "store-dept"])
+        self.assertEqual(len(pred_df), self.prediction_length * 4)
+        self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())
 
     def _check_requirements(self, run_id: str):
         # read requirements.txt from the run

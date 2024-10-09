@@ -22,9 +22,9 @@ from gluonts.dataset.pandas import PandasDataset
 from gluonts.torch.model.predictor import PyTorchPredictor
 from mlflow.utils.environment import _mlflow_conda_env
 
-from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime import version
-
+from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
+from databricks.automl_runtime.forecast.deepar.utils import set_index_and_fill_missing_time_steps
 
 DEEPAR_ADDITIONAL_PIP_DEPS = [
     f"gluonts[torch]=={gluonts.__version__}",
@@ -42,26 +42,25 @@ class DeepARModel(ForecastModel):
     DeepAR mlflow model wrapper for forecasting.
     """
 
-    def __init__(self, model: PyTorchPredictor, horizon: int, num_samples: int,
+    def __init__(self, model: PyTorchPredictor, horizon: int, frequency: str,
+                 num_samples: int,
                  target_col: str, time_col: str,
                  id_cols: Optional[List[str]] = None) -> None:
         """
         Initialize the DeepAR mlflow Python model wrapper
         :param model: DeepAR model
         :param horizon: the number of periods to forecast forward
+        :param frequency: the frequency of the time series
         :param num_samples: the number of samples to draw from the distribution
         :param target_col: the target column name
         :param time_col: the time column name
         :param id_cols: the column names of the identity columns for multi-series time series; None for single series
         """
 
-        # TODO: combine id_cols in predict() to ts_id when there are multiple id_cols
-        if id_cols and len(id_cols) > 1:
-            raise NotImplementedError("Logging multiple id_cols for DeepAR in AutoML are not supported yet")
-
         super().__init__()
         self._model = model
         self._horizon = horizon
+        self._frequency = frequency
         self._num_samples = num_samples
         self._target_col = target_col
         self._time_col = time_col
@@ -99,7 +98,8 @@ class DeepARModel(ForecastModel):
 
         pred_df = pred_df.rename(columns={'index': self._time_col})
         if self._id_cols:
-            pred_df = pred_df.rename(columns={'item_id': self._id_cols[0]})
+            id_col_name = '-'.join(self._id_cols)
+            pred_df = pred_df.rename(columns={'item_id': id_col_name})
         else:
             pred_df = pred_df.drop(columns='item_id')
 
@@ -119,12 +119,12 @@ class DeepARModel(ForecastModel):
         if num_samples is None:
             num_samples = self._num_samples
 
-        model_input = model_input.set_index(self._time_col)
-        if self._id_cols:
-            test_ds = PandasDataset.from_long_dataframe(model_input, target=self._target_col,
-                                                        item_id=self._id_cols[0], unchecked=True)
-        else:
-            test_ds = PandasDataset(model_input, target=self._target_col)
+        model_input_transformed = set_index_and_fill_missing_time_steps(model_input,
+                                                                        self._time_col,
+                                                                        self._frequency,
+                                                                        self._id_cols)
+
+        test_ds = PandasDataset(model_input_transformed, target=self._target_col)
 
         forecast_iter = self._model.predict(test_ds, num_samples=num_samples)
         forecast_sample_list = list(forecast_iter)
