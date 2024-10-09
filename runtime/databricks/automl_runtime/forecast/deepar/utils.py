@@ -21,6 +21,19 @@ import pandas as pd
 def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
                                           frequency: str,
                                           id_cols: Optional[List[str]] = None):
+    """
+    Transform the input dataframe to an acceptable format for the GluonTS library.
+
+    - Set the time column as the index
+    - Impute missing time steps between the min and max time steps
+
+    :param df: the input dataframe that contains time_col
+    :param time_col: time column name
+    :param frequency: the frequency of the time series
+    :param id_cols: the column names of the identity columns for multi-series time series; None for single series
+    :return: single-series - transformed dataframe;
+             multi-series - dictionary of transformed dataframes, each key is the (concatenated) id of the time series
+    """
     # TODO (ML-46009): Compare with the ARIMA implementation
 
     total_min, total_max = df[time_col].min(), df[time_col].max()
