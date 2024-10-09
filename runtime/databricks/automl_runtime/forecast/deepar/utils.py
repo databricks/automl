@@ -23,12 +23,20 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
                                           id_cols: Optional[List[str]] = None):
     # TODO (ML-46009): Compare with the ARIMA implementation, and fill
     #                  the missing time steps for multi-series time series too
+
+    total_min, total_max = df[time_col].min(), df[time_col].max()
+    new_index_full = pd.date_range(total_min, total_max, freq=frequency)
+
     if id_cols is not None:
-        df = df.set_index(time_col)
-        return df
+        df_dict = {}
+        for grouped_id, grouped_df in df.groupby(id_cols):
+            ts_id = "-".join([str(x) for x in grouped_id])
+            df_dict[ts_id] = grouped_df.set_index(time_col).sort_index()
+            df_dict[ts_id] = df_dict[ts_id].reindex(new_index_full).drop(id_cols, axis=1)
+
+        return df_dict
 
     df = df.set_index(time_col).sort_index()
-    new_index_full = pd.date_range(df.index.min(), df.index.max(), freq=frequency)
 
     # Fill in missing time steps between the min and max time steps
     return df.reindex(new_index_full)

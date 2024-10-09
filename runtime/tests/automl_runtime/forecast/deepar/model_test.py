@@ -134,20 +134,20 @@ class TestDeepARModel(unittest.TestCase):
             id_cols=[id_col],
         )
 
-        num_rows = 10
+        num_rows_per_ts = 10
         sample_input_base = pd.concat(
             [
                 pd.to_datetime(
-                    pd.Series(range(num_rows), name=time_col).apply(
+                    pd.Series(range(num_rows_per_ts), name=time_col).apply(
                         lambda i: f"2020-10-{3 * i + 1}"
                     )
                 ),
-                pd.Series(range(num_rows), name=target_col),
+                pd.Series(range(num_rows_per_ts), name=target_col),
             ],
             axis=1,
         )
         sample_input = pd.concat([sample_input_base.copy(), sample_input_base.copy()], ignore_index=True)
-        sample_input[id_col] = [1] * num_rows + [2] * num_rows
+        sample_input[id_col] = [1] * num_rows_per_ts + [2] * num_rows_per_ts
 
         with mlflow.start_run() as run:
             mlflow_deepar_log_model(deepar_model, sample_input)
@@ -159,6 +159,7 @@ class TestDeepARModel(unittest.TestCase):
 
         # load the model and predict
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+
         pred_df = loaded_model.predict(sample_input)
 
         assert pred_df.columns.tolist() == [time_col, "yhat", id_col]

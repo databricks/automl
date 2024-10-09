@@ -57,10 +57,6 @@ class DeepARModel(ForecastModel):
         :param id_cols: the column names of the identity columns for multi-series time series; None for single series
         """
 
-        # TODO: combine id_cols in predict() to ts_id when there are multiple id_cols
-        if id_cols and len(id_cols) > 1:
-            raise NotImplementedError("Logging multiple id_cols for DeepAR in AutoML are not supported yet")
-
         super().__init__()
         self._model = model
         self._horizon = horizon
@@ -122,16 +118,15 @@ class DeepARModel(ForecastModel):
         if num_samples is None:
             num_samples = self._num_samples
 
-        model_input = set_index_and_fill_missing_time_steps(model_input,
-                                                            self._time_col,
-                                                            self._frequency,
-                                                            self._id_cols)
+        model_input_transformed = set_index_and_fill_missing_time_steps(model_input,
+                                                                        self._time_col,
+                                                                        self._frequency,
+                                                                        self._id_cols)
 
         if self._id_cols:
-            test_ds = PandasDataset.from_long_dataframe(model_input, target=self._target_col,
-                                                        item_id=self._id_cols[0], unchecked=True)
+            test_ds = PandasDataset(model_input_transformed, target=self._target_col)
         else:
-            test_ds = PandasDataset(model_input, target=self._target_col)
+            test_ds = PandasDataset(model_input_transformed, target=self._target_col)
 
         forecast_iter = self._model.predict(test_ds, num_samples=num_samples)
         forecast_sample_list = list(forecast_iter)
