@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 import unittest
-from idlelib.pyparse import trans
 
 import pandas as pd
 
