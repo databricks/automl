@@ -261,14 +261,6 @@ class TestDeepARModel(unittest.TestCase):
         loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
         pred_df = loaded_model.predict(sample_input)
 
-        # Get the grouped input data to verify the averaging
-        grouped_input = sample_input.groupby(time_col)[target_col].mean()
-
-        # Verify that our input data was correctly averaged
-        self.assertEqual(grouped_input["2020-10-01"], 15.0)  # (10 + 20) / 2
-        self.assertEqual(grouped_input["2020-10-04"], 60.0)  # (30 + 60 + 90) / 3
-        self.assertEqual(grouped_input["2020-10-07"], 100.0)  # single value
-
         # Verify the prediction output format
         self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat"])
         self.assertEqual(len(pred_df), self.prediction_length)
