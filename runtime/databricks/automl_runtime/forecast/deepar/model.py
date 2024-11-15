@@ -89,7 +89,7 @@ class DeepARModel(ForecastModel):
         self._validate_cols(model_input, required_cols)
 
         # Group by the time column in case there are multiple rows for each time column,
-        # for example, the user didn't provide identity columns for a multi-series dataset
+        # for example, the user didn't provide all the identity columns for a multi-series dataset
         group_cols = [self._time_col]
         if self._id_cols:
             group_cols += self._id_cols
