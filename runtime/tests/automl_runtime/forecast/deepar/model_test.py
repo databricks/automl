@@ -77,6 +77,15 @@ class TestDeepARModel(unittest.TestCase):
             device="cpu",
         )
 
+    def _check_requirements(self, run_id: str):
+        # read requirements.txt from the run
+        requirements_path = mlflow.artifacts.download_artifacts(f"runs:/{run_id}/model/requirements.txt")
+        with open(requirements_path, "r") as f:
+            requirements = f.read()
+        # check if all additional dependencies are logged
+        for dependency in DEEPAR_ADDITIONAL_PIP_DEPS:
+            self.assertIn(dependency, requirements, f"requirements.txt should contain {dependency} but got {requirements}")
+
     def test_model_save_and_load_single_series(self):
         target_col = "sales"
         time_col = "date"
@@ -210,11 +219,57 @@ class TestDeepARModel(unittest.TestCase):
         self.assertEqual(len(pred_df), self.prediction_length * 4)
         self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())
 
-    def _check_requirements(self, run_id: str):
-        # read requirements.txt from the run
-        requirements_path = mlflow.artifacts.download_artifacts(f"runs:/{run_id}/model/requirements.txt")
-        with open(requirements_path, "r") as f:
-            requirements = f.read()
-        # check if all additional dependencies are logged
-        for dependency in DEEPAR_ADDITIONAL_PIP_DEPS:
-            self.assertIn(dependency, requirements, f"requirements.txt should contain {dependency} but got {requirements}")
+    def test_model_prediction_with_duplicate_timestamps(self):
+        """
+        Test that the model correctly handles and averages multiple rows with the same timestamp
+        when identity columns are not provided.
+        """
+        target_col = "sales"
+        time_col = "date"
+
+        deepar_model = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            frequency="d",
+            num_samples=1,
+            target_col=target_col,
+            time_col=time_col,
+        )
+
+        # Create sample input with duplicate timestamps
+        dates = pd.to_datetime([
+            "2020-10-01", "2020-10-01",  # duplicate date with different values
+            "2020-10-04", "2020-10-04", "2020-10-04",  # triple duplicate
+            "2020-10-07"  # single entry
+        ])
+
+        sales = [10, 20,  # should average to 15
+                 30, 60, 90,  # should average to 60
+                 100]  # single value stays 100
+
+        sample_input = pd.DataFrame({
+            time_col: dates,
+            target_col: sales
+        })
+
+        with mlflow.start_run() as run:
+            mlflow_deepar_log_model(deepar_model, sample_input)
+
+        run_id = run.info.run_id
+
+        # Load the model and predict
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+        pred_df = loaded_model.predict(sample_input)
+
+        # Get the grouped input data to verify the averaging
+        grouped_input = sample_input.groupby(time_col)[target_col].mean()
+
+        # Verify that our input data was correctly averaged
+        self.assertEqual(grouped_input["2020-10-01"], 15.0)  # (10 + 20) / 2
+        self.assertEqual(grouped_input["2020-10-04"], 60.0)  # (30 + 60 + 90) / 3
+        self.assertEqual(grouped_input["2020-10-07"], 100.0)  # single value
+
+        # Verify the prediction output format
+        self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat"])
+        self.assertEqual(len(pred_df), self.prediction_length)
+        self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())

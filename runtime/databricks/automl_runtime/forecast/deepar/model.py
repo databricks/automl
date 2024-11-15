@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import logging
 from typing import List, Optional
 
 import gluonts
@@ -36,6 +37,7 @@ DEEPAR_CONDA_ENV = _mlflow_conda_env(
     additional_pip_deps=DEEPAR_ADDITIONAL_PIP_DEPS
 )
 
+_logger = logging.getLogger(__name__)
 
 class DeepARModel(ForecastModel):
     """
@@ -86,7 +88,15 @@ class DeepARModel(ForecastModel):
             required_cols += self._id_cols
         self._validate_cols(model_input, required_cols)
 
+        # Group by the time column in case there are multiple rows for each time column,
+        # for example, the user didn't provide identity columns for a multi-series dataset
+        group_cols = [self._time_col]
+        if self._id_cols:
+            group_cols += self._id_cols
+        model_input = model_input.groupby(group_cols).agg({self._target_col: "mean"}).reset_index()
+
         forecast_sample_list = self.predict_samples(model_input, num_samples=self._num_samples)
+
 
         pred_df = pd.concat(
             [
