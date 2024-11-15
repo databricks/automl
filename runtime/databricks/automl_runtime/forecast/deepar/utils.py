@@ -35,6 +35,13 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
              multi-series - dictionary of transformed dataframes, each key is the (concatenated) id of the time series
     """
     total_min, total_max = df[time_col].min(), df[time_col].max()
+
+    # We need to adjust the frequency for pd.date_range if it is weekly,
+    # otherwise it would always be "W-SUN"
+    if frequency.upper() == "W":
+        weekday_name = total_min.strftime("%a").upper() # e.g., "FRI"
+        frequency = f"W-{weekday_name}"
+
     new_index_full = pd.date_range(total_min, total_max, freq=frequency)
 
     if id_cols is not None:

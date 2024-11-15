@@ -108,3 +108,38 @@ class TestDeepARUtils(unittest.TestCase):
         expected_first_df = expected_first_df.set_index(time_col).rename_axis(None).asfreq("D")
 
         pd.testing.assert_frame_equal(transformed_df_dict["1-1"], expected_first_df)
+
+    def test_single_series_week_day_index(self):
+        target_col = "sales"
+        time_col = "date"
+        num_weeks = 10
+
+        # Starting from first Friday in 2020
+        base_dates = pd.date_range(
+            start='2020-01-03',  # First Friday of 2020
+            periods=num_weeks,
+            freq='W-FRI'  # Weekly frequency starting Friday
+        )
+
+        base_df = pd.DataFrame({
+            time_col: base_dates,
+            target_col: range(num_weeks)
+        })
+
+        # Create a dataframe with missing weeks (drop weeks 3 and 4)
+        dropped_df = base_df.drop([3, 4]).reset_index(drop=True)
+
+        # Transform the dataframe
+        transformed_df = set_index_and_fill_missing_time_steps(
+            dropped_df,
+            time_col,
+            "W" # Weekly frequency **without** specifying Friday
+        )
+
+        # Create expected dataframe
+        expected_df = base_df.copy()
+        expected_df.loc[[3, 4], target_col] = float('nan')
+        expected_df = expected_df.set_index(time_col).rename_axis(None).asfreq("W-FRI")
+
+        # Assert equality
+        pd.testing.assert_frame_equal(transformed_df, expected_df)
