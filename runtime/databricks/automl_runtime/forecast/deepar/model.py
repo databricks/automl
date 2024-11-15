@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
 from typing import List, Optional
 
 import gluonts
@@ -37,7 +36,6 @@ DEEPAR_CONDA_ENV = _mlflow_conda_env(
     additional_pip_deps=DEEPAR_ADDITIONAL_PIP_DEPS
 )
 
-_logger = logging.getLogger(__name__)
 
 class DeepARModel(ForecastModel):
     """
@@ -96,7 +94,6 @@ class DeepARModel(ForecastModel):
         model_input = model_input.groupby(group_cols).agg({self._target_col: "mean"}).reset_index()
 
         forecast_sample_list = self.predict_samples(model_input, num_samples=self._num_samples)
-
 
         pred_df = pd.concat(
             [
