@@ -86,13 +86,6 @@ class DeepARModel(ForecastModel):
             required_cols += self._id_cols
         self._validate_cols(model_input, required_cols)
 
-        # Group by the time column in case there are multiple rows for each time column,
-        # for example, the user didn't provide all the identity columns for a multi-series dataset
-        group_cols = [self._time_col]
-        if self._id_cols:
-            group_cols += self._id_cols
-        model_input = model_input.groupby(group_cols).agg({self._target_col: "mean"}).reset_index()
-
         forecast_sample_list = self.predict_samples(model_input, num_samples=self._num_samples)
 
         pred_df = pd.concat(
@@ -125,6 +118,13 @@ class DeepARModel(ForecastModel):
         """
         if num_samples is None:
             num_samples = self._num_samples
+
+        # Group by the time column in case there are multiple rows for each time column,
+        # for example, the user didn't provide all the identity columns for a multi-series dataset
+        group_cols = [self._time_col]
+        if self._id_cols:
+            group_cols += self._id_cols
+        model_input = model_input.groupby(group_cols).agg({self._target_col: "mean"}).reset_index()
 
         model_input_transformed = set_index_and_fill_missing_time_steps(model_input,
                                                                         self._time_col,
