@@ -265,3 +265,44 @@ class TestDeepARModel(unittest.TestCase):
         self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat"])
         self.assertEqual(len(pred_df), self.prediction_length)
         self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())
+
+    def test_model_prediction_with_monthly_data(self):
+        target_col = "sales"
+        time_col = "date"
+
+        deepar_model = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            frequency="MS",
+            num_samples=1,
+            target_col=target_col,
+            time_col=time_col,
+        )
+
+        # Create sample input with duplicate timestamps
+        dates = pd.to_datetime([
+            "2020-10-01", "2020-11-01", "2020-12-01",
+            "2021-01-01", "2021-02-01", "2021-03-01"
+        ])
+
+        sales = [10, 20, 30, 
+                 60, 90, 100]
+
+        sample_input = pd.DataFrame({
+            time_col: dates,
+            target_col: sales
+        })
+
+        with mlflow.start_run() as run:
+            mlflow_deepar_log_model(deepar_model, sample_input)
+
+        run_id = run.info.run_id
+
+        # Load the model and predict
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+        pred_df = loaded_model.predict(sample_input)
+
+        # Verify the prediction output format
+        self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat"])
+        self.assertEqual(len(pred_df), self.prediction_length)
+        self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())
