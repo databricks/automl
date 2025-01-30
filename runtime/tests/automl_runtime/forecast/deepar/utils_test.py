@@ -143,3 +143,109 @@ class TestDeepARUtils(unittest.TestCase):
 
         # Assert equality
         pd.testing.assert_frame_equal(transformed_df, expected_df)
+
+    def test_single_series_month_start_index(self):
+        target_col = "sales"
+        time_col = "date"
+        num_months = 24
+
+        # Starting from first day of January 2020
+        base_dates = pd.date_range(
+            start='2020-01-01',
+            periods=num_months,
+            freq='MS'
+        )
+
+        base_df = pd.DataFrame({
+            time_col: base_dates,
+            target_col: range(num_months)
+        })
+
+        # Create a dataframe with missing months (drop months 3 and 4)
+        dropped_df = base_df.drop([3, 4]).reset_index(drop=True)
+
+        # Transform the dataframe
+        transformed_df = set_index_and_fill_missing_time_steps(
+            dropped_df,
+            time_col,
+            "MS" # Monthly frequency
+        )
+
+        # Create expected dataframe
+        expected_df = base_df.copy()
+        expected_df.loc[[3, 4], target_col] = float('nan')
+        expected_df = expected_df.set_index(time_col).rename_axis(None)
+
+        # Assert equality
+        pd.testing.assert_frame_equal(transformed_df, expected_df)
+
+    def test_single_series_month_mid_index(self):
+        target_col = "sales"
+        time_col = "date"
+        num_months = 24
+
+        # Starting from fifteenth day of January 2020
+        base_dates = pd.date_range(
+            start='2020-01-01',
+            periods=num_months,
+            freq='MS'  
+        ) + pd.DateOffset(days=14)
+
+        base_df = pd.DataFrame({
+            time_col: base_dates,
+            target_col: range(num_months)
+        })
+
+        # Create a dataframe with missing months (drop months 3 and 4)
+        dropped_df = base_df.drop([3, 4]).reset_index(drop=True)
+
+        # Transform the dataframe
+        transformed_df = set_index_and_fill_missing_time_steps(
+            dropped_df,
+            time_col,
+            "MS"
+        )
+
+        # Create expected dataframe
+        expected_df = base_df.copy()
+        expected_df.loc[[3, 4], target_col] = float('nan')
+        expected_df = expected_df.set_index(time_col).rename_axis(None)
+
+        # Assert equality
+        pd.testing.assert_frame_equal(transformed_df, expected_df)
+
+    def test_single_series_month_end_index(self):
+        target_col = "sales"
+        time_col = "date"
+        num_months = 24
+
+        # Starting from end day of January 2020
+        base_dates = pd.date_range(
+            start='2020-01-01',
+            periods=num_months,
+            freq='M'  
+        )
+
+        base_df = pd.DataFrame({
+            time_col: base_dates,
+            target_col: range(num_months)
+        })
+
+        # Create a dataframe with missing months (drop months 3 and 4)
+        dropped_df = base_df.drop([3, 4]).reset_index(drop=True)
+
+        # Transform the dataframe
+        transformed_df = set_index_and_fill_missing_time_steps(
+            dropped_df,
+            time_col,
+            "MS" # Monthly frequency
+        )
+
+        # Create expected dataframe
+        expected_df = base_df.copy()
+        expected_df.loc[[3, 4], target_col] = float('nan')
+        expected_df = expected_df.set_index(time_col).rename_axis(None)
+
+        # Assert equality
+        pd.testing.assert_frame_equal(transformed_df, expected_df)
+

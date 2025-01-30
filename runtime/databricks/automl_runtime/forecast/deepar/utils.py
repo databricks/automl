@@ -18,6 +18,52 @@ from typing import List, Optional
 import pandas as pd
 
 
+def validate_and_generate_index(df: pd.DataFrame, time_col: str, frequency: str):
+    """
+    Generate a complete time index for the given DataFrame based on the specified frequency.
+
+    - Ensures the time column is in datetime format.
+    - Validates consistency in the day of the month if frequency is "MS" (month start).
+    - Generates a new time index from the minimum to the maximum timestamp in the data.
+
+    :param df: The input DataFrame containing the time column.
+    :param time_col: The name of the time column.
+    :param frequency: The frequency of the time series.
+    :return: A complete time index covering the full range of the dataset.
+    :raises ValueError: If the day-of-month pattern is inconsistent for "MS" frequency.
+    """
+    if frequency.upper() != "MS":
+        return pd.date_range(df[time_col].min(), df[time_col].max(), freq=frequency)
+
+    df[time_col] = pd.to_datetime(df[time_col])  # Ensure datetime format
+    
+    # Extract unique days
+    unique_days = df[time_col].dt.day.unique()
+    
+    if len(unique_days) == 1:
+        # All dates have the same day-of-month, considered consistent
+        day_of_month = unique_days[0]
+    else:
+        # Check if all dates are last days of their respective months
+        is_last_day = (df[time_col] + pd.offsets.MonthEnd(0)) == df[time_col]
+        if is_last_day.all():
+            day_of_month = "MonthEnd"
+        else:
+            raise ValueError("Inconsistent day of the month found in time column.")
+
+    # Generate new index based on detected pattern
+    total_min, total_max = df[time_col].min(), df[time_col].max()
+    month_starts = pd.date_range(start=total_min.to_period("M").to_timestamp(),
+                                 end=total_max.to_period("M").to_timestamp(),
+                                 freq="MS")
+
+    if day_of_month == "MonthEnd":
+        new_index_full = month_starts + pd.offsets.MonthEnd(0)
+    else:
+        new_index_full = month_starts.map(lambda d: d.replace(day=day_of_month))
+
+    return new_index_full
+
 def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
                                           frequency: str,
                                           id_cols: Optional[List[str]] = None):
@@ -42,7 +88,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
         weekday_name = total_min.strftime("%a").upper() # e.g., "FRI"
         frequency = f"W-{weekday_name}"
 
-    new_index_full = pd.date_range(total_min, total_max, freq=frequency)
+    new_index_full = validate_and_generate_index(df=df, time_col=time_col, frequency=frequency)
 
     if id_cols is not None:
         df_dict = {}
