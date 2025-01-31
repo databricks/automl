@@ -103,4 +103,10 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
     df = df.set_index(time_col).sort_index()
 
     # Fill in missing time steps between the min and max time steps
-    return df.reindex(new_index_full)
+    df = df.reindex(new_index_full)
+
+    if frequency.upper() == "MS":
+        # Truncate the day of month to avoid issues with pandas frequency check
+        df = df.to_period("M")
+
+    return df

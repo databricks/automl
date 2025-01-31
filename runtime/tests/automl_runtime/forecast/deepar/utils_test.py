@@ -175,6 +175,7 @@ class TestDeepARUtils(unittest.TestCase):
         expected_df = base_df.copy()
         expected_df.loc[[3, 4], target_col] = float('nan')
         expected_df = expected_df.set_index(time_col).rename_axis(None)
+        expected_df = expected_df.to_period("M")
 
         # Assert equality
         pd.testing.assert_frame_equal(transformed_df, expected_df)
@@ -210,6 +211,7 @@ class TestDeepARUtils(unittest.TestCase):
         expected_df = base_df.copy()
         expected_df.loc[[3, 4], target_col] = float('nan')
         expected_df = expected_df.set_index(time_col).rename_axis(None)
+        expected_df = expected_df.to_period("M")
 
         # Assert equality
         pd.testing.assert_frame_equal(transformed_df, expected_df)
@@ -245,6 +247,7 @@ class TestDeepARUtils(unittest.TestCase):
         expected_df = base_df.copy()
         expected_df.loc[[3, 4], target_col] = float('nan')
         expected_df = expected_df.set_index(time_col).rename_axis(None)
+        expected_df = expected_df.to_period("M")
 
         # Assert equality
         pd.testing.assert_frame_equal(transformed_df, expected_df)
