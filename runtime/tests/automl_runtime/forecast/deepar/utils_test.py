@@ -222,6 +222,7 @@ class TestDeepARUtils(unittest.TestCase):
         num_months = 24
 
         # Starting from end day of January 2020
+        # by specifying freq='M', it is by default the end of the month
         base_dates = pd.date_range(
             start='2020-01-01',
             periods=num_months,
