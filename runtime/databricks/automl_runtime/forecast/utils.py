@@ -96,7 +96,7 @@ def make_single_future_dataframe(
     )
     return pd.DataFrame(date_rng, columns=[column_name])
 
-def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
+def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str, frequency_quantity: int = 1) -> int:
     """
     Return validation_horizon, which is the lesser of `horizon` and one quarter of the dataframe's timedelta
     Since the seasonality period is never more than half of the dataframe's timedelta,
@@ -105,10 +105,14 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     :param df: pd.DataFrame of the historical data
     :param horizon: int number of time into the future for forecasting
     :param unit: frequency unit of the time series, which must be a pandas offset alias
+    :param frequency_quantity: int multiplier for the frequency unit, representing the number of `unit`s 
+        per time step in the dataframe. This is useful when the time series has a granularity that 
+        spans multiple `unit`s (e.g., if `unit='min'` and `frequency_quantity=5`, it means the data 
+        follows a five-minute pattern). To make it backward compatible, defaults to 1.
     :return: horizon used for validation, in terms of the input `unit`
     """
     MIN_HORIZONS = 4  # minimum number of horizons in the dataframe
-    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon * frequency_quantity
 
     try:
         if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
@@ -119,14 +123,14 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str) -> int:
     # In order to calculate the validation horizon, we incrementally add offset
     # to the start time to the quarter of total timedelta. We did this since
     # pd.DateOffset does not support divide by operation.
-    unit_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])
+    timestep_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * frequency_quantity
     max_horizon = 0
     cur_timestamp = df["ds"].min()
-    while cur_timestamp + unit_dateoffset <= df["ds"].max():
-        cur_timestamp += unit_dateoffset
+    while cur_timestamp + timestep_dateoffset <= df["ds"].max():
+        cur_timestamp += timestep_dateoffset
         max_horizon += 1
     _logger.info(f"Horizon {horizon_dateoffset} too long relative to dataframe's "
-    f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*unit_dateoffset}.")
+    f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*timestep_dateoffset}.")
     return max_horizon // MIN_HORIZONS
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
