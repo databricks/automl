@@ -123,14 +123,14 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str, frequency_
     # In order to calculate the validation horizon, we incrementally add offset
     # to the start time to the quarter of total timedelta. We did this since
     # pd.DateOffset does not support divide by operation.
-    unit_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * frequency_quantity
+    timestep_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * frequency_quantity
     max_horizon = 0
     cur_timestamp = df["ds"].min()
-    while cur_timestamp + unit_dateoffset <= df["ds"].max():
-        cur_timestamp += unit_dateoffset
+    while cur_timestamp + timestep_dateoffset <= df["ds"].max():
+        cur_timestamp += timestep_dateoffset
         max_horizon += 1
     _logger.info(f"Horizon {horizon_dateoffset} too long relative to dataframe's "
-    f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*unit_dateoffset}.")
+    f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*timestep_dateoffset}.")
     return max_horizon // MIN_HORIZONS
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,

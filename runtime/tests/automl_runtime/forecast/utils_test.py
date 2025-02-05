@@ -89,6 +89,8 @@ class TestGetValidationHorizon(unittest.TestCase):
             self.assertIn("too long relative to dataframe's timedelta. Validation horizon will be reduced to", cm.output[0])
 
     def test_frequency_quantity(self):
+        # Since we only add extra supports of 5 min, 10 min, 15 min and 30 min for now, only test cases are added.
+        # We need to add more test cases when we add more supports.
         df = pd.DataFrame(pd.date_range(start="2020-08-01 00:00:00", end="2020-08-01 23:55:00", freq="5T"), columns=["ds"])
         validation_horizon = get_validation_horizon(df, 10, "min", 5)
         self.assertEqual(validation_horizon, 10)
