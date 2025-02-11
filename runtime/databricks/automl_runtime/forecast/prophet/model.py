@@ -156,6 +156,7 @@ class MultiSeriesProphetModel(ProphetModel):
         :param timeseries_end: the end time of the time series
         :param horizon: int number of periods to forecast forward
         :param frequency: the frequency of the time series
+        :param frequency_quantity: the frequency quantity of the time series
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
         """

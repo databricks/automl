@@ -47,6 +47,7 @@ class ArimaEstimator:
         :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
         used as additional features in arima model.
         :param split_cutoff: Optional cutoff specified by user. If provided, 
+        :param frequency_quantity: The number of frequency units in the frequency. Default is 1.
         it is the starting point of cutoffs for cross validation.
         For tuning job, it is the cutoff between train and validate split.
         For training job, it is the cutoff bewteen validate and test split.

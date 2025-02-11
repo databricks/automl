@@ -27,6 +27,7 @@ def validate_and_generate_index(df: pd.DataFrame, time_col: str, frequency: str,
     :param df: The input DataFrame containing the time column.
     :param time_col: The name of the time column.
     :param frequency: The frequency of the time series.
+    :param frequency_quantity: The frequency quantity of the time series.
     :return: A complete time index covering the full range of the dataset.
     :raises ValueError: If the day-of-month pattern is inconsistent for "MS" frequency.
     """
@@ -75,6 +76,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
     :param df: the input dataframe that contains time_col
     :param time_col: time column name
     :param frequency: the frequency of the time series
+    :param frequency_quantity: the frequency quantity of the time series
     :param id_cols: the column names of the identity columns for multi-series time series; None for single series
     :return: single-series - transformed dataframe;
              multi-series - dictionary of transformed dataframes, each key is the (concatenated) id of the time series

@@ -38,6 +38,7 @@ def make_future_dataframe(
     :param end_time: the dictionary of the end time of each time series in training data.
     :param horizon: int number of periods to forecast forward.
     :param frequency: the frequency of the time series
+    :param frequency_quantity: the multiplier for the frequency.
     :param include_history:
     :param groups: the collection of group(s) to generate forecast predictions.
     :param identity_column_names: Column names of the identity columns
@@ -77,6 +78,7 @@ def make_single_future_dataframe(
     :param end_time: The end time of time series of the training data.
     :param horizon: Int number of periods to forecast forward.
     :param frequency: The frequency of the time series
+    :param frequency_quantity: The frequency quantity of the time series
     :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
     :param column_name: column name of the time column. Default is "ds".
@@ -148,6 +150,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     :param seasonal_period: length of the seasonality period.
     :param seasonal_unit: Optional frequency unit for the seasonal period. If not specified, the function will use
                           the same frequency unit as the time series.
+    :param frequency_quantity: frequency quantity of the time series.
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
@@ -203,6 +206,7 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     :param horizon: int number of time into the future for forecasting.
     :param unit: frequency unit of the time series, which must be a pandas offset alias.
     :param split_cutoff: the user-specified cutoff, as the starting point of cutoffs.
+    :param frequency_quantity: frequency quantity of the time series.
     For tuning job, it is the cutoff between train and validate split.
     For training job, it is the cutoff bewteen validate and test split.
     :return: list of pd.Timestamp cutoffs for cross-validation.
@@ -243,6 +247,7 @@ def is_frequency_consistency(
     :param end_time: A pandas timestamp.
     :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
                 'month' etc.
+    :param frequency_quantity: the multiplier for the frequency.
     :return: A boolean indicate whether the time interval is
              evenly divisible by the period.
     """
@@ -264,6 +269,7 @@ def calculate_period_differences(
     :param end_time: A pandas timestamp.
     :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
                 'month' etc.
+    :param frequency_quantity: An integer that is the multiplier for the frequency.
     :return: A pd.Series indicates the round-down integer period
              calculated.
     """

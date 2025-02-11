@@ -70,6 +70,7 @@ class AbstractArimaModel(ForecastModel):
         :param start_ds: the pd.Timestamp as the start of the DatetimeIndex.
         :param periods: the length of the DatetimeIndex.
         :param frequency: the frequency of the DatetimeIndex.
+        :param frequency_quantity: the frequency quantity of the DatetimeIndex.
         :return: a DatetimeIndex.
         """
         ds_indices = pd.date_range(
@@ -97,6 +98,7 @@ class ArimaModel(AbstractArimaModel):
         :param pickled_model: the pickled ARIMA model as a bytes object.
         :param horizon: int number of periods to forecast forward.
         :param frequency: the frequency of the time series
+        :param frequency_quantity: the frequency quantity of the time series
         :param start_ds: the start time of training data
         :param end_ds: the end time of training data
         :param time_col: the column name of the time column
@@ -278,6 +280,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         :param pickled_model_dict: the dictionary of binarized ARIMA models for different time series.
         :param horizon: int number of periods to forecast forward.
         :param frequency: the frequency of the time series
+        :param frequency_quantity: the frequency quantity of the time series
         :param start_ds_dict: the dictionary of the starting time of each time series in training data.
         :param end_ds_dict: the dictionary of the end time of each time series in training data.
         :param time_col: the column name of the time column
