@@ -18,7 +18,7 @@ from typing import List, Optional
 import pandas as pd
 
 
-def validate_and_generate_index(df: pd.DataFrame, time_col: str, frequency: str):
+def validate_and_generate_index(df: pd.DataFrame, time_col: str, frequency: str, frequency_quantity: int):
     """
     Generate a complete time index for the given DataFrame based on the specified frequency.
     - Ensures the time column is in datetime format.
@@ -31,7 +31,7 @@ def validate_and_generate_index(df: pd.DataFrame, time_col: str, frequency: str)
     :raises ValueError: If the day-of-month pattern is inconsistent for "MS" frequency.
     """
     if frequency.upper() != "MS":
-        return pd.date_range(df[time_col].min(), df[time_col].max(), freq=frequency)
+        return pd.date_range(df[time_col].min(), df[time_col].max(), freq=f"{frequency_quantity}{frequency}")
 
     df[time_col] = pd.to_datetime(df[time_col])  # Ensure datetime format
 
@@ -64,6 +64,7 @@ def validate_and_generate_index(df: pd.DataFrame, time_col: str, frequency: str)
 
 def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
                                           frequency: str,
+                                          frequency_quantity: int,
                                           id_cols: Optional[List[str]] = None):
     """
     Transform the input dataframe to an acceptable format for the GluonTS library.
@@ -86,7 +87,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
         weekday_name = total_min.strftime("%a").upper() # e.g., "FRI"
         frequency = f"W-{weekday_name}"
 
-    new_index_full = validate_and_generate_index(df=df, time_col=time_col, frequency=frequency)
+    new_index_full = validate_and_generate_index(df=df, time_col=time_col, frequency=frequency, frequency_quantity=frequency_quantity)
 
     if id_cols is not None:
         df_dict = {}

@@ -27,6 +27,7 @@ def make_future_dataframe(
         end_time: Union[pd.Timestamp, Dict[Tuple, pd.Timestamp]],
         horizon: int,
         frequency: str,
+        frequency_quantity: int,
         include_history: bool = True,
         groups: List[Tuple] = None,
         identity_column_names: List[str] = None,
@@ -43,7 +44,7 @@ def make_future_dataframe(
     :return: pd.DataFrame that extends forward
     """
     if groups is None:
-        return make_single_future_dataframe(start_time, end_time, horizon, frequency)
+        return make_single_future_dataframe(start_time, end_time, horizon, frequency, frequency_quantity)
 
     future_df_list = []
     for group in groups:
@@ -55,7 +56,7 @@ def make_future_dataframe(
             group_end_time = end_time[group]
         else:
             group_end_time = end_time
-        df = make_single_future_dataframe(group_start_time, group_end_time, horizon, frequency, include_history)
+        df = make_single_future_dataframe(group_start_time, group_end_time, horizon, frequency, frequency_quantity, include_history)
         for idx, identity_column_name in enumerate(identity_column_names):
             df[identity_column_name] = group[idx]
         future_df_list.append(df)
@@ -66,6 +67,7 @@ def make_single_future_dataframe(
         end_time: pd.Timestamp,
         horizon: int,
         frequency: str,
+        frequency_quantity: int,
         include_history: bool = True,
         column_name: str = "ds"
 ) -> pd.DataFrame:
@@ -81,18 +83,18 @@ def make_single_future_dataframe(
     :return:
     """
     offset_freq = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
-    unit_offset = pd.DateOffset(**offset_freq)
+    timestep_offset = pd.DateOffset(**offset_freq) * frequency_quantity
     end_time = pd.Timestamp(end_time)
 
     if include_history:
         start_time = start_time
     else:
-        start_time = end_time + unit_offset
+        start_time = end_time + timestep_offset
 
     date_rng = pd.date_range(
         start=start_time,
-        end=end_time + unit_offset*horizon,
-        freq=unit_offset
+        end=end_time + timestep_offset*horizon,
+        freq=timestep_offset
     )
     return pd.DataFrame(date_rng, columns=[column_name])
 
@@ -135,7 +137,8 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str, frequency_
 
 def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
                      num_folds: int, seasonal_period: int = 0, 
-                     seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
+                     seasonal_unit: Optional[str] = None,
+                     frequency_quantity: int = 1) -> List[pd.Timestamp]:
     """
     Generate cutoff times for cross validation with the control of number of folds.
     :param df: pd.DataFrame of the historical data.
@@ -152,17 +155,17 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     # avoid non-integer months, quaters ands years.
     if unit in NON_DAILY_OFFSET_ALIAS:
         period = int(period)
-        period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
+        period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*frequency_quantity*period
     else:
         offset_kwarg = {list(DATE_OFFSET_KEYWORD_MAP[unit])[0]: period}
-        period_dateoffset = pd.DateOffset(**offset_kwarg)
+        period_dateoffset = pd.DateOffset(**offset_kwarg)*frequency_quantity
 
-    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*frequency_quantity*horizon
 
     if not seasonal_unit:
         seasonal_unit = unit
 
-    seasonality_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*seasonal_period
+    seasonality_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*frequency_quantity*seasonal_period
 
     # We can not compare DateOffset directly, so we add to start time and compare.
     initial = seasonality_dateoffset
@@ -192,7 +195,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     return list(reversed(result))
 
 def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
-                     split_cutoff: pd.Timestamp) -> List[pd.Timestamp]:
+                     split_cutoff: pd.Timestamp, frequency_quantity: int = 1) -> List[pd.Timestamp]:
     """
     Generate custom cutoff times for cross validation based on user-specified split cutoff.
     Period (step size) is 1.
@@ -206,8 +209,8 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
     """
     # TODO: [ML-43528] expose period as input.
     period = 1 
-    period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
-    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
+    period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period*frequency_quantity
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon*frequency_quantity
 
     # First cutoff is the cutoff bewteen splits
     cutoff = split_cutoff
@@ -229,7 +232,8 @@ def is_quaterly_alias(freq: str):
 def is_frequency_consistency(
                 start_time: pd.Timestamp,
                 end_time: pd.Timestamp, 
-                freq:str) -> bool:
+                freq:str,
+                frequency_quantity: int) -> bool:
     """
     Validate the periods given a start time, end time is consistent with given frequency.
     We consider consistency as only integer frequencies between start and end time, e.g.
@@ -242,17 +246,18 @@ def is_frequency_consistency(
     :return: A boolean indicate whether the time interval is
              evenly divisible by the period.
     """
-    periods = calculate_period_differences(start_time, end_time, freq)
+    periods = calculate_period_differences(start_time, end_time, freq, frequency_quantity)
     diff = pd.to_datetime(end_time) -  pd.DateOffset(
                 **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]]
-            ) * periods == pd.to_datetime(start_time)
+            ) * periods * frequency_quantity == pd.to_datetime(start_time)
     return diff
 
 
 def calculate_period_differences(
                 start_time: pd.Timestamp,
                 end_time: pd.Timestamp, 
-                freq:str) -> int:
+                freq:str,
+                frequency_quantity: int) -> int:
     """
     Calculate the periods given a start time, end time and period frequency.
     :param start_time: A pandas timestamp.
@@ -265,4 +270,4 @@ def calculate_period_differences(
     start_time = pd.to_datetime(start_time)
     end_time = pd.to_datetime(end_time)
     freq_alias = PERIOD_ALIAS_MAP[OFFSET_ALIAS_MAP[freq]]
-    return  (end_time.to_period(freq_alias) - start_time.to_period(freq_alias)).n
+    return  (end_time.to_period(freq_alias) - start_time.to_period(freq_alias)).n // frequency_quantity

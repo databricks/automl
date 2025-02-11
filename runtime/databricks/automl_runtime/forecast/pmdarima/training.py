@@ -36,7 +36,7 @@ class ArimaEstimator:
 
     def __init__(self, horizon: int, frequency_unit: str, metric: str, seasonal_periods: List[int],
                  num_folds: int = 20, max_steps: int = 150, exogenous_cols: Optional[List[str]] = None,
-                 split_cutoff: Optional[pd.Timestamp] = None) -> None:
+                 split_cutoff: Optional[pd.Timestamp] = None, frequency_quantity: int = 1) -> None:
         """
         :param horizon: Number of periods to forecast forward
         :param frequency_unit: Frequency of the time series
@@ -53,6 +53,7 @@ class ArimaEstimator:
         """
         self._horizon = horizon
         self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
+        self._frequency_quantity = frequency_quantity
         self._metric = metric
         self._seasonal_periods = seasonal_periods
         self._num_folds = num_folds
@@ -70,14 +71,14 @@ class ArimaEstimator:
         history_pd["ds"] = pd.to_datetime(history_pd["ds"])
 
         # Check if the time has consistent frequency
-        self._validate_ds_freq(history_pd, self._frequency_unit)
+        self._validate_ds_freq(history_pd, self._frequency_unit, self._frequency_quantity)
 
         history_periods = utils.calculate_period_differences(
-            history_pd['ds'].min(), history_pd['ds'].max(), self._frequency_unit
+            history_pd['ds'].min(), history_pd['ds'].max(), self._frequency_unit, self._frequency_quantity
         )
         if history_periods + 1 != history_pd['ds'].size:
             # Impute missing time steps
-            history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit)
+            history_pd = self._fill_missing_time_steps(history_pd, self._frequency_unit, self._frequency_quantity)
 
 
         # Tune seasonal periods
@@ -87,19 +88,20 @@ class ArimaEstimator:
             try:
                 # this check mirrors the the default behavior by prophet
                 if history_periods < 2 * m:
-                    _logger.warning(f"Skipping seasonal_period={m} ({self._frequency_unit}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_periods} {self._frequency_unit}""")
+                    _logger.warning(f"Skipping seasonal_period={m} ({self._frequency_quantity}{self._frequency_unit}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_periods} {self._frequency_quantity}{self._frequency_unit}""")
                     continue
                 # Prophet also rejects the seasonality periods if the seasonality period timedelta is less than the shortest timedelta in the dataframe.
                 # However, this cannot happen in ARIMA because _fill_missing_time_steps imputes values for each _frequency_unit,
                 # so the minimum valid seasonality period is always 1
 
-                validation_horizon = utils.get_validation_horizon(history_pd, self._horizon, self._frequency_unit)
+                validation_horizon = utils.get_validation_horizon(history_pd, self._horizon, self._frequency_unit, self._frequency_quantity)
                 if self._split_cutoff:
                     cutoffs = utils.generate_custom_cutoffs(
                         history_pd,
                         horizon=validation_horizon,
                         unit=self._frequency_unit,
-                        split_cutoff=self._split_cutoff
+                        split_cutoff=self._split_cutoff,
+                        frequency_quantity=self._frequency_quantity,
                     )
                 else:
                     cutoffs = utils.generate_cutoffs(
@@ -107,6 +109,7 @@ class ArimaEstimator:
                         horizon=validation_horizon,
                         unit=self._frequency_unit,
                         num_folds=self._num_folds,
+                        frequency_quantity=self._frequency_quantity,
                     )
 
                 result = self._fit_predict(history_pd, cutoffs=cutoffs, seasonal_period=m, max_steps=self._max_steps)
@@ -150,9 +153,9 @@ class ArimaEstimator:
         return {"metrics": metrics, "model": arima_model}
 
     @staticmethod
-    def _fill_missing_time_steps(df: pd.DataFrame, frequency: str):
+    def _fill_missing_time_steps(df: pd.DataFrame, frequency: str, frequency_quantity: int):
         # Forward fill missing time steps
-        df_filled = df.set_index("ds").resample(rule=OFFSET_ALIAS_MAP[frequency]).pad().reset_index()
+        df_filled = df.set_index("ds").resample(rule=f"{frequency_quantity}{OFFSET_ALIAS_MAP[frequency]}").pad().reset_index()
         start_ds, modified_start_ds = df["ds"].min(), df_filled["ds"].min()
         if start_ds != modified_start_ds:
             offset = modified_start_ds - start_ds
@@ -160,12 +163,12 @@ class ArimaEstimator:
         return df_filled
 
     @staticmethod
-    def _validate_ds_freq(df: pd.DataFrame, frequency: str):
+    def _validate_ds_freq(df: pd.DataFrame, frequency: str, frequency_qantity: int):
         start_ds = df["ds"].min()
         consistency = df["ds"].apply(lambda x:
-            utils.is_frequency_consistency(start_ds, x, frequency)
+            utils.is_frequency_consistency(start_ds, x, frequency, frequency_qantity)
         ).all()
         if not consistency:
             raise ValueError(
-                f"Input time column includes different frequency than the specified frequency {frequency}."
+                f"Input time column includes different frequency than the specified frequency {frequency_qantity}{frequency}."
             )

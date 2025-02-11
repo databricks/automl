@@ -45,7 +45,7 @@ class ProphetModel(ForecastModel):
     Prophet mlflow model wrapper for univariate forecasting.
     """
 
-    def __init__(self, model_json: Union[Dict[Tuple, str], str], horizon: int, frequency: str,
+    def __init__(self, model_json: Union[Dict[Tuple, str], str], horizon: int, frequency: str, frequency_quantity: int,
                  time_col: str) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
@@ -53,11 +53,13 @@ class ProphetModel(ForecastModel):
         the dictionary of json strings of Prophet model for multi-series forecasting
         :param horizon: Int number of periods to forecast forward.
         :param frequency: the frequency of the time series
+        :param frequency_quantity: the frequency quantity of the time series
         :param time_col: the column name of the time column
         """
         self._model_json = model_json
         self._horizon = horizon
         self._frequency = frequency
+        self._frequency_quantity = frequency_quantity
         self._time_col = time_col
         self._is_quaterly = is_quaterly_alias(frequency)
         super().__init__()
@@ -93,6 +95,7 @@ class ProphetModel(ForecastModel):
         requested number of periods.
         """
         offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency]]
+        offset_kwarg = {key: value * self._frequency_quantity for key, value in offset_kwarg.items()}
         return self.model().make_future_dataframe(periods=horizon or self._horizon,
                                                   freq=pd.DateOffset(**offset_kwarg),
                                                   include_history=include_history)
@@ -144,7 +147,7 @@ class MultiSeriesProphetModel(ProphetModel):
     """
 
     def __init__(self, model_json: Dict[Tuple, str], timeseries_starts: Dict[Tuple, pd.Timestamp],
-                 timeseries_end: str, horizon: int, frequency: str, time_col: str, id_cols: List[str],
+                 timeseries_end: str, horizon: int, frequency: str, frequency_quantity: int, time_col: str, id_cols: List[str],
                  ) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
@@ -156,8 +159,9 @@ class MultiSeriesProphetModel(ProphetModel):
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
         """
-        super().__init__(model_json, horizon, frequency, time_col)
+        super().__init__(model_json, horizon, frequency, frequency_quantity, time_col)
         self._frequency = frequency
+        self._frequency_quantity = frequency_quantity
         self._timeseries_end = timeseries_end
         self._timeseries_starts = timeseries_starts
         self._id_cols = id_cols
@@ -201,6 +205,7 @@ class MultiSeriesProphetModel(ProphetModel):
             end_time=end_time,
             horizon=horizon,
             frequency=self._frequency,
+            frequency_quantity=self._frequency_quantity,
             include_history=include_history,
             groups=groups,
             identity_column_names=self._id_cols
@@ -236,6 +241,7 @@ class MultiSeriesProphetModel(ProphetModel):
             end_time=end_time,
             horizon=horizon,
             frequency=self._frequency,
+            frequency_quantity=self._frequency_quantity,
             include_history=include_history,
             groups=self._model_json.keys(),
             identity_column_names=self._id_cols
