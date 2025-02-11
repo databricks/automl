@@ -18,7 +18,10 @@ from typing import List, Optional
 import pandas as pd
 
 
-def validate_and_generate_index(df: pd.DataFrame, time_col: str, frequency: str, frequency_quantity: int):
+def validate_and_generate_index(df: pd.DataFrame, 
+                                time_col: str, 
+                                frequency: str, 
+                                frequency_quantity: int):
     """
     Generate a complete time index for the given DataFrame based on the specified frequency.
     - Ensures the time column is in datetime format.
@@ -89,7 +92,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
         weekday_name = total_min.strftime("%a").upper() # e.g., "FRI"
         frequency = f"W-{weekday_name}"
 
-    new_index_full = validate_and_generate_index(df=df, time_col=time_col, frequency=frequency, frequency_quantity=frequency_quantity)
+    valid_index = validate_and_generate_index(df=df, time_col=time_col, frequency=frequency, frequency_quantity=frequency_quantity)
 
     if id_cols is not None:
         df_dict = {}
@@ -99,14 +102,14 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
             else:
                 ts_id = str(grouped_id)
             df_dict[ts_id] = (grouped_df.set_index(time_col).sort_index()
-                              .reindex(new_index_full).drop(id_cols, axis=1))
+                              .reindex(valid_index).drop(id_cols, axis=1))
 
         return df_dict
 
     df = df.set_index(time_col).sort_index()
 
     # Fill in missing time steps between the min and max time steps
-    df = df.reindex(new_index_full)
+    df = df.reindex(valid_index)
 
     if frequency.upper() == "MS":
         # Truncate the day of month to avoid issues with pandas frequency check
