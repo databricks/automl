@@ -164,12 +164,12 @@ class ArimaEstimator:
         return df_filled
 
     @staticmethod
-    def _validate_ds_freq(df: pd.DataFrame, frequency: str, frequency_qantity: int):
+    def _validate_ds_freq(df: pd.DataFrame, frequency: str, frequency_quantity: int):
         start_ds = df["ds"].min()
         consistency = df["ds"].apply(lambda x:
-            utils.is_frequency_consistency(start_ds, x, frequency, frequency_qantity)
+            utils.is_frequency_consistency(start_ds, x, frequency, frequency_quantity)
         ).all()
         if not consistency:
             raise ValueError(
-                f"Input time column includes different frequency than the specified frequency {frequency_qantity}{frequency}."
+                f"Input time column includes different frequency than the specified frequency {frequency_quantity}{frequency}."
             )

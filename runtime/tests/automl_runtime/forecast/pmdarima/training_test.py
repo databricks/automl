@@ -53,6 +53,7 @@ class TestArimaEstimator(unittest.TestCase):
         for freq, df in [['d', self.df], ['d', self.df_string_time], ['month', self.df_monthly]]:
             arima_estimator = ArimaEstimator(horizon=1,
                                              frequency_unit=freq,
+                                             frequency_quantity=1,
                                              metric="smape",
                                              seasonal_periods=[1, 7],
                                              num_folds=2)
@@ -64,6 +65,7 @@ class TestArimaEstimator(unittest.TestCase):
     def test_fit_success_with_exogenous(self):
         arima_estimator = ArimaEstimator(horizon=1,
                                          frequency_unit="d",
+                                         frequency_quantity=1,
                                          metric="smape",
                                          seasonal_periods=[1, 7],
                                          num_folds=2,
@@ -79,6 +81,7 @@ class TestArimaEstimator(unittest.TestCase):
                          ['month', self.df_monthly, '2020-09-07 00:00:00']]:
             arima_estimator = ArimaEstimator(horizon=1,
                                             frequency_unit=freq,
+                                            frequency_quantity=1,
                                             metric="smape",
                                             seasonal_periods=[1, 7],
                                             num_folds=2,
@@ -90,18 +93,20 @@ class TestArimaEstimator(unittest.TestCase):
     def test_fit_skip_too_long_seasonality(self):
         arima_estimator = ArimaEstimator(horizon=1,
                                          frequency_unit="d",
+                                         frequency_quantity=1,
                                          metric="smape",
                                          seasonal_periods=[3, 14],
                                          num_folds=2)
         with self.assertLogs(logger="databricks.automl_runtime.forecast.pmdarima.training", level="WARNING") as cm:
             results_pd = arima_estimator.fit(self.df)
-            self.assertIn("Skipping seasonal_period=14 (D). Dataframe timestamps must span at least two seasonality periods", cm.output[0])
+            self.assertIn("Skipping seasonal_period=14 (1D). Dataframe timestamps must span at least two seasonality periods", cm.output[0])
 
     @patch("databricks.automl_runtime.forecast.prophet.forecast.utils.generate_cutoffs")
     def test_fit_horizon_truncation(self, mock_generate_cutoffs):
         period = 2
         arima_estimator = ArimaEstimator(horizon=100,
                                          frequency_unit="d",
+                                         frequency_quantity=1,
                                          metric="smape",
                                          seasonal_periods=[period],
                                          num_folds=2)
@@ -119,6 +124,7 @@ class TestArimaEstimator(unittest.TestCase):
         period = 2
         arima_estimator = ArimaEstimator(horizon=100,
                                          frequency_unit="d",
+                                         frequency_quantity=1,
                                          metric="smape",
                                          seasonal_periods=[period],
                                          num_folds=2)
@@ -137,6 +143,7 @@ class TestArimaEstimator(unittest.TestCase):
         # The fit method still succeeds because m=1 succeeds
         arima_estimator = ArimaEstimator(horizon=1,
                                          frequency_unit="d",
+                                         frequency_quantity=1,
                                          metric="smape",
                                          seasonal_periods=[1, 7, 30],
                                          num_folds=2)
@@ -147,6 +154,7 @@ class TestArimaEstimator(unittest.TestCase):
     def test_fit_failure_inconsistent_frequency(self):
         arima_estimator = ArimaEstimator(horizon=1,
                                          frequency_unit="W",
+                                         frequency_quantity=1,
                                          metric="smape",
                                          seasonal_periods=[1],
                                          num_folds=2)
@@ -156,6 +164,7 @@ class TestArimaEstimator(unittest.TestCase):
     def test_fit_failure_no_succeeded_model(self):
         arima_estimator = ArimaEstimator(horizon=1,
                                          frequency_unit="d",
+                                         frequency_quantity=1,
                                          metric="smape",
                                          seasonal_periods=[30],
                                          num_folds=2)
@@ -182,7 +191,7 @@ class TestArimaEstimator(unittest.TestCase):
             )
             indices_to_drop = [5, 8]
             df_missing = pd.DataFrame({"ds": ds, "y": range(12)}).drop(indices_to_drop).reset_index(drop=True)
-            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency)
+            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency, frequency_quantity=1)
             for index in indices_to_drop:
                 self.assertTrue(df_filled["y"][index] == df_filled["y"][index - 1])
             self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
@@ -196,16 +205,16 @@ class TestArimaEstimator(unittest.TestCase):
             )
             indices_to_drop = [5, 8]
             df_missing = pd.DataFrame({"ds": ds, "y": range(12), "x": range(12)}).drop(indices_to_drop).reset_index(drop=True)
-            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency)
+            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency, frequency_quantity=1)
             for index in indices_to_drop:
                 self.assertTrue(df_filled["y"][index] == df_filled["y"][index - 1])
                 self.assertTrue(df_filled["x"][index] == df_filled["x"][index - 1])
             self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
 
     def test_validate_ds_freq_matched_frequency(self):
-        ArimaEstimator._validate_ds_freq(self.df, frequency='D')
-        ArimaEstimator._validate_ds_freq(self.df_monthly, frequency='month')
+        ArimaEstimator._validate_ds_freq(self.df, frequency='D', frequency_quantity=1)
+        ArimaEstimator._validate_ds_freq(self.df_monthly, frequency='month', frequency_quantity=1)
 
     def test_validate_ds_freq_unmatched_frequency(self):
         with pytest.raises(ValueError, match="includes different frequency"):
-            ArimaEstimator._validate_ds_freq(self.df, frequency='W')
+            ArimaEstimator._validate_ds_freq(self.df, frequency='W', frequency_quantity=1)

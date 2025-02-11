@@ -39,7 +39,7 @@ class TestDeepARUtils(unittest.TestCase):
         )
         dropped_df = base_df.drop([4, 5]).reset_index(drop=True)
 
-        transformed_df = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D")
+        transformed_df = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", 1)
 
         expected_df = base_df.copy()
         expected_df.loc[[4, 5], target_col] = float('nan')
@@ -68,7 +68,7 @@ class TestDeepARUtils(unittest.TestCase):
         dropped_df = pd.concat([dropped_base_df.copy(), dropped_base_df.copy()], ignore_index=True)
         dropped_df[id_col] = [1] * (num_rows_per_ts - 2) + [2] * (num_rows_per_ts - 2)
 
-        transformed_df_dict = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", id_cols=[id_col])
+        transformed_df_dict = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", 1, id_cols=[id_col])
         self.assertEqual(transformed_df_dict.keys(), {"1", "2"})
 
         expected_first_df = base_df.copy()
@@ -100,7 +100,7 @@ class TestDeepARUtils(unittest.TestCase):
         dropped_df[id_cols[0]] = ([1] * (num_rows_per_ts - 2) + [2] * (num_rows_per_ts - 2)) * 2
         dropped_df[id_cols[1]] = [1] * (2 * (num_rows_per_ts - 2)) + [2] * (2 * (num_rows_per_ts - 2))
 
-        transformed_df_dict = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", id_cols=id_cols)
+        transformed_df_dict = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", 1, id_cols=id_cols)
         self.assertEqual(transformed_df_dict.keys(), {"1-1", "1-2", "2-1", "2-2"})
 
         expected_first_df = base_df.copy()
@@ -133,7 +133,8 @@ class TestDeepARUtils(unittest.TestCase):
         transformed_df = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "W" # Weekly frequency **without** specifying Friday
+            "W", # Weekly frequency **without** specifying Friday
+            1
         )
 
         # Create expected dataframe
@@ -168,7 +169,8 @@ class TestDeepARUtils(unittest.TestCase):
         transformed_df = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "MS" # Monthly frequency
+            "MS", # Monthly frequency
+            1
         )
 
         # Create expected dataframe
@@ -204,7 +206,8 @@ class TestDeepARUtils(unittest.TestCase):
         transformed_df = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "MS"
+            "MS",
+            1
         )
 
         # Create expected dataframe
@@ -241,7 +244,8 @@ class TestDeepARUtils(unittest.TestCase):
         transformed_df = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "MS" # Monthly frequency
+            "MS", # Monthly frequency
+            1
         )
 
         # Create expected dataframe

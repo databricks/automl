@@ -300,7 +300,7 @@ class TestCalculatePeriodsAndFrequency(unittest.TestCase):
             )
         })
         periods = df.apply(lambda x: calculate_period_differences(
-            x.start_time, x.end_time, 'month'
+            x.start_time, x.end_time, 'month', 1
         ), axis=1)
         self.assertTrue((periods == pd.Series([4, 5, 12])).all())
     
@@ -314,11 +314,11 @@ class TestCalculatePeriodsAndFrequency(unittest.TestCase):
             )
         })
         periods = df.apply(lambda x: calculate_period_differences(
-            x.start_time, x.end_time, 'month'
+            x.start_time, x.end_time, 'month', 1
         ), axis=1)
         self.assertTrue((periods == pd.Series([4, 5, 0])).all())
         periods = df.apply(lambda x: calculate_period_differences(
-            x.start_time, x.end_time, 'day'
+            x.start_time, x.end_time, 'day', 1
         ), axis=1)
         self.assertTrue((periods == pd.Series([118, 151, 0])).all())
 
@@ -331,12 +331,12 @@ class TestCalculatePeriodsAndFrequency(unittest.TestCase):
         )
         start_scalar = pd.to_datetime('2021-01-14')
         end_scalar = pd.to_datetime('2021-05-16')
-        self.assertFalse(is_frequency_consistency(start_scalar, end_scalar, 'month'))
+        self.assertFalse(is_frequency_consistency(start_scalar, end_scalar, 'month', 1))
         self.assertTrue(start_time.apply(
-            lambda x: is_frequency_consistency(x, end_scalar, 'day')
+            lambda x: is_frequency_consistency(x, end_scalar, 'day', 1)
         ).all())
         self.assertTrue(end_time.apply(
-            lambda x: is_frequency_consistency(start_scalar, x, 'month')
+            lambda x: is_frequency_consistency(start_scalar, x, 'month', 1)
         ).all())
 
 
@@ -347,6 +347,7 @@ class TestMakeFutureDataFrame(unittest.TestCase):
             end_time=pd.to_datetime('2022-01-04'),
             horizon=1,
             frequency="d",
+            frequency_quantity=1,
             include_history=False,
             column_name="test_date"
         )
@@ -359,6 +360,7 @@ class TestMakeFutureDataFrame(unittest.TestCase):
             end_time=pd.to_datetime('2022-01-04'),
             horizon=1,
             frequency="d",
+            frequency_quantity=1,
             include_history=True,
             column_name="test_date"
         )
@@ -375,6 +377,7 @@ class TestMakeFutureDataFrame(unittest.TestCase):
                 end_time=end_time,
                 horizon=1,
                 frequency=freq,
+                frequency_quantity=1,
                 include_history=True,
                 column_name="test_date"
             )
@@ -401,6 +404,7 @@ class TestMakeFutureDataFrame(unittest.TestCase):
             end_time=end_time,
             horizon=1,
             frequency="d",
+            frequency_quantity=1,
             groups=groups,
             identity_column_names=identity_column_names,
         )
