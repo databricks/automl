@@ -20,6 +20,7 @@ import mlflow
 import pandas as pd
 import torch
 import torch.nn as nn
+from parameterized import parameterized
 from gluonts.dataset.field_names import FieldName
 from gluonts.transform import InstanceSplitter, TestSplitSampler
 from gluonts.torch.model.predictor import PyTorchPredictor
@@ -289,6 +290,46 @@ class TestDeepARModel(unittest.TestCase):
             "2020-10-01", "2020-11-01", "2020-12-01",
             "2021-01-01", "2021-02-01", "2021-03-01"
         ])
+
+        sales = [10, 20, 30, 
+                 60, 90, 100]
+
+        sample_input = pd.DataFrame({
+            time_col: dates,
+            target_col: sales
+        })
+
+        with mlflow.start_run() as run:
+            mlflow_deepar_log_model(deepar_model, sample_input)
+
+        run_id = run.info.run_id
+
+        # Load the model and predict
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+        pred_df = loaded_model.predict(sample_input)
+
+        # Verify the prediction output format
+        self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat"])
+        self.assertEqual(len(pred_df), self.prediction_length)
+        self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())
+
+    @parameterized.expand([(1,), (5,), (10,), (15,), (30,)])
+    def test_model_prediction_with_multiple_minutes_frequency(self, frequency_quantity):
+        target_col = "sales"
+        time_col = "date"
+
+        deepar_model = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            frequency="min",
+            frequency_quantity=frequency_quantity,
+            num_samples=1,
+            target_col=target_col,
+            time_col=time_col,
+        )
+
+        # Create sample input with duplicate timestamps
+        dates = pd.date_range(start="2020-10-01", periods=6, freq=f"{frequency_quantity}min")
 
         sales = [10, 20, 30, 
                  60, 90, 100]

@@ -16,6 +16,7 @@
 import unittest
 
 import pandas as pd
+from parameterized import parameterized
 
 from databricks.automl_runtime.forecast.deepar.utils import set_index_and_fill_missing_time_steps
 
@@ -253,6 +254,38 @@ class TestDeepARUtils(unittest.TestCase):
         expected_df.loc[[3, 4], target_col] = float('nan')
         expected_df = expected_df.set_index(time_col).rename_axis(None)
         expected_df = expected_df.to_period("M")
+
+        # Assert equality
+        pd.testing.assert_frame_equal(transformed_df, expected_df)
+
+    @parameterized.expand([(1,), (5,), (10,), (15,), (30,)])
+    def test_single_series_with_multiple_minute_index(self, frequency_quantity):
+        target_col = "sales"
+        time_col = "date"
+        num_rows = 6
+
+        base_dates = pd.date_range(start="2020-10-01", periods=num_rows, freq=f"{frequency_quantity}min")
+
+        base_df = pd.DataFrame({
+            time_col: base_dates,
+            target_col: range(num_rows)
+        })
+
+        # Create a dataframe with missing months (drop the 3rd and 4th rows)
+        dropped_df = base_df.drop([3, 4]).reset_index(drop=True)
+
+        # Transform the dataframe
+        transformed_df = set_index_and_fill_missing_time_steps(
+            dropped_df,
+            time_col,
+            "min",
+            frequency_quantity
+        )
+
+        # Create expected dataframe
+        expected_df = base_df.copy()
+        expected_df.loc[[3, 4], target_col] = float('nan')
+        expected_df = expected_df.set_index(time_col).rename_axis(None).asfreq(f"{frequency_quantity}min")
 
         # Assert equality
         pd.testing.assert_frame_equal(transformed_df, expected_df)
