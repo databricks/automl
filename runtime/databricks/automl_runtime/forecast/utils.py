@@ -253,9 +253,9 @@ def is_frequency_consistency(
     """
     periods = calculate_period_differences(start_time, end_time, frequency_unit, frequency_quantity)
     # If the difference between start and end time is divisible by the period time
-    diff = pd.to_datetime(end_time) -  pd.DateOffset(
+    diff = (pd.to_datetime(end_time) -  pd.DateOffset(
                 **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
-            ) * periods * frequency_quantity == pd.to_datetime(start_time)
+            ) * periods * frequency_quantity) == pd.to_datetime(start_time)
     return diff
 
 
@@ -277,4 +277,5 @@ def calculate_period_differences(
     start_time = pd.to_datetime(start_time)
     end_time = pd.to_datetime(end_time)
     freq_alias = PERIOD_ALIAS_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
+    # It is intended to get the floor value. And in the later check we will use this floor value to find out if it is not consistent.
     return  (end_time.to_period(freq_alias) - start_time.to_period(freq_alias)).n // frequency_quantity
