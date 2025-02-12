@@ -16,6 +16,7 @@
 import unittest
 
 import pandas as pd
+from parameterized import parameterized
 
 from databricks.automl_runtime.forecast.deepar.utils import set_index_and_fill_missing_time_steps
 
@@ -39,7 +40,7 @@ class TestDeepARUtils(unittest.TestCase):
         )
         dropped_df = base_df.drop([4, 5]).reset_index(drop=True)
 
-        transformed_df = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D")
+        transformed_df = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", 1)
 
         expected_df = base_df.copy()
         expected_df.loc[[4, 5], target_col] = float('nan')
@@ -68,7 +69,7 @@ class TestDeepARUtils(unittest.TestCase):
         dropped_df = pd.concat([dropped_base_df.copy(), dropped_base_df.copy()], ignore_index=True)
         dropped_df[id_col] = [1] * (num_rows_per_ts - 2) + [2] * (num_rows_per_ts - 2)
 
-        transformed_df_dict = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", id_cols=[id_col])
+        transformed_df_dict = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", 1, id_cols=[id_col])
         self.assertEqual(transformed_df_dict.keys(), {"1", "2"})
 
         expected_first_df = base_df.copy()
@@ -100,7 +101,7 @@ class TestDeepARUtils(unittest.TestCase):
         dropped_df[id_cols[0]] = ([1] * (num_rows_per_ts - 2) + [2] * (num_rows_per_ts - 2)) * 2
         dropped_df[id_cols[1]] = [1] * (2 * (num_rows_per_ts - 2)) + [2] * (2 * (num_rows_per_ts - 2))
 
-        transformed_df_dict = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", id_cols=id_cols)
+        transformed_df_dict = set_index_and_fill_missing_time_steps(dropped_df, time_col, "D", 1, id_cols=id_cols)
         self.assertEqual(transformed_df_dict.keys(), {"1-1", "1-2", "2-1", "2-2"})
 
         expected_first_df = base_df.copy()
@@ -133,7 +134,8 @@ class TestDeepARUtils(unittest.TestCase):
         transformed_df = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "W" # Weekly frequency **without** specifying Friday
+            "W", # Weekly frequency **without** specifying Friday
+            1
         )
 
         # Create expected dataframe
@@ -168,7 +170,8 @@ class TestDeepARUtils(unittest.TestCase):
         transformed_df = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "MS" # Monthly frequency
+            "MS", # Monthly frequency
+            1
         )
 
         # Create expected dataframe
@@ -204,7 +207,8 @@ class TestDeepARUtils(unittest.TestCase):
         transformed_df = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "MS"
+            "MS",
+            1
         )
 
         # Create expected dataframe
@@ -241,7 +245,8 @@ class TestDeepARUtils(unittest.TestCase):
         transformed_df = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "MS" # Monthly frequency
+            "MS", # Monthly frequency
+            1
         )
 
         # Create expected dataframe
@@ -249,6 +254,38 @@ class TestDeepARUtils(unittest.TestCase):
         expected_df.loc[[3, 4], target_col] = float('nan')
         expected_df = expected_df.set_index(time_col).rename_axis(None)
         expected_df = expected_df.to_period("M")
+
+        # Assert equality
+        pd.testing.assert_frame_equal(transformed_df, expected_df)
+
+    @parameterized.expand([(1,), (5,), (10,), (15,), (30,)])
+    def test_single_series_with_multiple_minute_index(self, frequency_quantity):
+        target_col = "sales"
+        time_col = "date"
+        num_rows = 6
+
+        base_dates = pd.date_range(start="2020-10-01", periods=num_rows, freq=f"{frequency_quantity}min")
+
+        base_df = pd.DataFrame({
+            time_col: base_dates,
+            target_col: range(num_rows)
+        })
+
+        # Create a dataframe with missing months (drop the 3rd and 4th rows)
+        dropped_df = base_df.drop([3, 4]).reset_index(drop=True)
+
+        # Transform the dataframe
+        transformed_df = set_index_and_fill_missing_time_steps(
+            dropped_df,
+            time_col,
+            "min",
+            frequency_quantity
+        )
+
+        # Create expected dataframe
+        expected_df = base_df.copy()
+        expected_df.loc[[3, 4], target_col] = float('nan')
+        expected_df = expected_df.set_index(time_col).rename_axis(None).asfreq(f"{frequency_quantity}min")
 
         # Assert equality
         pd.testing.assert_frame_equal(transformed_df, expected_df)

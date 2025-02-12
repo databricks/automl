@@ -26,7 +26,8 @@ def make_future_dataframe(
         start_time: Union[pd.Timestamp, Dict[Tuple, pd.Timestamp]],
         end_time: Union[pd.Timestamp, Dict[Tuple, pd.Timestamp]],
         horizon: int,
-        frequency: str,
+        frequency_unit: str,
+        frequency_quantity: int,
         include_history: bool = True,
         groups: List[Tuple] = None,
         identity_column_names: List[str] = None,
@@ -36,14 +37,15 @@ def make_future_dataframe(
     :param start_time: the dictionary of the starting time of each time series in training data.
     :param end_time: the dictionary of the end time of each time series in training data.
     :param horizon: int number of periods to forecast forward.
-    :param frequency: the frequency of the time series
+    :param frequency_unit: the frequency unit of the time series
+    :param frequency_quantity: the multiplier for the frequency.
     :param include_history:
     :param groups: the collection of group(s) to generate forecast predictions.
     :param identity_column_names: Column names of the identity columns
     :return: pd.DataFrame that extends forward
     """
     if groups is None:
-        return make_single_future_dataframe(start_time, end_time, horizon, frequency)
+        return make_single_future_dataframe(start_time, end_time, horizon, frequency_unit, frequency_quantity)
 
     future_df_list = []
     for group in groups:
@@ -55,7 +57,7 @@ def make_future_dataframe(
             group_end_time = end_time[group]
         else:
             group_end_time = end_time
-        df = make_single_future_dataframe(group_start_time, group_end_time, horizon, frequency, include_history)
+        df = make_single_future_dataframe(group_start_time, group_end_time, horizon, frequency_unit, frequency_quantity, include_history)
         for idx, identity_column_name in enumerate(identity_column_names):
             df[identity_column_name] = group[idx]
         future_df_list.append(df)
@@ -65,7 +67,8 @@ def make_single_future_dataframe(
         start_time: pd.Timestamp,
         end_time: pd.Timestamp,
         horizon: int,
-        frequency: str,
+        frequency_unit: str,
+        frequency_quantity: int,
         include_history: bool = True,
         column_name: str = "ds"
 ) -> pd.DataFrame:
@@ -74,29 +77,30 @@ def make_single_future_dataframe(
     :param start_time: The starting time of time series of the training data.
     :param end_time: The end time of time series of the training data.
     :param horizon: Int number of periods to forecast forward.
-    :param frequency: The frequency of the time series
+    :param frequency_unit: The frequency unit of the time series
+    :param frequency_quantity: The frequency quantity of the time series
     :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
     :param column_name: column name of the time column. Default is "ds".
     :return:
     """
-    offset_freq = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
-    unit_offset = pd.DateOffset(**offset_freq)
+    offset_freq = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
+    timestep_offset = pd.DateOffset(**offset_freq) * frequency_quantity
     end_time = pd.Timestamp(end_time)
 
     if include_history:
         start_time = start_time
     else:
-        start_time = end_time + unit_offset
+        start_time = end_time + timestep_offset
 
     date_rng = pd.date_range(
         start=start_time,
-        end=end_time + unit_offset*horizon,
-        freq=unit_offset
+        end=end_time + timestep_offset * horizon,
+        freq=timestep_offset
     )
     return pd.DataFrame(date_rng, columns=[column_name])
 
-def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str, frequency_quantity: int = 1) -> int:
+def get_validation_horizon(df: pd.DataFrame, horizon: int, frequency_unit: str, frequency_quantity: int = 1) -> int:
     """
     Return validation_horizon, which is the lesser of `horizon` and one quarter of the dataframe's timedelta
     Since the seasonality period is never more than half of the dataframe's timedelta,
@@ -104,7 +108,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str, frequency_
     behavior, and we enforce it for ARIMA.)
     :param df: pd.DataFrame of the historical data
     :param horizon: int number of time into the future for forecasting
-    :param unit: frequency unit of the time series, which must be a pandas offset alias
+    :param frequency_unit: frequency unit of the time series, which must be a pandas offset alias
     :param frequency_quantity: int multiplier for the frequency unit, representing the number of `unit`s 
         per time step in the dataframe. This is useful when the time series has a granularity that 
         spans multiple `unit`s (e.g., if `unit='min'` and `frequency_quantity=5`, it means the data 
@@ -112,7 +116,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str, frequency_
     :return: horizon used for validation, in terms of the input `unit`
     """
     MIN_HORIZONS = 4  # minimum number of horizons in the dataframe
-    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * horizon * frequency_quantity
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit]) * horizon * frequency_quantity
 
     try:
         if MIN_HORIZONS * horizon_dateoffset + df["ds"].min() <= df["ds"].max():
@@ -123,7 +127,7 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str, frequency_
     # In order to calculate the validation horizon, we incrementally add offset
     # to the start time to the quarter of total timedelta. We did this since
     # pd.DateOffset does not support divide by operation.
-    timestep_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit]) * frequency_quantity
+    timestep_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit]) * frequency_quantity
     max_horizon = 0
     cur_timestamp = df["ds"].min()
     while cur_timestamp + timestep_dateoffset <= df["ds"].max():
@@ -133,36 +137,38 @@ def get_validation_horizon(df: pd.DataFrame, horizon: int, unit: str, frequency_
     f"timedelta. Validation horizon will be reduced to {max_horizon//MIN_HORIZONS*timestep_dateoffset}.")
     return max_horizon // MIN_HORIZONS
 
-def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
+def generate_cutoffs(df: pd.DataFrame, horizon: int, frequency_unit: str,
                      num_folds: int, seasonal_period: int = 0, 
-                     seasonal_unit: Optional[str] = None) -> List[pd.Timestamp]:
+                     seasonal_unit: Optional[str] = None,
+                     frequency_quantity: int = 1) -> List[pd.Timestamp]:
     """
     Generate cutoff times for cross validation with the control of number of folds.
     :param df: pd.DataFrame of the historical data.
     :param horizon: int number of time into the future for forecasting.
-    :param unit: frequency unit of the time series, which must be a pandas offset alias.
+    :param frequency_unit: frequency unit of the time series, which must be a pandas offset alias.
     :param num_folds: int number of cutoffs for cross validation.
     :param seasonal_period: length of the seasonality period.
     :param seasonal_unit: Optional frequency unit for the seasonal period. If not specified, the function will use
                           the same frequency unit as the time series.
+    :param frequency_quantity: frequency quantity of the time series.
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
 
     # avoid non-integer months, quaters ands years.
-    if unit in NON_DAILY_OFFSET_ALIAS:
+    if frequency_unit in NON_DAILY_OFFSET_ALIAS:
         period = int(period)
-        period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
+        period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*frequency_quantity*period
     else:
-        offset_kwarg = {list(DATE_OFFSET_KEYWORD_MAP[unit])[0]: period}
-        period_dateoffset = pd.DateOffset(**offset_kwarg)
+        offset_kwarg = {list(DATE_OFFSET_KEYWORD_MAP[frequency_unit])[0]: period}
+        period_dateoffset = pd.DateOffset(**offset_kwarg) * frequency_quantity
 
-    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*frequency_quantity*horizon
 
     if not seasonal_unit:
-        seasonal_unit = unit
+        seasonal_unit = frequency_unit
 
-    seasonality_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*seasonal_period
+    seasonality_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*frequency_quantity*seasonal_period
 
     # We can not compare DateOffset directly, so we add to start time and compare.
     initial = seasonality_dateoffset
@@ -191,23 +197,24 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
         )
     return list(reversed(result))
 
-def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, unit: str,
-                     split_cutoff: pd.Timestamp) -> List[pd.Timestamp]:
+def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, frequency_unit: str,
+                     split_cutoff: pd.Timestamp, frequency_quantity: int = 1) -> List[pd.Timestamp]:
     """
     Generate custom cutoff times for cross validation based on user-specified split cutoff.
     Period (step size) is 1.
     :param df: pd.DataFrame of the historical data.
     :param horizon: int number of time into the future for forecasting.
-    :param unit: frequency unit of the time series, which must be a pandas offset alias.
+    :param frequency_unit: frequency unit of the time series, which must be a pandas offset alias.
     :param split_cutoff: the user-specified cutoff, as the starting point of cutoffs.
+    :param frequency_quantity: frequency quantity of the time series.
     For tuning job, it is the cutoff between train and validate split.
     For training job, it is the cutoff bewteen validate and test split.
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     # TODO: [ML-43528] expose period as input.
     period = 1 
-    period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*period
-    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[unit])*horizon
+    period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*period*frequency_quantity
+    horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*horizon*frequency_quantity
 
     # First cutoff is the cutoff bewteen splits
     cutoff = split_cutoff
@@ -229,7 +236,8 @@ def is_quaterly_alias(freq: str):
 def is_frequency_consistency(
                 start_time: pd.Timestamp,
                 end_time: pd.Timestamp, 
-                freq:str) -> bool:
+                frequency_unit:str,
+                frequency_quantity: int) -> bool:
     """
     Validate the periods given a start time, end time is consistent with given frequency.
     We consider consistency as only integer frequencies between start and end time, e.g.
@@ -239,30 +247,35 @@ def is_frequency_consistency(
     :param end_time: A pandas timestamp.
     :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
                 'month' etc.
+    :param frequency_quantity: the multiplier for the frequency.
     :return: A boolean indicate whether the time interval is
              evenly divisible by the period.
     """
-    periods = calculate_period_differences(start_time, end_time, freq)
-    diff = pd.to_datetime(end_time) -  pd.DateOffset(
-                **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[freq]]
-            ) * periods == pd.to_datetime(start_time)
+    periods = calculate_period_differences(start_time, end_time, frequency_unit, frequency_quantity)
+    # If the difference between start and end time is divisible by the period time
+    diff = (pd.to_datetime(end_time) -  pd.DateOffset(
+                **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
+            ) * periods * frequency_quantity) == pd.to_datetime(start_time)
     return diff
 
 
 def calculate_period_differences(
                 start_time: pd.Timestamp,
                 end_time: pd.Timestamp, 
-                freq:str) -> int:
+                frequency_unit:str,
+                frequency_quantity: int) -> int:
     """
     Calculate the periods given a start time, end time and period frequency.
     :param start_time: A pandas timestamp.
     :param end_time: A pandas timestamp.
     :param freq: A string that is accepted by OFFSET_ALIAS_MAP, e.g. 'day',
                 'month' etc.
+    :param frequency_quantity: An integer that is the multiplier for the frequency.
     :return: A pd.Series indicates the round-down integer period
              calculated.
     """
     start_time = pd.to_datetime(start_time)
     end_time = pd.to_datetime(end_time)
-    freq_alias = PERIOD_ALIAS_MAP[OFFSET_ALIAS_MAP[freq]]
-    return  (end_time.to_period(freq_alias) - start_time.to_period(freq_alias)).n
+    freq_alias = PERIOD_ALIAS_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
+    # It is intended to get the floor value. And in the later check we will use this floor value to find out if it is not consistent.
+    return  (end_time.to_period(freq_alias) - start_time.to_period(freq_alias)).n // frequency_quantity

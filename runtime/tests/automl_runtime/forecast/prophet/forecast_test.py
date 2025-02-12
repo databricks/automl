@@ -58,6 +58,22 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             pd.Series(range(self.num_rows), name="ds").apply(lambda i: f"{2012+i:04d}-01-15"),
             y_series
         ], axis=1)
+        self.df_with_5_minute_interval = pd.concat([
+            pd.Series(pd.date_range(start="2020-07-05 00:00:00", periods=self.num_rows, freq="5min"), name="ds"),
+            y_series,
+        ], axis=1)
+        self.df_with_10_minute_interval = pd.concat([
+            pd.Series(pd.date_range(start="2020-07-05 00:00:00", periods=self.num_rows, freq="10min"), name="ds"),
+            y_series,
+        ], axis=1)
+        self.df_with_15_minute_interval = pd.concat([
+            pd.Series(pd.date_range(start="2020-07-05 00:00:00", periods=self.num_rows, freq="15min"), name="ds"),
+            y_series,
+        ], axis=1)
+        self.df_with_30_minute_interval = pd.concat([
+            pd.Series(pd.date_range(start="2020-07-05 00:00:00", periods=self.num_rows, freq="30min"), name="ds"),
+            y_series,
+        ], axis=1)
         self.search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
 
     def test_sequential_training(self):
@@ -96,6 +112,39 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         for freq, df in [['MS', self.df_string_monthly_time]]:
             hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
                                                     frequency_unit=freq,
+                                                    metric="smape",
+                                                    interval_width=0.8,
+                                                    country_holidays="US",
+                                                    search_space=search_space,
+                                                    num_folds=2,
+                                                    trial_timeout=1000,
+                                                    random_state=0,
+                                                    is_parallel=False)
+            results = hyperopt_estim.fit(df)
+            self.assertAlmostEqual(results["mse"][0], 0, delta=0.0002)
+            self.assertAlmostEqual(results["rmse"][0], 0, delta=0.02)
+            self.assertAlmostEqual(results["mae"][0], 0, delta=0.02)
+            self.assertAlmostEqual(results["mape"][0], 0, delta=0.002)
+            self.assertAlmostEqual(results["mdape"][0], 0, delta=0.002)
+            self.assertAlmostEqual(results["smape"][0], 0, delta=0.002)
+            self.assertGreaterEqual(results["coverage"][0], 0.5)
+            # check the best result parameter is inside the search space
+            model_json = json.loads(results["model_json"][0])
+            self.assertGreaterEqual(model_json["changepoint_prior_scale"], 0.1)
+            self.assertLessEqual(model_json["changepoint_prior_scale"], 0.5)
+    
+    def test_sequential_training_with_multiple_frequency_quantities(self):
+        search_space = {"changepoint_prior_scale": hp.loguniform("changepoint_prior_scale", -2.3, -0.7)}
+        search_space["seasonality_mode"] = hp.choice(
+            'seasonality_mode', ['additive', 'multiplicative']
+        )
+        for df, frequency_quantity, frequency_unit in [[self.df_with_5_minute_interval, 5, "min"], 
+                                                       [self.df_with_10_minute_interval, 10, "min"], 
+                                                       [self.df_with_15_minute_interval, 15, "min"],
+                                                       [self.df_with_30_minute_interval, 30, "min"]]:
+            hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
+                                                    frequency_unit=frequency_unit,
+                                                    frequency_quantity=frequency_quantity,
                                                     metric="smape",
                                                     interval_width=0.8,
                                                     country_holidays="US",

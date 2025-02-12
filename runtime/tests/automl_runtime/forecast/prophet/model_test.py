@@ -80,7 +80,7 @@ class TestProphetModel(BaseProphetModelTest):
         cls.model = model_from_json(cls.model_json)
 
     def test_model_save_and_load(self):
-        prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds")
 
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
@@ -110,7 +110,7 @@ class TestProphetModel(BaseProphetModelTest):
             # don't have full support yet.
             if OFFSET_ALIAS_MAP[feq_unit] in ['YS', 'MS', 'QS']:
                 continue
-            prophet_model = ProphetModel(self.model_json, 1, feq_unit, "ds")
+            prophet_model = ProphetModel(self.model_json, 1, feq_unit, 1, "ds")
             future_df = prophet_model.make_future_dataframe(1)
             offset_kw_arg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[feq_unit]]
             expected_time = pd.Timestamp("2020-10-25") + pd.DateOffset(**offset_kw_arg)
@@ -118,8 +118,18 @@ class TestProphetModel(BaseProphetModelTest):
                              f"Wrong future dataframe generated with frequency {feq_unit}:"
                              f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
 
+    def test_make_future_dataframe_with_multiple_frequency_quantities(self):
+        for frequency_quantity in [1, 5, 10, 15, 30]:
+            prophet_model = ProphetModel(self.model_json, 1, "min", frequency_quantity, "ds")
+            future_df = prophet_model.make_future_dataframe(1)
+            offset_kw_arg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP["min"]]
+            expected_time = pd.Timestamp("2020-10-25") + pd.DateOffset(**offset_kw_arg)*frequency_quantity
+            self.assertEqual(future_df.iloc[-1]["ds"], expected_time,
+                             f"Wrong future dataframe generated with frequency min:"
+                             f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
+
     def test_predict_success_datetime_date(self):
-        prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds")
         test_df = pd.DataFrame(
             {"ds": [datetime.date(2020, 10, 8), datetime.date(2020, 12, 10)]}
         )
@@ -131,7 +141,7 @@ class TestProphetModel(BaseProphetModelTest):
         )  # check the input dataframe is unchanged
 
     def test_predict_success_string(self):
-        prophet_model = ProphetModel(self.model_json, 1, "d", "ds")
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds")
         test_df = pd.DataFrame({"ds": ["2020-10-08", "2020-12-10"]})
         expected_test_df = test_df.copy()
         yhat = prophet_model.predict(None, test_df)
@@ -140,8 +150,19 @@ class TestProphetModel(BaseProphetModelTest):
             test_df, expected_test_df
         )  # check the input dataframe is unchanged
 
+    def test_predict_multiple_frequency_quantities(self):
+        for frequency_quantity in [1, 5, 10, 15, 30]:
+            prophet_model = ProphetModel(self.model_json, 1, "min", frequency_quantity, "ds")
+            test_df = pd.DataFrame({"ds": ["2020-10-08", "2020-12-10"]})
+            expected_test_df = test_df.copy()
+            yhat = prophet_model.predict(None, test_df)
+            self.assertEqual(2, len(yhat))
+            pd.testing.assert_frame_equal(
+                test_df, expected_test_df
+            )  # check the input dataframe is unchanged
+
     def test_validate_predict_cols(self):
-        prophet_model = ProphetModel(self.model_json, 1, "d", "time")
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "time")
         test_df = pd.DataFrame(
             {
                 "date": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],
@@ -173,7 +194,8 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
             timeseries_starts=cls.multi_series_start,
             timeseries_end="2020-07-25",
             horizon=1,
-            frequency="days",
+            frequency_unit="days",
+            frequency_quantity=1,
             time_col="time",
             id_cols=["id"],
         )
@@ -241,6 +263,7 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
             "2020-07-25",
             1,
             "days",
+            1,
             "time",
             ["id1", "id2"],
         )
@@ -302,7 +325,8 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
             timeseries_starts=self.multi_series_start,
             timeseries_end="2020-07-25",
             horizon=1,
-            frequency="days",
+            frequency_unit="days",
+            frequency_quantity=1,
             time_col="ds",
             id_cols=["id1"],
         )
@@ -338,6 +362,23 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
         self.assertCountEqual(future_df.columns, {"ds", "id"})
         self.assertEqual(2, future_df.shape[0])
 
+    def test_make_future_dataframe_multiple_frequency_quantities(self):
+
+        for frequency_quantity in [1, 5, 10, 15, 30]:
+            prophet_model = MultiSeriesProphetModel(
+                model_json=self.multi_series_model_json,
+                timeseries_starts=self.multi_series_start,
+                timeseries_end="2020-07-25",
+                horizon=1,
+                frequency_unit="min",
+                frequency_quantity=frequency_quantity,
+                time_col="time",
+                id_cols=["id"],
+            )
+            future_df = prophet_model.make_future_dataframe(include_history=False)
+            self.assertCountEqual(future_df.columns, {"ds", "id"})
+            self.assertEqual(2, future_df.shape[0])
+
     def test_make_future_dataframe_multi_ids(self):
         multi_series_model_json = {(1, "1"): self.model_json, (2, "1"): self.model_json}
         multi_series_start = {
@@ -350,6 +391,7 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
             "2020-07-25",
             1,
             "days",
+            1,
             "time",
             ["id1", "id2"],
         )
