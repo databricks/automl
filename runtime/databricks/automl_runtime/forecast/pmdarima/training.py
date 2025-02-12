@@ -85,9 +85,11 @@ class ArimaEstimator:
         # Tune seasonal periods
         best_result = None
         best_metric = float("inf")
+        print("FINDME1")
         for m in self._seasonal_periods:
             try:
                 # this check mirrors the the default behavior by prophet
+                print("FINDME2", history_periods, m)
                 if history_periods < 2 * m:
                     _logger.warning(f"Skipping seasonal_period={m} ({self._frequency_quantity}{self._frequency_unit}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_periods} {self._frequency_quantity}{self._frequency_unit}""")
                     continue
@@ -96,6 +98,7 @@ class ArimaEstimator:
                 # so the minimum valid seasonality period is always 1
 
                 validation_horizon = utils.get_validation_horizon(history_pd, self._horizon, self._frequency_unit, self._frequency_quantity)
+                print("FINDME3", validation_horizon)
                 if self._split_cutoff:
                     cutoffs = utils.generate_custom_cutoffs(
                         history_pd,
@@ -112,9 +115,10 @@ class ArimaEstimator:
                         num_folds=self._num_folds,
                         frequency_quantity=self._frequency_quantity,
                     )
-
+                print("FINDME4",cutoffs)
                 result = self._fit_predict(history_pd, cutoffs=cutoffs, seasonal_period=m, max_steps=self._max_steps)
                 metric = result["metrics"]["smape"]
+                print("FINDME5", metric, best_metric)
                 if metric < best_metric:
                     best_result = result
                     best_metric = metric
