@@ -85,7 +85,7 @@ class ArimaEstimator:
         # Tune seasonal periods
         best_result = None
         best_metric = float("inf")
-        print("FINDME1")
+        print("FINDME1", self._seasonal_periods)
         for m in self._seasonal_periods:
             try:
                 # this check mirrors the the default behavior by prophet
