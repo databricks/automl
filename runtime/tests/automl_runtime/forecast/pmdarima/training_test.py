@@ -110,7 +110,7 @@ class TestArimaEstimator(unittest.TestCase):
                                             frequency_unit=freq,
                                             frequency_quantity=frequency_quantity,
                                             metric="smape",
-                                            seasonal_periods=[1],
+                                            seasonal_periods=[1, 7],
                                             num_folds=2,
                                             split_cutoff=pd.Timestamp(split_cutoff))
             results_pd = arima_estimator.fit(df)
