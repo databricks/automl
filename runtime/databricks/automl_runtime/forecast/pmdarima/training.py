@@ -123,7 +123,7 @@ class ArimaEstimator:
                 _logger.warning(f"Encountered an exception with seasonal_period={m}: {repr(e)}")
                 traceback.print_exc()
         if not best_result:
-            raise Exception("No model is successfully trained.")
+            raise Exception("test test No model is successfully trained.")
 
         results_pd = pd.DataFrame(best_result["metrics"], index=[0])
         results_pd["pickled_model"] = pickle.dumps(best_result["model"])
