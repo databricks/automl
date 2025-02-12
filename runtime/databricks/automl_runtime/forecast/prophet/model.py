@@ -45,7 +45,11 @@ class ProphetModel(ForecastModel):
     Prophet mlflow model wrapper for univariate forecasting.
     """
 
-    def __init__(self, model_json: Union[Dict[Tuple, str], str], horizon: int, frequency_unit: str, frequency_quantity: int,
+    def __init__(self, 
+                 model_json: Union[Dict[Tuple, str], str], 
+                 horizon: int, 
+                 frequency_unit: str, 
+                 frequency_quantity: int,
                  time_col: str) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow

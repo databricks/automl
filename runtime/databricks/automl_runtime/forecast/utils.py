@@ -95,7 +95,7 @@ def make_single_future_dataframe(
 
     date_rng = pd.date_range(
         start=start_time,
-        end=end_time + timestep_offset*horizon,
+        end=end_time + timestep_offset * horizon,
         freq=timestep_offset
     )
     return pd.DataFrame(date_rng, columns=[column_name])
@@ -161,7 +161,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, frequency_unit: str,
         period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*frequency_quantity*period
     else:
         offset_kwarg = {list(DATE_OFFSET_KEYWORD_MAP[frequency_unit])[0]: period}
-        period_dateoffset = pd.DateOffset(**offset_kwarg)*frequency_quantity
+        period_dateoffset = pd.DateOffset(**offset_kwarg) * frequency_quantity
 
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*frequency_quantity*horizon
 
@@ -252,6 +252,7 @@ def is_frequency_consistency(
              evenly divisible by the period.
     """
     periods = calculate_period_differences(start_time, end_time, frequency_unit, frequency_quantity)
+    # If the difference between start and end time is divisible by the period time
     diff = pd.to_datetime(end_time) -  pd.DateOffset(
                 **DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
             ) * periods * frequency_quantity == pd.to_datetime(start_time)
