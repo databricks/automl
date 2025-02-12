@@ -100,7 +100,7 @@ class ArimaEstimator:
                     cutoffs = utils.generate_custom_cutoffs(
                         history_pd,
                         horizon=validation_horizon,
-                        unit=self._frequency_unit,
+                        frequency_unit=self._frequency_unit,
                         split_cutoff=self._split_cutoff,
                         frequency_quantity=self._frequency_quantity,
                     )
@@ -108,7 +108,7 @@ class ArimaEstimator:
                     cutoffs = utils.generate_cutoffs(
                         history_pd,
                         horizon=validation_horizon,
-                        unit=self._frequency_unit,
+                        frequency_unit=self._frequency_unit,
                         num_folds=self._num_folds,
                         frequency_quantity=self._frequency_quantity,
                     )
@@ -154,9 +154,9 @@ class ArimaEstimator:
         return {"metrics": metrics, "model": arima_model}
 
     @staticmethod
-    def _fill_missing_time_steps(df: pd.DataFrame, frequency: str, frequency_quantity: int):
+    def _fill_missing_time_steps(df: pd.DataFrame, frequency_unit: str, frequency_quantity: int):
         # Forward fill missing time steps
-        df_filled = df.set_index("ds").resample(rule=f"{frequency_quantity}{OFFSET_ALIAS_MAP[frequency]}").pad().reset_index()
+        df_filled = df.set_index("ds").resample(rule=f"{frequency_quantity}{OFFSET_ALIAS_MAP[frequency_unit]}").pad().reset_index()
         start_ds, modified_start_ds = df["ds"].min(), df_filled["ds"].min()
         if start_ds != modified_start_ds:
             offset = modified_start_ds - start_ds
@@ -164,12 +164,12 @@ class ArimaEstimator:
         return df_filled
 
     @staticmethod
-    def _validate_ds_freq(df: pd.DataFrame, frequency: str, frequency_quantity: int):
+    def _validate_ds_freq(df: pd.DataFrame, frequency_unit: str, frequency_quantity: int):
         start_ds = df["ds"].min()
         consistency = df["ds"].apply(lambda x:
-            utils.is_frequency_consistency(start_ds, x, frequency, frequency_quantity)
+            utils.is_frequency_consistency(start_ds, x, frequency_unit, frequency_quantity)
         ).all()
         if not consistency:
             raise ValueError(
-                f"Input time column includes different frequency than the specified frequency {frequency_quantity}{frequency}."
+                f"Input time column includes different frequency than the specified frequency {frequency_quantity}{frequency_unit}."
             )

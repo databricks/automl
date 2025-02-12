@@ -43,7 +43,7 @@ class TestDiagnostics(unittest.TestCase):
         (df_with_exogenous, ["x1", "x2"])
     ])
     def test_cross_validation_success(self, df, exogenous_cols):
-        cutoffs = generate_cutoffs(df, horizon=3, unit="D", seasonal_period=1, seasonal_unit="D", num_folds=3)
+        cutoffs = generate_cutoffs(df, horizon=3, frequency_unit="D", seasonal_period=1, seasonal_unit="D", num_folds=3)
         train_df = df[df["ds"] <= cutoffs[0]].set_index("ds")
         y_train = train_df[["y"]]
         X_train = train_df.drop(["y"], axis=1)

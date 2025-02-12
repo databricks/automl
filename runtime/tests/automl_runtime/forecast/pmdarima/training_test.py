@@ -218,7 +218,7 @@ class TestArimaEstimator(unittest.TestCase):
             )
             indices_to_drop = [5, 8]
             df_missing = pd.DataFrame({"ds": ds, "y": range(12)}).drop(indices_to_drop).reset_index(drop=True)
-            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency, frequency_quantity=1)
+            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency_unit=frequency, frequency_quantity=1)
             for index in indices_to_drop:
                 self.assertTrue(df_filled["y"][index] == df_filled["y"][index - 1])
             self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
@@ -232,7 +232,7 @@ class TestArimaEstimator(unittest.TestCase):
             )
             indices_to_drop = [5, 8]
             df_missing = pd.DataFrame({"ds": ds, "y": range(12), "x": range(12)}).drop(indices_to_drop).reset_index(drop=True)
-            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency=frequency, frequency_quantity=1)
+            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency_unit=frequency, frequency_quantity=1)
             for index in indices_to_drop:
                 self.assertTrue(df_filled["y"][index] == df_filled["y"][index - 1])
                 self.assertTrue(df_filled["x"][index] == df_filled["x"][index - 1])
@@ -245,22 +245,22 @@ class TestArimaEstimator(unittest.TestCase):
             ds = pd.date_range(start=start_ds, periods=12, freq=pd.DateOffset(**{'minutes': quantity}))
             indices_to_drop = [5, 8]
             df_missing = pd.DataFrame({"ds": ds, "y": range(12)}).drop(indices_to_drop).reset_index(drop=True)
-            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency='min', frequency_quantity=quantity)
+            df_filled = ArimaEstimator._fill_missing_time_steps(df_missing, frequency_unit='min', frequency_quantity=quantity)
             for index in indices_to_drop:
                 self.assertTrue(df_filled["y"][index] == df_filled["y"][index - 1])
             self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
 
     def test_validate_ds_freq_matched_frequency(self):
-        ArimaEstimator._validate_ds_freq(self.df, frequency='D', frequency_quantity=1)
-        ArimaEstimator._validate_ds_freq(self.df_monthly, frequency='month', frequency_quantity=1)
-        ArimaEstimator._validate_ds_freq(self.df_with_5_minute_interval, frequency='min', frequency_quantity=5)
-        ArimaEstimator._validate_ds_freq(self.df_with_10_minute_interval, frequency='min', frequency_quantity=10)
-        ArimaEstimator._validate_ds_freq(self.df_with_15_minute_interval, frequency='min', frequency_quantity=15)
-        ArimaEstimator._validate_ds_freq(self.df_with_30_minute_interval, frequency='min', frequency_quantity=30)
+        ArimaEstimator._validate_ds_freq(self.df, frequency_unit='D', frequency_quantity=1)
+        ArimaEstimator._validate_ds_freq(self.df_monthly, frequency_unit='month', frequency_quantity=1)
+        ArimaEstimator._validate_ds_freq(self.df_with_5_minute_interval, frequency_unit='min', frequency_quantity=5)
+        ArimaEstimator._validate_ds_freq(self.df_with_10_minute_interval, frequency_unit='min', frequency_quantity=10)
+        ArimaEstimator._validate_ds_freq(self.df_with_15_minute_interval, frequency_unit='min', frequency_quantity=15)
+        ArimaEstimator._validate_ds_freq(self.df_with_30_minute_interval, frequency_unit='min', frequency_quantity=30)
 
     def test_validate_ds_freq_unmatched_frequency(self):
         with pytest.raises(ValueError, match="includes different frequency"):
-            ArimaEstimator._validate_ds_freq(self.df, frequency='W', frequency_quantity=1)
+            ArimaEstimator._validate_ds_freq(self.df, frequency_unit='W', frequency_quantity=1)
         
         with pytest.raises(ValueError, match="includes different frequency"):
-            ArimaEstimator._validate_ds_freq(self.df_with_5_minute_interval, frequency='min', frequency_quantity=10)
+            ArimaEstimator._validate_ds_freq(self.df_with_5_minute_interval, frequency_unit='min', frequency_quantity=10)

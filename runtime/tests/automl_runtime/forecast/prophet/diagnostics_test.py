@@ -43,7 +43,7 @@ class TestDiagnostics(unittest.TestCase):
         cutoffs = generate_cutoffs(
             self.X,
             horizon=3,
-            unit="MS",
+            frequency_unit="MS",
             seasonal_period=1,
             seasonal_unit="D",
             num_folds=3,

@@ -42,7 +42,7 @@ class DeepARModel(ForecastModel):
     DeepAR mlflow model wrapper for forecasting.
     """
 
-    def __init__(self, model: PyTorchPredictor, horizon: int, frequency: str, frequency_quantity: int,
+    def __init__(self, model: PyTorchPredictor, horizon: int, frequency_unit: str, frequency_quantity: int,
                  num_samples: int,
                  target_col: str, time_col: str,
                  id_cols: Optional[List[str]] = None) -> None:
@@ -50,7 +50,7 @@ class DeepARModel(ForecastModel):
         Initialize the DeepAR mlflow Python model wrapper
         :param model: DeepAR model
         :param horizon: the number of periods to forecast forward
-        :param frequency: the frequency of the time series
+        :param frequency_unit: the frequency unit of the time series
         :param frequency_quantity: the frequency quantity of the time series
         :param num_samples: the number of samples to draw from the distribution
         :param target_col: the target column name
@@ -61,7 +61,7 @@ class DeepARModel(ForecastModel):
         super().__init__()
         self._model = model
         self._horizon = horizon
-        self._frequency = frequency
+        self._frequency_unit = frequency_unit
         self._frequency_quantity = frequency_quantity
         self._num_samples = num_samples
         self._target_col = target_col
@@ -130,7 +130,7 @@ class DeepARModel(ForecastModel):
 
         model_input_transformed = set_index_and_fill_missing_time_steps(model_input,
                                                                         self._time_col,
-                                                                        self._frequency,
+                                                                        self._frequency_unit,
                                                                         self._frequency_quantity,
                                                                         self._id_cols)
 

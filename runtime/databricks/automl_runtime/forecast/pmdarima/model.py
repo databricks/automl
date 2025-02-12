@@ -64,19 +64,19 @@ class AbstractArimaModel(ForecastModel):
         return ARIMA_CONDA_ENV
 
     @staticmethod
-    def _get_ds_indices(start_ds: pd.Timestamp, periods: int, frequency: str, frequency_quantity: int) -> pd.DatetimeIndex:
+    def _get_ds_indices(start_ds: pd.Timestamp, periods: int, frequency_unit: str, frequency_quantity: int) -> pd.DatetimeIndex:
         """
         Create a DatetimeIndex with specified starting time and frequency, whose length is the given periods.
         :param start_ds: the pd.Timestamp as the start of the DatetimeIndex.
         :param periods: the length of the DatetimeIndex.
-        :param frequency: the frequency of the DatetimeIndex.
+        :param frequency_unit: the frequency unit of the DatetimeIndex.
         :param frequency_quantity: the frequency quantity of the DatetimeIndex.
         :return: a DatetimeIndex.
         """
         ds_indices = pd.date_range(
             start=start_ds,
             periods=periods,
-            freq=pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency]) * frequency_quantity
+            freq=pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit]) * frequency_quantity
         )
         modified_start_ds = ds_indices.min()
         if start_ds != modified_start_ds:
@@ -90,14 +90,14 @@ class ArimaModel(AbstractArimaModel):
     ARIMA mlflow model wrapper for univariate forecasting.
     """
 
-    def __init__(self, pickled_model: bytes, horizon: int, frequency: str,
+    def __init__(self, pickled_model: bytes, horizon: int, frequency_unit: str,
                  frequency_quantity: int, start_ds: pd.Timestamp, end_ds: pd.Timestamp,
                  time_col: str, exogenous_cols: Optional[List[str]] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for ARIMA.
         :param pickled_model: the pickled ARIMA model as a bytes object.
         :param horizon: int number of periods to forecast forward.
-        :param frequency: the frequency of the time series
+        :param frequency_unit: the frequency unit of the time series
         :param frequency_quantity: the frequency quantity of the time series
         :param start_ds: the start time of training data
         :param end_ds: the end time of training data
@@ -108,7 +108,7 @@ class ArimaModel(AbstractArimaModel):
         super().__init__()
         self._pickled_model = pickled_model
         self._horizon = horizon
-        self._frequency = OFFSET_ALIAS_MAP[frequency]
+        self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
         self._frequency_quantity = frequency_quantity
         self._start_ds = pd.to_datetime(start_ds)
         self._end_ds = pd.to_datetime(end_ds)
@@ -160,7 +160,7 @@ class ArimaModel(AbstractArimaModel):
             start_time=self._start_ds,
             end_time=self._end_ds,
             horizon=horizon or self._horizon,
-            frequency=self._frequency,
+            frequency_unit=self._frequency_unit,
             frequency_quantity=self._frequency_quantity,
             include_history=include_history
         )
@@ -196,7 +196,7 @@ class ArimaModel(AbstractArimaModel):
             )
         # Check if the time has correct frequency
         consistency = df["ds"].apply(lambda x: 
-            is_frequency_consistency(self._start_ds, x, self._frequency, self._frequency_quantity)
+            is_frequency_consistency(self._start_ds, x, self._frequency_unit, self._frequency_quantity)
         ).all()
         if not consistency:
             raise MlflowException(
@@ -207,7 +207,7 @@ class ArimaModel(AbstractArimaModel):
             )
         preds_pds = []
         # Out-of-sample prediction if needed
-        horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency, self._frequency_quantity)
+        horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency_unit, self._frequency_quantity)
         if horizon > 0:
             X_future = df[df["ds"] > self._end_ds].set_index("ds")
             future_pd = self._forecast(
@@ -233,8 +233,8 @@ class ArimaModel(AbstractArimaModel):
         end_ds: pd.Timestamp = None,
         X: pd.DataFrame = None) -> pd.DataFrame:
         if start_ds and end_ds:
-            start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency, self._frequency_quantity)
-            end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency, self._frequency_quantity)
+            start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency_unit, self._frequency_quantity)
+            end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency_unit, self._frequency_quantity)
         else:
             start_ds = self._start_ds
             end_ds = self._end_ds
@@ -246,8 +246,8 @@ class ArimaModel(AbstractArimaModel):
             start=start_idx,
             end=end_idx,
             return_conf_int=True)
-        periods = calculate_period_differences(self._start_ds, end_ds, self._frequency, self._frequency_quantity) + 1
-        ds_indices = self._get_ds_indices(start_ds=self._start_ds, periods=periods, frequency=self._frequency, frequency_quantity=self._frequency_quantity)[start_idx:]
+        periods = calculate_period_differences(self._start_ds, end_ds, self._frequency_unit, self._frequency_quantity) + 1
+        ds_indices = self._get_ds_indices(start_ds=self._start_ds, periods=periods, frequency_unit=self._frequency_unit, frequency_quantity=self._frequency_quantity)[start_idx:]
         in_sample_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds_in_sample})
         in_sample_pd[["yhat_lower", "yhat_upper"]] = conf_in_sample
         return in_sample_pd
@@ -261,7 +261,7 @@ class ArimaModel(AbstractArimaModel):
             horizon,
             X=X,
             return_conf_int=True)
-        ds_indices = self._get_ds_indices(start_ds=self._end_ds, periods=horizon + 1, frequency=self._frequency, frequency_quantity=self._frequency_quantity)[1:]
+        ds_indices = self._get_ds_indices(start_ds=self._end_ds, periods=horizon + 1, frequency_unit=self._frequency_unit, frequency_quantity=self._frequency_quantity)[1:]
         preds_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds})
         preds_pd[["yhat_lower", "yhat_upper"]] = conf
         return preds_pd
@@ -272,14 +272,14 @@ class MultiSeriesArimaModel(AbstractArimaModel):
     ARIMA mlflow model wrapper for multivariate forecasting.
     """
 
-    def __init__(self, pickled_model_dict: Dict[Tuple, bytes], horizon: int, frequency: str, frequency_quantity: int,
+    def __init__(self, pickled_model_dict: Dict[Tuple, bytes], horizon: int, frequency_unit: str, frequency_quantity: int,
                  start_ds_dict: Dict[Tuple, pd.Timestamp], end_ds_dict: Dict[Tuple, pd.Timestamp],
                  time_col: str, id_cols: List[str], exogenous_cols: Optional[List[str]] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for multiseries ARIMA.
         :param pickled_model_dict: the dictionary of binarized ARIMA models for different time series.
         :param horizon: int number of periods to forecast forward.
-        :param frequency: the frequency of the time series
+        :param frequency_unit: the frequency unit of the time series
         :param frequency_quantity: the frequency quantity of the time series
         :param start_ds_dict: the dictionary of the starting time of each time series in training data.
         :param end_ds_dict: the dictionary of the end time of each time series in training data.
@@ -291,7 +291,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         super().__init__()
         self._pickled_models = pickled_model_dict
         self._horizon = horizon
-        self._frequency = frequency
+        self._frequency_unit = frequency_unit
         self._frequency_quantity = frequency_quantity
         self._starts = start_ds_dict
         self._ends = end_ds_dict
@@ -335,7 +335,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
             start_time=self._starts,
             end_time=self._ends,
             horizon=horizon,
-            frequency=self._frequency,
+            frequency_unit=self._frequency_unit,
             frequency_quantity=self._frequency_quantity,
             include_history=include_history,
             groups=groups,
@@ -367,7 +367,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         horizon: int,
         include_history: bool = True,
         df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
-        arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency, self._frequency_quantity,
+        arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency_unit, self._frequency_quantity,
                                            self._starts[id_], self._ends[id_], self._time_col, self._exogenous_cols)
         preds_df = arima_model_single_id.predict_timeseries(horizon, include_history, df)
         for id, col_name in zip(id_, self._id_cols):
@@ -408,7 +408,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         id_ = df["ts_id"].to_list()[0]
         arima_model_single_id = ArimaModel(self._pickled_models[id_],
                                            self._horizon,
-                                           self._frequency,
+                                           self._frequency_unit,
                                            self._frequency_quantity,
                                            self._starts[id_],
                                            self._ends[id_],

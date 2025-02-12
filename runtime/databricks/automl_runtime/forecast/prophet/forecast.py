@@ -38,7 +38,7 @@ class ProphetHyperParams(Enum):
 
 
 def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
-                         horizon: int, frequency: str, cutoffs: List[pd.Timestamp],
+                         horizon: int, frequency_unit: str, cutoffs: List[pd.Timestamp],
                          interval_width: int, primary_metric: str,
                          country_holidays: Optional[str] = None,
                          regressors = None, 
@@ -51,7 +51,7 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     :param history_pd: pd.DataFrame containing the history. Must have columns ds (date
             type) and y, the time series
     :param horizon: Forecast horizon_timedelta
-    :param frequency: Frequency of the time series
+    :param frequency_unit: Frequency unit of the time series
     :param frequency_quantity: the number of time units that make up a single period of the time series. For now, only 1/5/10/15/30 minutes, 1 hour, 1 day, 1 week, 1 month, 1 quarter, 1 year are supported.
     :param num_folds: Number of folds for cross validation
     :param interval_width: Width of the uncertainty intervals provided for the forecast
@@ -70,7 +70,7 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
             model.add_regressor(regressor)
 
     model.fit(history_pd, iter=200)
-    offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency]]
+    offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
     horizon_offset = pd.DateOffset(**offset_kwarg)*frequency_quantity*horizon
     # Evaluate Metrics
     df_cv = cross_validation(
@@ -155,7 +155,7 @@ class ProphetHyperoptEstimator(ABC):
             cutoffs = utils.generate_custom_cutoffs(
                 df.reset_index(drop=True),
                 horizon=validation_horizon,
-                unit=self._frequency_unit,
+                frequency_unit=self._frequency_unit,
                 split_cutoff=self._split_cutoff,
                 frequency_quantity=self._frequency_quantity,
             )
@@ -163,13 +163,13 @@ class ProphetHyperoptEstimator(ABC):
             cutoffs = utils.generate_cutoffs(
                 df.reset_index(drop=True),
                 horizon=validation_horizon,
-                unit=self._frequency_unit,
+                frequency_unit=self._frequency_unit,
                 num_folds=self._num_folds,
                 frequency_quantity=self._frequency_quantity,
             )
 
         train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=validation_horizon,
-                           frequency=self._frequency_unit, 
+                           frequency_unit=self._frequency_unit, 
                            frequency_quantity=self._frequency_quantity,
                            cutoffs=cutoffs,
                            interval_width=self._interval_width,

@@ -94,7 +94,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
-            frequency="d",
+            frequency_unit="d",
             frequency_quantity=1,
             num_samples=1,
             target_col=target_col,
@@ -139,7 +139,7 @@ class TestDeepARModel(unittest.TestCase):
             model=self.model,
             horizon=self.prediction_length,
             num_samples=1,
-            frequency="d",
+            frequency_unit="d",
             frequency_quantity=1,
             target_col=target_col,
             time_col=time_col,
@@ -187,7 +187,7 @@ class TestDeepARModel(unittest.TestCase):
             model=self.model,
             horizon=self.prediction_length,
             num_samples=1,
-            frequency="d",
+            frequency_unit="d",
             frequency_quantity=1,
             target_col=target_col,
             time_col=time_col,
@@ -234,7 +234,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
-            frequency="d",
+            frequency_unit="d",
             frequency_quantity=1,
             num_samples=1,
             target_col=target_col,
@@ -278,7 +278,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
-            frequency="MS",
+            frequency_unit="MS",
             frequency_quantity=1,
             num_samples=1,
             target_col=target_col,
@@ -321,7 +321,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
-            frequency="min",
+            frequency_unit="min",
             frequency_quantity=frequency_quantity,
             num_samples=1,
             target_col=target_col,
