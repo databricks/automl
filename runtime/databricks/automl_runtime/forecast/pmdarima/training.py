@@ -119,6 +119,7 @@ class ArimaEstimator:
                     best_result = result
                     best_metric = metric
             except Exception as e:
+                raise e
                 _logger.warning(f"Encountered an exception with seasonal_period={m}: {repr(e)}")
                 traceback.print_exc()
         if not best_result:
