@@ -211,6 +211,30 @@ class TestGenerateCutoffs(unittest.TestCase):
         cutoffs = generate_cutoffs(df, horizon=1, unit="YS", num_folds=3, seasonal_period=1)
         self.assertEqual([pd.Timestamp('2018-07-14 00:00:00'), pd.Timestamp('2019-07-14 00:00:00'), pd.Timestamp('2020-07-14 00:00:00')], cutoffs)
 
+    def test_generate_cutoffs_success_with_multiple_frequency_quantities(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01 00:00:00", end="2020-07-01 23:55:00", freq='5T'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_cutoffs(df, horizon=1, unit="min", num_folds=3, seasonal_period=1)
+        self.assertEqual([pd.Timestamp('2020-07-01 23:44:00'), pd.Timestamp('2020-07-01 23:49:00'), pd.Timestamp('2020-07-01 23:54:00')], cutoffs)
+
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01 00:00:00", end="2020-07-01 23:50:00", freq='10T'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_cutoffs(df, horizon=1, unit="min", num_folds=3, seasonal_period=1)
+        self.assertEqual([pd.Timestamp('2020-07-01 23:29:00'), pd.Timestamp('2020-07-01 23:39:00'), pd.Timestamp('2020-07-01 23:49:00')], cutoffs)
+
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01 00:00:00", end="2020-07-01 23:45:00", freq='15T'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_cutoffs(df, horizon=1, unit="min", num_folds=3, seasonal_period=1)
+        self.assertEqual([pd.Timestamp('2020-07-01 23:14:00'), pd.Timestamp('2020-07-01 23:29:00'), pd.Timestamp('2020-07-01 23:44:00')], cutoffs)
+
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01 00:00:00", end="2020-07-01 23:30:00", freq='30T'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_cutoffs(df, horizon=1, unit="min", num_folds=3, seasonal_period=1)
+        self.assertEqual([pd.Timestamp('2020-07-01 22:29:00'), pd.Timestamp('2020-07-01 22:59:00'), pd.Timestamp('2020-07-01 23:29:00')], cutoffs)
 
 class TestTestGenerateCustomCutoffs(unittest.TestCase):
 
@@ -267,6 +291,31 @@ class TestTestGenerateCustomCutoffs(unittest.TestCase):
         cutoffs = generate_custom_cutoffs(df, horizon=7, unit="YS", split_cutoff=pd.Timestamp('2012-07-14 00:00:00'))
         self.assertEqual([pd.Timestamp('2012-07-14 00:00:00'), pd.Timestamp('2013-07-14 00:00:00'), pd.Timestamp('2014-07-14 00:00:00')], cutoffs)
 
+    def test_generate_custom_cutoffs_success_with_multiple_frequency_quantities(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01 00:00:00", end="2020-07-01 23:55:00", freq='5T'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=1, unit="min", frequency_quantity=5, split_cutoff=pd.Timestamp('2020-07-01 23:45:00'))
+        self.assertEqual([pd.Timestamp('2020-07-01 23:45:00'), pd.Timestamp('2020-07-01 23:50:00')], cutoffs)
+
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01 00:00:00", end="2020-07-01 23:50:00", freq='10T'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=1, unit="min", frequency_quantity=10, split_cutoff=pd.Timestamp('2020-07-01 23:30:00'))
+        self.assertEqual([pd.Timestamp('2020-07-01 23:30:00'), pd.Timestamp('2020-07-01 23:40:00')], cutoffs)
+
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01 00:00:00", end="2020-07-01 23:45:00", freq='15T'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=1, unit="min", frequency_quantity=15, split_cutoff=pd.Timestamp('2020-07-01 23:15:00'))
+        self.assertEqual([pd.Timestamp('2020-07-01 23:15:00'), pd.Timestamp('2020-07-01 23:30:00')], cutoffs)
+
+        df = pd.DataFrame(
+            pd.date_range(start="2020-07-01 00:00:00", end="2020-07-01 23:30:00", freq='30T'), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=1, unit="min", frequency_quantity=30, split_cutoff=pd.Timestamp('2020-07-01 23:00:00'))
+        self.assertEqual([pd.Timestamp('2020-07-01 23:00:00')], cutoffs)
+
     def test_generate_custom_cutoffs_success_with_small_gaps(self):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-01", periods=30, freq='3d'), columns=["ds"]
@@ -321,6 +370,17 @@ class TestCalculatePeriodsAndFrequency(unittest.TestCase):
             x.start_time, x.end_time, 'day', 1
         ), axis=1)
         self.assertTrue((periods == pd.Series([118, 151, 0])).all())
+    
+    def test_calculate_period_differences_with_frequency_quantity(self):
+        for frequency_quantity in [1, 5, 10, 15, 30]:
+            df = pd.DataFrame({
+                'start_time': pd.date_range(start="2020-07-01 00:00:00", periods=10, freq=f'{frequency_quantity}T'),
+                'end_time': pd.date_range(start="2020-07-01 04:00:00", periods=10, freq=f'{frequency_quantity}T')
+            })
+            periods = df.apply(lambda x: calculate_period_differences(
+                x.start_time, x.end_time, 'min', frequency_quantity
+            ), axis=1)
+            self.assertTrue((periods == pd.Series([240//frequency_quantity]*10)).all())
 
     def test_frequency_consistency(self):
         start_time = pd.Series(
@@ -338,6 +398,17 @@ class TestCalculatePeriodsAndFrequency(unittest.TestCase):
         self.assertTrue(end_time.apply(
             lambda x: is_frequency_consistency(start_scalar, x, 'month', 1)
         ).all())
+
+    def test_frequency_consistency_with_frequency_quantity(self):
+        for frequency_quantity in [1, 5, 10, 15, 30]:
+            start_time = pd.date_range(start="2020-07-01 00:00:00", periods=10, freq=f'{frequency_quantity}T')
+            end_time = pd.date_range(start="2020-07-01 04:00:00", periods=10, freq=f'{frequency_quantity}T')
+            self.assertTrue(start_time.to_series().apply(
+                lambda x: is_frequency_consistency(x, end_time[0], 'min', frequency_quantity)
+            ).all())
+            self.assertTrue(end_time.to_series().apply(
+                lambda x: is_frequency_consistency(start_time[0], x, 'min', frequency_quantity)
+            ).all())
 
 
 class TestMakeFutureDataFrame(unittest.TestCase):
@@ -385,26 +456,49 @@ class TestMakeFutureDataFrame(unittest.TestCase):
             expected_columns = { "test_date" }
             self.assertTrue(expected_columns.issubset(set(future_df.columns)))
 
+    def test_make_single_future_dataframe_with_different_frequency_quantities(self):
+        for frequency_quantity in [1, 5, 10, 15, 30]:
+            start_time = pd.to_datetime('2022-01-01')
+            end_time = start_time + pd.DateOffset(**{'minutes': 1}) * frequency_quantity
+            future_df = make_single_future_dataframe(
+                start_time=start_time,
+                end_time=end_time,
+                horizon=1,
+                frequency="min",
+                frequency_quantity=frequency_quantity,
+                include_history=True,
+                column_name="test_date"
+            )
+            self.assertEqual(len(future_df), 3)
+            expected_columns = { "test_date" }
+            self.assertTrue(expected_columns.issubset(set(future_df.columns)))
+
     @parameterized.expand([
-        (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), None, None, { "ds" }, ),
-        (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), ["id"], [("1", )], { "ds", "id" }),
+        (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), None, None, { "ds" }, "d", 1),
+        (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), ["id"], [("1", )], { "ds", "id" }, "d", 1),
         (pd.to_datetime('2022-01-01'), pd.to_datetime('2022-01-05'), ["id1", "id2"],
-         [("1", 1)], { "ds", "id1", "id2" }),
+         [("1", 1)], { "ds", "id1", "id2" }, "d", 1),
         ({("1", ): pd.to_datetime('2022-01-01'), ("2", ): pd.to_datetime('2022-01-01')},
-         pd.to_datetime('2022-01-02'), ["id"], [("1", ), ("2", )], { "ds", "id" }),
+         pd.to_datetime('2022-01-02'), ["id"], [("1", ), ("2", )], { "ds", "id" }, "d", 1),
         ({("1", ): pd.to_datetime('2022-01-01'), ("2", ): pd.to_datetime('2022-01-01')},
          {("1", ): pd.to_datetime('2022-01-02'), ("2", ): pd.to_datetime('2022-01-02')},
-         ["id"], [("1", ), ("2", )], { "ds", "id" }),
+         ["id"], [("1", ), ("2", )], { "ds", "id" }, "d", 1),
+        (pd.Timestamp('2022-01-01 00:00:00'), pd.Timestamp('2022-01-01 00:20:00'), None, None, { "ds" }, "min", 5),
+        (pd.Timestamp('2022-01-01 00:00:00'), pd.Timestamp('2022-01-01 00:40:00'), None, None, { "ds" }, "min", 10),
+        (pd.Timestamp('2022-01-01 00:00:00'), pd.Timestamp('2022-01-01 01:00:00'), None, None, { "ds" }, "min", 15),
+        (pd.Timestamp('2022-01-01 00:00:00'), pd.Timestamp('2022-01-01 02:00:00'), None, None, { "ds" }, "min", 30),
     ])
     def test_make_future_dataframe(self, start_time, end_time,
                                    identity_column_names,
-                                   groups, expected_columns):
+                                   groups, expected_columns,
+                                   frequency_unit,
+                                   frequency_quantity):
         future_df = make_future_dataframe(
             start_time=start_time,
             end_time=end_time,
             horizon=1,
-            frequency="d",
-            frequency_quantity=1,
+            frequency=frequency_unit,
+            frequency_quantity=frequency_quantity,
             groups=groups,
             identity_column_names=identity_column_names,
         )
