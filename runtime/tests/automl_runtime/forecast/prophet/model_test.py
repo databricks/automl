@@ -81,7 +81,7 @@ class TestProphetModel(BaseProphetModelTest):
         cls.model = model_from_json(cls.model_json)
 
     def test_model_save_and_load(self):
-        prophet_model = ProphetModel(self.model_json, 1, Frequency(frequency_unit="D", frequency_quantity=1), "ds")
+        prophet_model = ProphetModel(self.model_json, 1, Frequency(frequency_unit="d", frequency_quantity=1), "ds")
 
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
@@ -130,7 +130,7 @@ class TestProphetModel(BaseProphetModelTest):
                              f" Expect {expected_time}, but get {future_df.iloc[-1]['ds']}")
 
     def test_predict_success_datetime_date(self):
-        prophet_model = ProphetModel(self.model_json, 1, Frequency(frequency_unit="D", frequency_quantity=1), "ds")
+        prophet_model = ProphetModel(self.model_json, 1, Frequency(frequency_unit="d", frequency_quantity=1), "ds")
         test_df = pd.DataFrame(
             {"ds": [datetime.date(2020, 10, 8), datetime.date(2020, 12, 10)]}
         )
@@ -142,7 +142,7 @@ class TestProphetModel(BaseProphetModelTest):
         )  # check the input dataframe is unchanged
 
     def test_predict_success_string(self):
-        prophet_model = ProphetModel(self.model_json, 1, Frequency(frequency_unit="D", frequency_quantity=1), "ds")
+        prophet_model = ProphetModel(self.model_json, 1, Frequency(frequency_unit="d", frequency_quantity=1), "ds")
         test_df = pd.DataFrame({"ds": ["2020-10-08", "2020-12-10"]})
         expected_test_df = test_df.copy()
         yhat = prophet_model.predict(None, test_df)
@@ -163,7 +163,7 @@ class TestProphetModel(BaseProphetModelTest):
             )  # check the input dataframe is unchanged
 
     def test_validate_predict_cols(self):
-        prophet_model = ProphetModel(self.model_json, 1, Frequency(frequency_unit="D", frequency_quantity=1), "time")
+        prophet_model = ProphetModel(self.model_json, 1, Frequency(frequency_unit="d", frequency_quantity=1), "time")
         test_df = pd.DataFrame(
             {
                 "date": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")],

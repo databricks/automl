@@ -418,7 +418,7 @@ class TestMakeFutureDataFrame(unittest.TestCase):
             start_time=pd.to_datetime('2022-01-01'),
             end_time=pd.to_datetime('2022-01-04'),
             horizon=1,
-            frequency=Frequency(frequency_unit="D", frequency_quantity=1),
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             include_history=False,
             column_name="test_date"
         )
@@ -430,7 +430,7 @@ class TestMakeFutureDataFrame(unittest.TestCase):
             start_time=pd.to_datetime('2022-01-01'),
             end_time=pd.to_datetime('2022-01-04'),
             horizon=1,
-            frequency=Frequency(frequency_unit="D", frequency_quantity=1),
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             include_history=True,
             column_name="test_date"
         )

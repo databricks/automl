@@ -227,7 +227,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
     def test_horizon_truncation(self, mock_partial, mock_trials, mock_fmin):
         hyperopt_estim = ProphetHyperoptEstimator(
             horizon=100,
-            frequency=Frequency(frequency_unit="D", frequency_quantity=1),
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             metric="smape",
             interval_width=0.8,
             country_holidays="US",
@@ -252,7 +252,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         num_folds = 2
         hyperopt_estim = ProphetHyperoptEstimator(
             horizon=horizon,
-            frequency=Frequency(frequency_unit="D", frequency_quantity=1),
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             metric="smape",
             interval_width=0.8,
             country_holidays="US",
