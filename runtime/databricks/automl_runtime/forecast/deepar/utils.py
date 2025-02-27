@@ -33,7 +33,7 @@ def validate_and_generate_index(df: pd.DataFrame,
     :return: A complete time index covering the full range of the dataset.
     :raises ValueError: If the day-of-month pattern is inconsistent for "MS" frequency.
     """
-    if frequency.frequency_unit.upper() != "MS":
+    if not frequency.is_monthly():
         return pd.date_range(df[time_col].min(), df[time_col].max(), freq=f"{frequency.frequency_quantity}{frequency.frequency_unit}")
 
     df[time_col] = pd.to_datetime(df[time_col])  # Ensure datetime format
