@@ -26,7 +26,7 @@ class Frequency:
         frequency_quantity (int): The number of frequency_units in the period.
     
     Valid frequency units: source of truth is OFFSET_ALIAS_MAP in forecast.__init__.py
-        - Weeks: "W"
+        - Weeks: "W", "W-SUN", "W-MON", "W-TUE", "W-WED", "W-THU", "W-FRI", "W-SAT" These are aliases for "W", used for DeepAR only
         - Days: "d", "D", "days", "day"
         - Hours: "hours", "hour", "hr", "h", "H
         - Minutes: "m", "minute", "min", "minutes", "T"
@@ -41,7 +41,8 @@ class Frequency:
     """
 
     VALID_FREQUENCY_UNITS: ClassVar[Set[str]] = {
-        "W", "d", "D", "days", "day", "hours", "hour", "hr", "h", "H",
+        "W", "W-SUN", "W-MON", "W-TUE", "W-WED", "W-THU", "W-FRI", "W-SAT",
+        "d", "D", "days", "day", "hours", "hour", "hr", "h", "H",
         "m", "minute", "min", "minutes", "T", "S", "seconds",
         "sec", "second", "M", "MS", "month", "months", "Q", "QS", "quarter",
         "quarters", "Y", "YS", "year", "years"

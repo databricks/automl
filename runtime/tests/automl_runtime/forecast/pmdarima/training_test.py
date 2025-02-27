@@ -243,8 +243,8 @@ class TestArimaEstimator(unittest.TestCase):
             self.assertEqual(ds.to_list(), df_filled["ds"].to_list())
 
     def test_validate_ds_freq_matched_frequency(self):
-        ArimaEstimator._validate_ds_freq(self.df, frequency_unit='D', frequency_quantity=1)
-        ArimaEstimator._validate_ds_freq(self.df_monthly, frequency_unit='month', frequency_quantity=1)
+        ArimaEstimator._validate_ds_freq(self.df, frequency=Frequency(frequency_unit='D', frequency_quantity=1))
+        ArimaEstimator._validate_ds_freq(self.df_monthly, frequency=Frequency(frequency_unit='month', frequency_quantity=1))
         ArimaEstimator._validate_ds_freq(self.df_with_5_minute_interval, frequency=Frequency(frequency_unit="min", frequency_quantity=5))
         ArimaEstimator._validate_ds_freq(self.df_with_10_minute_interval, frequency=Frequency(frequency_unit="min", frequency_quantity=10))
         ArimaEstimator._validate_ds_freq(self.df_with_15_minute_interval, frequency=Frequency(frequency_unit="min", frequency_quantity=15))
@@ -255,4 +255,4 @@ class TestArimaEstimator(unittest.TestCase):
             ArimaEstimator._validate_ds_freq(self.df, frequency=Frequency(frequency_unit="W", frequency_quantity=1))
         
         with pytest.raises(ValueError, match="includes different frequency"):
-            ArimaEstimator._validate_ds_freq(self.df_with_5_minute_interval, frequency_unit='min', frequency_quantity=10)
+            ArimaEstimator._validate_ds_freq(self.df_with_5_minute_interval, frequency=Frequency(frequency_unit='min', frequency_quantity=10))

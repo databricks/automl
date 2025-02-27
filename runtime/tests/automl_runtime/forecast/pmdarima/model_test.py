@@ -43,7 +43,7 @@ class TestArimaModel(unittest.TestCase):
         self.horizon = 1
         self.freq = 'W'
         self.frequency_quantity=1
-        dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency_unit=self.freq, frequency_quantity=self.frequency_quantity)
+        dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency=Frequency(frequency_unit=self.freq, frequency_quantity=self.frequency_quantity))
         self.df = pd.concat([
             pd.Series(dates, name='date'),
             pd.Series(range(self.num_rows), name="y")
@@ -172,7 +172,7 @@ class TestArimaModelWithExogenous(unittest.TestCase):
         self.horizon = 1
         self.freq = 'W'
         self.frequency_quantity = 1
-        dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency_unit=self.freq, frequency_quantity=self.frequency_quantity)
+        dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency=Frequency(frequency_unit=self.freq, frequency_quantity=self.frequency_quantity))
         self.df = pd.concat([
             pd.Series(dates, name='date'),
             pd.Series(range(self.num_rows), name="y"),
@@ -422,7 +422,7 @@ class TestAbstractArimaModel(unittest.TestCase):
         ds_indices = AbstractArimaModel._get_ds_indices(
             start_ds=pd.Timestamp("2021-12-10 09:23"),
             periods=10,
-            frequency=Frequency(frequency_unit="h", frequency_quantity=1))
+            frequency=Frequency(frequency_unit="H", frequency_quantity=1))
         pd.testing.assert_index_equal(expected_ds, ds_indices)
 
 
