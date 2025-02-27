@@ -85,7 +85,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
 
     # We need to adjust the frequency_unit for pd.date_range if it is weekly,
     # otherwise it would always be "W-SUN"
-    if frequency.frequency_unit.upper() == "W":
+    if frequency.is_weekly():
         weekday_name = total_min.strftime("%a").upper() # e.g., "FRI"
         adjusted_frequency = Frequency(frequency_unit=f"W-{weekday_name}", frequency_quantity=frequency.frequency_quantity)
     else:
@@ -110,7 +110,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
     # Fill in missing time steps between the min and max time steps
     df = df.reindex(valid_index)
 
-    if frequency.frequency_unit.upper() == "MS":
+    if frequency.is_monthly():
         # Truncate the day of month to avoid issues with pandas frequency check
         df = df.to_period("M")
 

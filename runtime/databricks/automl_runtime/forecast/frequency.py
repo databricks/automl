@@ -54,6 +54,9 @@ class Frequency:
     frequency_unit: str
     frequency_quantity: int
 
+    def __str__(self):
+        return f"{self.frequency_quantity}{self.frequency_unit}"
+
     def __post_init__(self):
         if self.frequency_unit not in self.VALID_FREQUENCY_UNITS:
             raise ValueError(f"Invalid frequency unit: {self.frequency_unit}")
@@ -71,3 +74,26 @@ class Frequency:
                     "Only 1 is allowed for this unit."
                 )
 
+    def is_second(self) -> bool:
+        return self.frequency_unit in {"S", "seconds", "sec", "second"}        
+
+    def is_minute(self) -> bool:
+        return self.frequency_unit in {"m", "minute", "min", "minutes", "T"}
+
+    def is_hourly(self) -> bool:
+        return self.frequency_unit in {"hours", "hour", "hr", "h", "H"}        
+    
+    def is_daily(self) -> bool:
+        return self.frequency_unit in {"d", "D", "days", "day"}
+
+    def is_weekly(self) -> bool:
+        return self.frequency_unit in {"W", "W-SUN", "W-MON", "W-TUE", "W-WED", "W-THU", "W-FRI", "W-SAT"}
+    
+    def is_monthly(self) -> bool:
+        return self.frequency_unit in {"M", "MS", "month", "months"}
+    
+    def is_quarterly(self) -> bool:
+        return self.frequency_unit in {"Q", "QS", "quarter", "quarters"}
+    
+    def is_yearly(self) -> bool:
+        return self.frequency_unit in {"Y", "YS", "year", "years"}

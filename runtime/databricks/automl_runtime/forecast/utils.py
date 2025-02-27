@@ -147,7 +147,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, frequency: Frequency,
     period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
 
     # avoid non-integer months, quaters ands years.
-    if frequency.frequency_unit in NON_DAILY_OFFSET_ALIAS:
+    if frequency.is_monthly() or frequency.is_quarterly() or frequency.is_yearly():
         period = int(period)
         period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency.frequency_unit]) * frequency.frequency_quantity * period
     else:

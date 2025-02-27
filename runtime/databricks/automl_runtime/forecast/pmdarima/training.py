@@ -89,7 +89,7 @@ class ArimaEstimator:
             try:
                 # this check mirrors the the default behavior by prophet
                 if history_periods < 2 * m:
-                    _logger.warning(f"Skipping seasonal_period={m} ({self._frequency.frequency_quantity}{self._frequency.frequency_unit}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_periods} {self._frequency.frequency_quantity}{self._frequency.frequency_unit}""")
+                    _logger.warning(f"Skipping seasonal_period={m} ({self._frequency}). Dataframe timestamps must span at least two seasonality periods, but only spans {history_periods} {self._frequency}""")
                     continue
                 # Prophet also rejects the seasonality periods if the seasonality period timedelta is less than the shortest timedelta in the dataframe.
                 # However, this cannot happen in ARIMA because _fill_missing_time_steps imputes values for each _frequency_unit,
