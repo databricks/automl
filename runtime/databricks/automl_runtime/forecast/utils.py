@@ -16,7 +16,7 @@
 import logging
 from typing import Dict, List, Optional, Tuple, Union
 from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP,\
-    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS, OFFSET_ALIAS_MAP, PERIOD_ALIAS_MAP
+    QUATERLY_OFFSET_ALIAS, OFFSET_ALIAS_MAP, PERIOD_ALIAS_MAP
 from databricks.automl_runtime.forecast.frequency import Frequency
 
 import pandas as pd
