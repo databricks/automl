@@ -16,12 +16,12 @@
 from typing import List, Optional
 
 import pandas as pd
+from databricks.automl_runtime.forecast.frequency import Frequency
 
 
 def validate_and_generate_index(df: pd.DataFrame, 
                                 time_col: str, 
-                                frequency_unit: str, 
-                                frequency_quantity: int):
+                                frequency: Frequency):
     """
     Generate a complete time index for the given DataFrame based on the specified frequency.
     - Ensures the time column is in datetime format.
@@ -29,13 +29,12 @@ def validate_and_generate_index(df: pd.DataFrame,
     - Generates a new time index from the minimum to the maximum timestamp in the data.
     :param df: The input DataFrame containing the time column.
     :param time_col: The name of the time column.
-    :param frequency_unit: The frequency unit of the time series.
-    :param frequency_quantity: The frequency quantity of the time series.
+    :param frequency: The frequency of the time series.
     :return: A complete time index covering the full range of the dataset.
     :raises ValueError: If the day-of-month pattern is inconsistent for "MS" frequency.
     """
-    if frequency_unit.upper() != "MS":
-        return pd.date_range(df[time_col].min(), df[time_col].max(), freq=f"{frequency_quantity}{frequency_unit}")
+    if frequency.frequency_unit.upper() != "MS":
+        return pd.date_range(df[time_col].min(), df[time_col].max(), freq=f"{frequency.frequency_quantity}{frequency.frequency_unit}")
 
     df[time_col] = pd.to_datetime(df[time_col])  # Ensure datetime format
 
@@ -67,8 +66,7 @@ def validate_and_generate_index(df: pd.DataFrame,
     return new_index_full
 
 def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
-                                          frequency_unit: str,
-                                          frequency_quantity: int,
+                                          frequency: Frequency,
                                           id_cols: Optional[List[str]] = None):
     """
     Transform the input dataframe to an acceptable format for the GluonTS library.
@@ -78,8 +76,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
 
     :param df: the input dataframe that contains time_col
     :param time_col: time column name
-    :param frequency_unit: the frequency unit of the time series
-    :param frequency_quantity: the frequency quantity of the time series
+    :param frequency: the frequency of the time series
     :param id_cols: the column names of the identity columns for multi-series time series; None for single series
     :return: single-series - transformed dataframe;
              multi-series - dictionary of transformed dataframes, each key is the (concatenated) id of the time series
@@ -88,11 +85,13 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
 
     # We need to adjust the frequency_unit for pd.date_range if it is weekly,
     # otherwise it would always be "W-SUN"
-    if frequency_unit.upper() == "W":
+    if frequency.frequency_unit.upper() == "W":
         weekday_name = total_min.strftime("%a").upper() # e.g., "FRI"
-        frequency_unit = f"W-{weekday_name}"
+        adjusted_frequency = Frequency(frequency_unit=f"W-{weekday_name}", frequency_quantity=frequency.frequency_quantity)
+    else:
+        adjusted_frequency = Frequency(frequency_unit=frequency.frequency_unit, frequency_quantity=frequency.frequency_quantity)
 
-    valid_index = validate_and_generate_index(df=df, time_col=time_col, frequency_unit=frequency_unit, frequency_quantity=frequency_quantity)
+    valid_index = validate_and_generate_index(df=df, time_col=time_col, frequency=adjusted_frequency)
 
     if id_cols is not None:
         df_dict = {}
@@ -111,7 +110,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
     # Fill in missing time steps between the min and max time steps
     df = df.reindex(valid_index)
 
-    if frequency_unit.upper() == "MS":
+    if frequency.frequency_unit.upper() == "MS":
         # Truncate the day of month to avoid issues with pandas frequency check
         df = df.to_period("M")
 

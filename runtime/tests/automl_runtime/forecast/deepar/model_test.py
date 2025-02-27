@@ -25,6 +25,7 @@ from gluonts.dataset.field_names import FieldName
 from gluonts.transform import InstanceSplitter, TestSplitSampler
 from gluonts.torch.model.predictor import PyTorchPredictor
 
+from databricks.automl_runtime.forecast.frequency import Frequency
 from databricks.automl_runtime.forecast.deepar.model import (
     DeepARModel, 
     mlflow_deepar_log_model, 
@@ -94,8 +95,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
-            frequency_unit="d",
-            frequency_quantity=1,
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             num_samples=1,
             target_col=target_col,
             time_col=time_col,
@@ -139,8 +139,7 @@ class TestDeepARModel(unittest.TestCase):
             model=self.model,
             horizon=self.prediction_length,
             num_samples=1,
-            frequency_unit="d",
-            frequency_quantity=1,
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             target_col=target_col,
             time_col=time_col,
             id_cols=[id_col],
@@ -187,8 +186,7 @@ class TestDeepARModel(unittest.TestCase):
             model=self.model,
             horizon=self.prediction_length,
             num_samples=1,
-            frequency_unit="d",
-            frequency_quantity=1,
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             target_col=target_col,
             time_col=time_col,
             id_cols=id_cols,
@@ -234,8 +232,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
-            frequency_unit="d",
-            frequency_quantity=1,
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             num_samples=1,
             target_col=target_col,
             time_col=time_col,
@@ -278,8 +275,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
-            frequency_unit="MS",
-            frequency_quantity=1,
+            frequency=Frequency(frequency_unit="MS", frequency_quantity=1),
             num_samples=1,
             target_col=target_col,
             time_col=time_col,
@@ -321,8 +317,7 @@ class TestDeepARModel(unittest.TestCase):
         deepar_model = DeepARModel(
             model=self.model,
             horizon=self.prediction_length,
-            frequency_unit="min",
-            frequency_quantity=frequency_quantity,
+            frequency=Frequency(frequency_unit="min", frequency_quantity=frequency_quantity),
             num_samples=1,
             target_col=target_col,
             time_col=time_col,

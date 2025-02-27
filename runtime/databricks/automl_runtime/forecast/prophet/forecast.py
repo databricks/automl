@@ -28,6 +28,7 @@ from hyperopt import fmin, Trials, SparkTrials
 
 from databricks.automl_runtime.forecast.prophet.diagnostics import cross_validation
 from databricks.automl_runtime.forecast import utils, OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
+from databricks.automl_runtime.forecast.frequency import Frequency
 
 
 class ProphetHyperParams(Enum):
@@ -38,11 +39,10 @@ class ProphetHyperParams(Enum):
 
 
 def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
-                         horizon: int, frequency_unit: str, cutoffs: List[pd.Timestamp],
+                         horizon: int, frequency: Frequency, cutoffs: List[pd.Timestamp],
                          interval_width: int, primary_metric: str,
                          country_holidays: Optional[str] = None,
                          regressors = None, 
-                         frequency_quantity: int = 1,
                          **prophet_kwargs) -> Dict[str, Any]:
     """
     Training function for hyperparameter tuning with hyperopt
@@ -51,8 +51,7 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
     :param history_pd: pd.DataFrame containing the history. Must have columns ds (date
             type) and y, the time series
     :param horizon: Forecast horizon_timedelta
-    :param frequency_unit: Frequency unit of the time series
-    :param frequency_quantity: the number of time units that make up a single period of the time series. For now, only 1/5/10/15/30 minutes, 1 hour, 1 day, 1 week, 1 month, 1 quarter, 1 year are supported.
+    :param frequency: Frequency of the time series
     :param num_folds: Number of folds for cross validation
     :param interval_width: Width of the uncertainty intervals provided for the forecast
     :param primary_metric: Metric that will be optimized across trials
@@ -70,8 +69,8 @@ def _prophet_fit_predict(params: Dict[str, Any], history_pd: pd.DataFrame,
             model.add_regressor(regressor)
 
     model.fit(history_pd, iter=200)
-    offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
-    horizon_offset = pd.DateOffset(**offset_kwarg)*frequency_quantity*horizon
+    offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[frequency.frequency_unit]]
+    horizon_offset = pd.DateOffset(**offset_kwarg) * frequency.frequency_quantity * horizon
     # Evaluate Metrics
     df_cv = cross_validation(
         model, horizon=horizon_offset, cutoffs=cutoffs, disable_tqdm=True
@@ -89,20 +88,19 @@ class ProphetHyperoptEstimator(ABC):
     """
     SUPPORTED_METRICS = ["mse", "rmse", "mae", "mape", "mdape", "smape", "coverage"]
 
-    def __init__(self, horizon: int, frequency_unit: str, metric: str, interval_width: int,
+    def __init__(self, horizon: int, frequency: Frequency, metric: str, interval_width: int,
                  country_holidays: str, search_space: Dict[str, Any],
                  algo=hyperopt.tpe.suggest, num_folds: int = 5,
                  max_eval: int = 10, trial_timeout: int = None,
                  random_state: int = 0, is_parallel: bool = True,
                  regressors = None, 
                  split_cutoff: Optional[pd.Timestamp] = None, 
-                 frequency_quantity: int = 1,
                  **prophet_kwargs) -> None:
         """
         Initialization
 
         :param horizon: Number of periods to forecast forward
-        :param frequency_unit: Frequency of the time series
+        :param frequency: Frequency of the time series
         :param metric: Metric that will be optimized across trials
         :param interval_width: Width of the uncertainty intervals provided for the forecast
         :param country_holidays: Built-in holidays for the specified country
@@ -123,8 +121,7 @@ class ProphetHyperoptEstimator(ABC):
             `The Prophet source code <https://github.com/facebook/prophet/blob/master/python/prophet/forecaster.py>`_.
         """
         self._horizon = horizon
-        self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
-        self._frequency_quantity = frequency_quantity
+        self._frequency = Frequency(frequency_unit=OFFSET_ALIAS_MAP[frequency.frequency_unit], frequency_quantity=frequency.frequency_quantity)
         self._metric = metric
         self._interval_width = interval_width
         self._country_holidays = country_holidays
@@ -150,27 +147,24 @@ class ProphetHyperoptEstimator(ABC):
 
         seasonality_mode = ["additive", "multiplicative"]
 
-        validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency_unit, self._frequency_quantity)
+        validation_horizon = utils.get_validation_horizon(df, self._horizon, self._frequency)
         if self._split_cutoff:
             cutoffs = utils.generate_custom_cutoffs(
                 df.reset_index(drop=True),
                 horizon=validation_horizon,
-                frequency_unit=self._frequency_unit,
+                frequency=self._frequency,
                 split_cutoff=self._split_cutoff,
-                frequency_quantity=self._frequency_quantity,
             )
         else:
             cutoffs = utils.generate_cutoffs(
                 df.reset_index(drop=True),
                 horizon=validation_horizon,
-                frequency_unit=self._frequency_unit,
+                frequency=self._frequency,
                 num_folds=self._num_folds,
-                frequency_quantity=self._frequency_quantity,
             )
 
         train_fn = partial(_prophet_fit_predict, history_pd=df, horizon=validation_horizon,
-                           frequency_unit=self._frequency_unit, 
-                           frequency_quantity=self._frequency_quantity,
+                           frequency=self._frequency, 
                            cutoffs=cutoffs,
                            interval_width=self._interval_width,
                            primary_metric=self._metric, country_holidays=self._country_holidays,

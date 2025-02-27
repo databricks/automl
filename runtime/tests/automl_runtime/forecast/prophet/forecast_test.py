@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 from hyperopt import hp
 
+from databricks.automl_runtime.forecast.frequency import Frequency
 from databricks.automl_runtime.forecast.prophet.forecast import ProphetHyperoptEstimator
 
 
@@ -79,7 +80,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
     def test_sequential_training(self):
         hyperopt_estim = ProphetHyperoptEstimator(
             horizon=1,
-            frequency_unit="d",
+            frequency=Frequency(frequency_unit="d", frequency_quantity=1),
             metric="smape",
             interval_width=0.8,
             country_holidays="US",
@@ -111,7 +112,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         )
         for freq, df in [['MS', self.df_string_monthly_time]]:
             hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
-                                                    frequency_unit=freq,
+                                                    frequency=Frequency(frequency_unit=freq, frequency_quantity=1),
                                                     metric="smape",
                                                     interval_width=0.8,
                                                     country_holidays="US",
@@ -143,8 +144,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                                                        [self.df_with_15_minute_interval, 15, "min"],
                                                        [self.df_with_30_minute_interval, 30, "min"]]:
             hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
-                                                    frequency_unit=frequency_unit,
-                                                    frequency_quantity=frequency_quantity,
+                                                    frequency=Frequency(frequency_unit=frequency_unit, frequency_quantity=frequency_quantity),
                                                     metric="smape",
                                                     interval_width=0.8,
                                                     country_holidays="US",
@@ -174,7 +174,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
             pd.Series(np.random.randn(self.num_rows), name="f2"),
         ], axis=1)
         hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
-                                                  frequency_unit="d",
+                                                  frequency=Frequency(frequency_unit="d", frequency_quantity=1),
                                                   metric="smape",
                                                   interval_width=0.8,
                                                   country_holidays="US",
@@ -198,7 +198,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
                        ['Y', self.df_string_annually_time, '2021-01-15 00:00:00', 5e-1]]
         for freq, df, split_cutoff, delta in test_spaces:
             hyperopt_estim = ProphetHyperoptEstimator(horizon=1,
-                                                  frequency_unit=freq,
+                                                  frequency=Frequency(frequency_unit=freq, frequency_quantity=1),
                                                   metric="smape",
                                                   interval_width=0.8,
                                                   country_holidays="US",
@@ -227,7 +227,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
     def test_horizon_truncation(self, mock_partial, mock_trials, mock_fmin):
         hyperopt_estim = ProphetHyperoptEstimator(
             horizon=100,
-            frequency_unit="d",
+            frequency=Frequency(frequency_unit="D", frequency_quantity=1),
             metric="smape",
             interval_width=0.8,
             country_holidays="US",
@@ -252,7 +252,7 @@ class TestProphetHyperoptEstimator(unittest.TestCase):
         num_folds = 2
         hyperopt_estim = ProphetHyperoptEstimator(
             horizon=horizon,
-            frequency_unit="d",
+            frequency=Frequency(frequency_unit="D", frequency_quantity=1),
             metric="smape",
             interval_width=0.8,
             country_holidays="US",

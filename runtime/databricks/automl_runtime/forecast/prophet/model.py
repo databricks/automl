@@ -24,6 +24,7 @@ from mlflow.models.signature import ModelSignature
 from mlflow.utils.environment import _mlflow_conda_env
 
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
+from databricks.automl_runtime.forecast.frequency import Frequency
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime import version
 from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe
@@ -48,24 +49,21 @@ class ProphetModel(ForecastModel):
     def __init__(self, 
                  model_json: Union[Dict[Tuple, str], str], 
                  horizon: int, 
-                 frequency_unit: str, 
-                 frequency_quantity: int,
+                 frequency: Frequency,
                  time_col: str) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: json string of the Prophet model or
         the dictionary of json strings of Prophet model for multi-series forecasting
         :param horizon: Int number of periods to forecast forward.
-        :param frequency_unit: the frequency unit of the time series
-        :param frequency_quantity: the frequency quantity of the time series
+        :param frequency: the frequency of the time series
         :param time_col: the column name of the time column
         """
         self._model_json = model_json
         self._horizon = horizon
-        self._frequency_unit = frequency_unit
-        self._frequency_quantity = frequency_quantity
+        self._frequency = frequency
         self._time_col = time_col
-        self._is_quaterly = is_quaterly_alias(frequency_unit)
+        self._is_quaterly = is_quaterly_alias(frequency.frequency_unit)
         super().__init__()
 
     def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
@@ -98,8 +96,8 @@ class ProphetModel(ForecastModel):
         :return: pd.Dataframe that extends forward from the end of self.history for the
         requested number of periods.
         """
-        offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency_unit]]
-        offset_kwarg = {key: value * self._frequency_quantity for key, value in offset_kwarg.items()}
+        offset_kwarg = DATE_OFFSET_KEYWORD_MAP[OFFSET_ALIAS_MAP[self._frequency.frequency_unit]]
+        offset_kwarg = {key: value * self._frequency.frequency_quantity for key, value in offset_kwarg.items()}
         return self.model().make_future_dataframe(periods=horizon or self._horizon,
                                                   freq=pd.DateOffset(**offset_kwarg),
                                                   include_history=include_history)
@@ -151,7 +149,7 @@ class MultiSeriesProphetModel(ProphetModel):
     """
 
     def __init__(self, model_json: Dict[Tuple, str], timeseries_starts: Dict[Tuple, pd.Timestamp],
-                 timeseries_end: str, horizon: int, frequency_unit: str, frequency_quantity: int, time_col: str, id_cols: List[str],
+                 timeseries_end: str, horizon: int, frequency: Frequency, time_col: str, id_cols: List[str],
                  ) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
@@ -159,14 +157,11 @@ class MultiSeriesProphetModel(ProphetModel):
         :param timeseries_starts: the dictionary of pd.Timestamp as the starting time of each time series
         :param timeseries_end: the end time of the time series
         :param horizon: int number of periods to forecast forward
-        :param frequency_unit: the frequency unit of the time series
-        :param frequency_quantity: the frequency quantity of the time series
+        :param frequency: the frequency of the time series
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
         """
-        super().__init__(model_json, horizon, frequency_unit, frequency_quantity, time_col)
-        self._frequency_unit = frequency_unit
-        self._frequency_quantity = frequency_quantity
+        super().__init__(model_json, horizon, frequency, time_col)
         self._timeseries_end = timeseries_end
         self._timeseries_starts = timeseries_starts
         self._id_cols = id_cols
@@ -209,8 +204,7 @@ class MultiSeriesProphetModel(ProphetModel):
             start_time=self._timeseries_starts,
             end_time=end_time,
             horizon=horizon,
-            frequency_unit=self._frequency_unit,
-            frequency_quantity=self._frequency_quantity,
+            frequency=self._frequency,
             include_history=include_history,
             groups=groups,
             identity_column_names=self._id_cols
@@ -245,8 +239,7 @@ class MultiSeriesProphetModel(ProphetModel):
             start_time=self._timeseries_starts,
             end_time=end_time,
             horizon=horizon,
-            frequency_unit=self._frequency_unit,
-            frequency_quantity=self._frequency_quantity,
+            frequency=self._frequency,
             include_history=include_history,
             groups=self._model_json.keys(),
             identity_column_names=self._id_cols

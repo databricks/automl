@@ -25,6 +25,7 @@ from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import ErrorCode, INVALID_PARAMETER_VALUE
 from pmdarima.arima import ARIMA
 
+from databricks.automl_runtime.forecast.frequency import Frequency
 from databricks.automl_runtime.forecast.pmdarima.model import (
     ArimaModel, 
     MultiSeriesArimaModel, 
@@ -52,8 +53,7 @@ class TestArimaModel(unittest.TestCase):
         pickled_model = pickle.dumps(model)
         self.arima_model = ArimaModel(pickled_model,
                                       horizon=self.horizon,
-                                      frequency_unit=self.freq,
-                                      frequency_quantity=self.frequency_quantity,
+                                      frequency=Frequency(frequency_unit=self.freq, frequency_quantity=self.frequency_quantity),
                                       start_ds=self.start_ds,
                                       end_ds=pd.Timestamp("2020-11-26"),
                                       time_col="date")
@@ -69,8 +69,7 @@ class TestArimaModel(unittest.TestCase):
         expected_ds = AbstractArimaModel._get_ds_indices(
             self.start_ds,
             periods=self.num_rows + self.horizon,
-            frequency_unit=self.freq,
-            frequency_quantity=self.frequency_quantity)
+            frequency=Frequency(frequency_unit=self.freq, frequency_quantity=self.frequency_quantity))
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(10, forecast_pd.shape[0])
         pd.testing.assert_series_equal(pd.Series(expected_ds, name='ds'), forecast_pd["ds"])
@@ -140,7 +139,7 @@ class TestArimaModelDate(unittest.TestCase):
         self.freq = 'W'
         self.frequency_quantity = 1
         dates = AbstractArimaModel._get_ds_indices(
-            pd.to_datetime(self.start_ds), periods=self.num_rows, frequency_unit=self.freq, frequency_quantity=self.frequency_quantity)
+            pd.to_datetime(self.start_ds), periods=self.num_rows, frequency=Frequency(frequency_unit=self.freq, frequency_quantity=self.frequency_quantity))
         self.df = pd.concat([
             pd.Series(dates, name='date'),
             pd.Series(range(self.num_rows), name="y")
@@ -150,8 +149,7 @@ class TestArimaModelDate(unittest.TestCase):
         pickled_model = pickle.dumps(model)
         self.arima_model = ArimaModel(pickled_model,
                                       horizon=self.horizon,
-                                      frequency_unit=self.freq,
-                                      frequency_quantity=self.frequency_quantity,
+                                      frequency=Frequency(frequency_unit=self.freq, frequency_quantity=self.frequency_quantity),
                                       start_ds=self.start_ds,
                                       end_ds=pd.Timestamp("2020-11-26"),
                                       time_col="date")
@@ -189,8 +187,7 @@ class TestArimaModelWithExogenous(unittest.TestCase):
         pickled_model = pickle.dumps(model)
         self.arima_model = ArimaModel(pickled_model,
                                       horizon=self.horizon,
-                                      frequency_unit=self.freq,
-                                      frequency_quantity=self.frequency_quantity,
+                                      frequency=Frequency(frequency_unit=self.freq, frequency_quantity=self.frequency_quantity),
                                       start_ds=self.start_ds,
                                       end_ds=pd.Timestamp("2020-11-26"),
                                       time_col="date",
@@ -234,8 +231,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         end_ds_dict = {("1",): pd.Timestamp("2020-09-13"), ("2",): pd.Timestamp("2020-09-13")}
         self.arima_model = MultiSeriesArimaModel(pickled_model_dict,
                                                  horizon=1,
-                                                 frequency_unit='month',
-                                                 frequency_quantity=1,
+                                                 frequency=Frequency(frequency_unit='month', frequency_quantity=1),
                                                  start_ds_dict=start_ds_dict,
                                                  end_ds_dict=end_ds_dict,
                                                  time_col="date",
@@ -318,8 +314,7 @@ class TestMultiSeriesArimaModel(unittest.TestCase):
         end_ds_dict = {(1, "1"): pd.Timestamp("2020-09-13"), (2, "1"): pd.Timestamp("2020-09-13")}
         arima_model = MultiSeriesArimaModel(pickled_model_dict,
                                             horizon=1,
-                                            frequency_unit='month',
-                                            frequency_quantity=1,
+                                            frequency=Frequency(frequency_unit='month', frequency_quantity=1),
                                             start_ds_dict=start_ds_dict,
                                             end_ds_dict=end_ds_dict,
                                             time_col="date",
@@ -359,8 +354,7 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
         end_ds_dict = {("1",): pd.Timestamp("2020-09-13"), ("2",): pd.Timestamp("2020-09-13")}
         self.arima_model = MultiSeriesArimaModel(pickled_model_dict,
                                                  horizon=1,
-                                                 frequency_unit='month',
-                                                 frequency_quantity=1,
+                                                 frequency=Frequency(frequency_unit='month', frequency_quantity=1),
                                                  start_ds_dict=start_ds_dict,
                                                  end_ds_dict=end_ds_dict,
                                                  time_col="date",
@@ -414,8 +408,7 @@ class TestAbstractArimaModel(unittest.TestCase):
         ds_indices = AbstractArimaModel._get_ds_indices(
             start_ds=pd.Timestamp("2022-01-01 12:30"),
             periods=8,
-            frequency_unit='W',
-            frequency_quantity=1)
+            frequency=Frequency(frequency_unit="W", frequency_quantity=1))
         pd.testing.assert_index_equal(expected_ds, ds_indices)
 
     def test_get_ds_hourly(self):
@@ -429,8 +422,7 @@ class TestAbstractArimaModel(unittest.TestCase):
         ds_indices = AbstractArimaModel._get_ds_indices(
             start_ds=pd.Timestamp("2021-12-10 09:23"),
             periods=10,
-            frequency_unit='H',
-            frequency_quantity=1)
+            frequency=Frequency(frequency_unit="h", frequency_quantity=1))
         pd.testing.assert_index_equal(expected_ds, ds_indices)
 
 
@@ -447,7 +439,7 @@ class TestLogModel(unittest.TestCase):
         self.pickled_model = pickle.dumps(model)
 
     def test_mlflow_arima_log_model(self):
-        arima_model = ArimaModel(self.pickled_model, horizon=1, frequency_unit='d', frequency_quantity=1,
+        arima_model = ArimaModel(self.pickled_model, horizon=1, frequency=Frequency(frequency_unit="d", frequency_quantity=1),
                                  start_ds=pd.to_datetime("2020-10-01"), end_ds=pd.to_datetime("2020-10-09"),
                                  time_col="date")
         with mlflow.start_run() as run:
@@ -472,8 +464,7 @@ class TestLogModel(unittest.TestCase):
         end_ds_dict = {("1",): pd.Timestamp("2020-10-09"), ("2",): pd.Timestamp("2020-10-09")}
         multiseries_arima_model = MultiSeriesArimaModel(pickled_model_dict,
                                                         horizon=1,
-                                                        frequency_unit='d',
-                                                        frequency_quantity=1,
+                                                        frequency=Frequency(frequency_unit='d', frequency_quantity=1),
                                                         start_ds_dict=start_ds_dict,
                                                         end_ds_dict=end_ds_dict,
                                                         time_col="date",
@@ -522,7 +513,7 @@ class TestArimaModelFrequencyQuantity(unittest.TestCase):
         self.quantity_model_pairs = []
 
         for frequency_quantity in frequency_quantities:
-            dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency_unit=self.freq, frequency_quantity=frequency_quantity)
+            dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency=Frequency(frequency_unit=self.freq, frequency_quantity=frequency_quantity))
             df = pd.concat([
                 pd.Series(dates, name='date'),
                 pd.Series(range(self.num_rows), name="y")
@@ -532,8 +523,7 @@ class TestArimaModelFrequencyQuantity(unittest.TestCase):
             pickled_model = pickle.dumps(model)
             self.quantity_model_pairs.append((frequency_quantity, ArimaModel(pickled_model,
                                       horizon=self.horizon,
-                                      frequency_unit=self.freq,
-                                      frequency_quantity=frequency_quantity,
+                                      frequency=Frequency(frequency_unit=self.freq, frequency_quantity=frequency_quantity),
                                       start_ds=self.start_ds,
                                       end_ds=dates.max(),
                                       time_col="date")))
@@ -551,8 +541,7 @@ class TestArimaModelFrequencyQuantity(unittest.TestCase):
             expected_ds = AbstractArimaModel._get_ds_indices(
                 self.start_ds,
                 periods=self.num_rows + self.horizon,
-                frequency_unit=self.freq,
-                frequency_quantity=frequency_quantity)
+                frequency=Frequency(frequency_unit=self.freq, frequency_quantity=frequency_quantity))
             self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
             self.assertEqual(10, forecast_pd.shape[0])
             pd.testing.assert_series_equal(pd.Series(expected_ds, name='ds'), forecast_pd["ds"])

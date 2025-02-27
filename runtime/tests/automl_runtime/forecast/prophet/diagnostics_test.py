@@ -20,6 +20,7 @@ import pandas as pd
 
 from prophet import Prophet
 
+from databricks.automl_runtime.forecast.frequency import Frequency
 from databricks.automl_runtime.forecast.utils import generate_cutoffs
 from databricks.automl_runtime.forecast.prophet.diagnostics import cross_validation
 
@@ -43,7 +44,7 @@ class TestDiagnostics(unittest.TestCase):
         cutoffs = generate_cutoffs(
             self.X,
             horizon=3,
-            frequency_unit="MS",
+            frequency=Frequency(frequency_unit="MS", frequency_quantity=1),
             seasonal_period=1,
             seasonal_unit="D",
             num_folds=3,

@@ -23,6 +23,7 @@ from gluonts.torch.model.predictor import PyTorchPredictor
 from mlflow.utils.environment import _mlflow_conda_env
 
 from databricks.automl_runtime import version
+from databricks.automl_runtime.forecast.frequency import Frequency
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime.forecast.deepar.utils import set_index_and_fill_missing_time_steps
 
@@ -42,7 +43,7 @@ class DeepARModel(ForecastModel):
     DeepAR mlflow model wrapper for forecasting.
     """
 
-    def __init__(self, model: PyTorchPredictor, horizon: int, frequency_unit: str, frequency_quantity: int,
+    def __init__(self, model: PyTorchPredictor, horizon: int, frequency: Frequency,
                  num_samples: int,
                  target_col: str, time_col: str,
                  id_cols: Optional[List[str]] = None) -> None:
@@ -50,8 +51,7 @@ class DeepARModel(ForecastModel):
         Initialize the DeepAR mlflow Python model wrapper
         :param model: DeepAR model
         :param horizon: the number of periods to forecast forward
-        :param frequency_unit: the frequency unit of the time series
-        :param frequency_quantity: the frequency quantity of the time series
+        :param frequency: the frequency of the time series
         :param num_samples: the number of samples to draw from the distribution
         :param target_col: the target column name
         :param time_col: the time column name
@@ -61,8 +61,7 @@ class DeepARModel(ForecastModel):
         super().__init__()
         self._model = model
         self._horizon = horizon
-        self._frequency_unit = frequency_unit
-        self._frequency_quantity = frequency_quantity
+        self._frequency = frequency
         self._num_samples = num_samples
         self._target_col = target_col
         self._time_col = time_col
@@ -130,8 +129,7 @@ class DeepARModel(ForecastModel):
 
         model_input_transformed = set_index_and_fill_missing_time_steps(model_input,
                                                                         self._time_col,
-                                                                        self._frequency_unit,
-                                                                        self._frequency_quantity,
+                                                                        self._frequency,
                                                                         self._id_cols)
 
         test_ds = PandasDataset(model_input_transformed, target=self._target_col)
