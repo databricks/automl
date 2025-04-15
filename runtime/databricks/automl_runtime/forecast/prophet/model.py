@@ -50,7 +50,9 @@ class ProphetModel(ForecastModel):
                  horizon: int, 
                  frequency_unit: str, 
                  frequency_quantity: int,
-                 time_col: str) -> None:
+                 time_col: str,
+                 split_col: Optional[str] = None,
+                 preprocess_func: Optional[callable] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: json string of the Prophet model or
@@ -59,6 +61,8 @@ class ProphetModel(ForecastModel):
         :param frequency_unit: the frequency unit of the time series
         :param frequency_quantity: the frequency quantity of the time series
         :param time_col: the column name of the time column
+        :param split_col: Optional column name of the split columns
+        :param preprocess_func: Optional callable function for preprocessing input data
         """
         self._model_json = model_json
         self._horizon = horizon
@@ -66,6 +70,8 @@ class ProphetModel(ForecastModel):
         self._frequency_quantity = frequency_quantity
         self._time_col = time_col
         self._is_quaterly = is_quaterly_alias(frequency_unit)
+        self._preprocess_func = preprocess_func
+        self._split_col = split_col
         super().__init__()
 
     def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
@@ -134,7 +140,16 @@ class ProphetModel(ForecastModel):
         :return: A pd.DataFrame with the forecast components.
         """
         self._validate_cols(model_input, [self._time_col])
-        test_df = pd.DataFrame({"ds": model_input[self._time_col]})
+        test_df = model_input.copy()
+
+        # apply the same preprocessing pipeline to test_df, which requires "y" and split column, remove them after preprocessed
+        if self._preprocess_func and self._split_col:
+            test_df["y"] = None
+            test_df[self._split_col] = "prediction"
+            test_df = test_df.apply(self._preprocess_func).reset_index(drop=True)
+            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
+
+        test_df.rename(columns={self._time_col: "ds"}, inplace=True)
         predict_df = self.model().predict(test_df)
         return predict_df["yhat"]
 
@@ -150,9 +165,17 @@ class MultiSeriesProphetModel(ProphetModel):
     Prophet mlflow model wrapper for multi-series forecasting.
     """
 
-    def __init__(self, model_json: Dict[Tuple, str], timeseries_starts: Dict[Tuple, pd.Timestamp],
-                 timeseries_end: str, horizon: int, frequency_unit: str, frequency_quantity: int, time_col: str, id_cols: List[str],
-                 ) -> None:
+    def __init__(self, 
+                 model_json: Dict[Tuple, str], 
+                 timeseries_starts: Dict[Tuple, pd.Timestamp],
+                 timeseries_end: str, 
+                 horizon: int, 
+                 frequency_unit: str, 
+                 frequency_quantity: int, 
+                 time_col: str, 
+                 id_cols: List[str],
+                 split_col: Optional[str] = None,
+                 preprocess_func: Optional[callable] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for mlflow
         :param model_json: the dictionary of json strings of Prophet model for multi-series forecasting
@@ -163,8 +186,10 @@ class MultiSeriesProphetModel(ProphetModel):
         :param frequency_quantity: the frequency quantity of the time series
         :param time_col: the column name of the time column
         :param id_cols: the column names of the identity columns for multi-series time series
+        :param split_col: Optional column name of the split columns
+        :param preprocess_func: Optional callable function for preprocessing input data
         """
-        super().__init__(model_json, horizon, frequency_unit, frequency_quantity, time_col)
+        super().__init__(model_json, horizon, frequency_unit, frequency_quantity, time_col, split_col, preprocess_func)
         self._frequency_unit = frequency_unit
         self._frequency_quantity = frequency_quantity
         self._timeseries_end = timeseries_end
@@ -297,6 +322,14 @@ class MultiSeriesProphetModel(ProphetModel):
         self._validate_cols(model_input, self._id_cols + [self._time_col])
         test_df = model_input.copy()
         test_df["ts_id"] = test_df[self._id_cols].apply(tuple, axis=1)
+
+        # apply the same preprocessing pipeline to test_df, which requires "y" and split column, remove them after preprocessed
+        if self._preprocess_func and self._split_col:
+            test_df["y"] = None
+            test_df[self._split_col] = "prediction"
+            test_df = test_df.groupby(self._id_cols).apply(self._preprocess_func).reset_index(drop=True)
+            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
+
         test_df.rename(columns={self._time_col: "ds"}, inplace=True)
 
         def model_prediction(df):

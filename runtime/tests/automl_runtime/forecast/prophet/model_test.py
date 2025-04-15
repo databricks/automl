@@ -80,7 +80,7 @@ class TestProphetModel(BaseProphetModelTest):
         cls.model = model_from_json(cls.model_json)
 
     def test_model_save_and_load(self):
-        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds")
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds", )
 
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
@@ -178,6 +178,23 @@ class TestProphetModel(BaseProphetModelTest):
         with pytest.raises(MlflowException, match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
         assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)
+
+    def test_predict_with_preprocess_func(self):
+        def preprocess_func(df):
+            return df
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds", "split", preprocess_func)
+        test_df = pd.DataFrame(
+            {
+                "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")], 
+                "split": ["train", "train"]
+            }
+        )
+        expected_test_df = test_df.copy()
+        yhat = prophet_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
+        pd.testing.assert_frame_equal(
+            test_df, expected_test_df
+        )
 
 
 class TestMultiSeriesProphetModel(BaseProphetModelTest):
@@ -405,3 +422,21 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
     def test_make_future_dataframe_invalid_group(self):
         with pytest.raises(ValueError, match="Invalid groups:"):
             future_df = self.prophet_model.make_future_dataframe(groups=[(1,)])
+
+
+    def test_predict_with_preprocess_func(self):
+        def preprocess_func(df):
+            return df
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds", "split", preprocess_func)
+        test_df = pd.DataFrame(
+            {
+                "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")], 
+                "split": ["train", "train"]
+            }
+        )
+        expected_test_df = test_df.copy()
+        yhat = prophet_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
+        pd.testing.assert_frame_equal(
+            test_df, expected_test_df
+        )
