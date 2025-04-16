@@ -187,7 +187,7 @@ class TestProphetModel(BaseProphetModelTest):
         test_df = pd.DataFrame(
             {
                 "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")], 
-                "split": ["train", "train"],
+                "split": ["train", "test"],
                 "y": [1, 2]
             }
         )
@@ -445,7 +445,7 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
         test_df = pd.DataFrame(
             {
                 "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-02")], 
-                "split": ["train", "train"],
+                "split": ["train", "test"],
                 "id": ["1", "2"],
             }
         )
