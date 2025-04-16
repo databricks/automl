@@ -80,7 +80,7 @@ class TestProphetModel(BaseProphetModelTest):
         cls.model = model_from_json(cls.model_json)
 
     def test_model_save_and_load(self):
-        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds")
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds", )
 
         with mlflow.start_run() as run:
             mlflow_prophet_log_model(prophet_model)
@@ -178,6 +178,21 @@ class TestProphetModel(BaseProphetModelTest):
         with pytest.raises(MlflowException, match="Model is missing inputs") as e:
             prophet_model.predict(test_df)
         assert e.value.error_code == ErrorCode.Name(INTERNAL_ERROR)
+
+    def test_predict_with_preprocess_func(self):
+        def preprocess_func(df):
+            df["y"] = df["y"] * 2
+            return df
+        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds", "split", preprocess_func)
+        test_df = pd.DataFrame(
+            {
+                "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")], 
+                "split": ["train", "test"],
+                "y": [1, 2]
+            }
+        )
+        yhat = prophet_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
 
 
 class TestMultiSeriesProphetModel(BaseProphetModelTest):
@@ -405,3 +420,34 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
     def test_make_future_dataframe_invalid_group(self):
         with pytest.raises(ValueError, match="Invalid groups:"):
             future_df = self.prophet_model.make_future_dataframe(groups=[(1,)])
+
+
+    def test_predict_with_preprocess_func(self):
+        def preprocess_func(df):
+            df["y"] = df["y"] + 1
+            return df
+        multi_series_model_json = {("1", ): self.model_json, ("2", ): self.model_json}
+        multi_series_start = {
+            (1, "1"): pd.Timestamp("2020-07-01"),
+            (2, "1"): pd.Timestamp("2020-07-01"),
+        }
+        prophet_model = MultiSeriesProphetModel(
+            multi_series_model_json,
+            multi_series_start, 
+            "2020-07-25",
+            1, 
+            "days", 
+            1, 
+            "ds", 
+            ["id"],
+            "split", 
+            preprocess_func)
+        test_df = pd.DataFrame(
+            {
+                "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-02")], 
+                "split": ["train", "test"],
+                "id": ["1", "2"],
+            }
+        )
+        yhat = prophet_model.predict(None, test_df)
+        self.assertEqual(2, len(yhat))
