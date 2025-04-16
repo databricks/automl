@@ -146,7 +146,7 @@ class ProphetModel(ForecastModel):
         if self._preprocess_func and self._split_col:
             test_df["y"] = None
             test_df[self._split_col] = "prediction"
-            test_df = test_df.apply(self._preprocess_func).reset_index(drop=True)
+            test_df = self._preprocess_func(test_df)
             test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
 
         test_df.rename(columns={self._time_col: "ds"}, inplace=True)
