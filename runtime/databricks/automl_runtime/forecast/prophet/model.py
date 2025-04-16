@@ -70,8 +70,8 @@ class ProphetModel(ForecastModel):
         self._frequency_quantity = frequency_quantity
         self._time_col = time_col
         self._is_quaterly = is_quaterly_alias(frequency_unit)
-        self._preprocess_func = preprocess_func
         self._split_col = split_col
+        self._preprocess_func = preprocess_func
         super().__init__()
 
     def load_context(self, context: mlflow.pyfunc.model.PythonModelContext) -> None:
@@ -142,8 +142,12 @@ class ProphetModel(ForecastModel):
         self._validate_cols(model_input, [self._time_col])
         test_df = model_input.copy()
 
-        # apply the same preprocessing pipeline to test_df, which requires "y" and split column, remove them after preprocessed
         if self._preprocess_func and self._split_col:
+        # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
+        # and the split column to be present, as they are used in the trial notebook. These columns are added 
+        # temporarily and removed after preprocessing.
+        # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
+        # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
             test_df["y"] = None
             test_df[self._split_col] = "prediction"
             test_df = self._preprocess_func(test_df)
@@ -323,8 +327,12 @@ class MultiSeriesProphetModel(ProphetModel):
         test_df = model_input.copy()
         test_df["ts_id"] = test_df[self._id_cols].apply(tuple, axis=1)
 
-        # apply the same preprocessing pipeline to test_df, which requires "y" and split column, remove them after preprocessed
         if self._preprocess_func and self._split_col:
+        # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
+        # and the split column to be present, as they are used in the trial notebook. These columns are added 
+        # temporarily and removed after preprocessing.
+        # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
+        # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
             test_df["y"] = None
             test_df[self._split_col] = "prediction"
             test_df = test_df.groupby(self._id_cols).apply(self._preprocess_func).reset_index(drop=True)

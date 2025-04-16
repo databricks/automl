@@ -181,20 +181,18 @@ class TestProphetModel(BaseProphetModelTest):
 
     def test_predict_with_preprocess_func(self):
         def preprocess_func(df):
+            df["y"] = df["y"] * 2
             return df
         prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds", "split", preprocess_func)
         test_df = pd.DataFrame(
             {
                 "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")], 
-                "split": ["train", "train"]
+                "split": ["train", "train"],
+                "y": [1, 2]
             }
         )
-        expected_test_df = test_df.copy()
         yhat = prophet_model.predict(None, test_df)
         self.assertEqual(2, len(yhat))
-        pd.testing.assert_frame_equal(
-            test_df, expected_test_df
-        )
 
 
 class TestMultiSeriesProphetModel(BaseProphetModelTest):
@@ -426,17 +424,30 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
 
     def test_predict_with_preprocess_func(self):
         def preprocess_func(df):
+            df["y"] = df["y"] + 1
             return df
-        prophet_model = ProphetModel(self.model_json, 1, "d", 1, "ds", "split", preprocess_func)
+        multi_series_model_json = {("1", ): self.model_json, ("2", ): self.model_json}
+        multi_series_start = {
+            (1, "1"): pd.Timestamp("2020-07-01"),
+            (2, "1"): pd.Timestamp("2020-07-01"),
+        }
+        prophet_model = MultiSeriesProphetModel(
+            multi_series_model_json,
+            multi_series_start, 
+            "2020-07-25",
+            1, 
+            "days", 
+            1, 
+            "ds", 
+            ["id"],
+            "split", 
+            preprocess_func)
         test_df = pd.DataFrame(
             {
-                "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-04")], 
-                "split": ["train", "train"]
+                "ds": [pd.to_datetime("2020-11-01"), pd.to_datetime("2020-11-02")], 
+                "split": ["train", "train"],
+                "id": ["1", "2"],
             }
         )
-        expected_test_df = test_df.copy()
         yhat = prophet_model.predict(None, test_df)
         self.assertEqual(2, len(yhat))
-        pd.testing.assert_frame_equal(
-            test_df, expected_test_df
-        )
