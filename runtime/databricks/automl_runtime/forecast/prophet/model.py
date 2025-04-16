@@ -334,7 +334,7 @@ class MultiSeriesProphetModel(ProphetModel):
         # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
         # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
             test_df["y"] = None
-            test_df[self._split_col] = "prediction"
+            test_df[self._split_col] = ""
             test_df = test_df.groupby(self._id_cols).apply(self._preprocess_func).reset_index(drop=True)
             test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
 
