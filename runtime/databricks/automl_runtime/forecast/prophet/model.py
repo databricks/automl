@@ -157,7 +157,7 @@ class ProphetModel(ForecastModel):
         predict_df = self.model().predict(test_df)
         return predict_df["yhat"]
     
-    def predict(self, model_input: pd.DataFrame) -> pd.DataFrame:
+    def predict_with_full_df_returned(self, model_input: pd.DataFrame) -> pd.DataFrame:
         """
         Predict API for prediction tables with covariates
         :param model_input: Input dataframe
@@ -378,7 +378,7 @@ class MultiSeriesProphetModel(ProphetModel):
         return_df = test_df.merge(predict_df, how="left", on=["ds"] + self._id_cols)
         return return_df["yhat"]
     
-    def predict(self, model_input: pd.DataFrame) -> pd.DataFrame:
+    def predict_with_full_df_returned(self, model_input: pd.DataFrame) -> pd.DataFrame:
         """
         Predict API for prediction tables with covariates
         :param model_input: Input dataframe
