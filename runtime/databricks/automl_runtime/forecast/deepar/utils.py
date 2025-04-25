@@ -98,9 +98,11 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
         df_dict = {}
         for grouped_id, grouped_df in df.groupby(id_cols):
             if isinstance(grouped_id, tuple):
+                # TODO (ML-52171): Fix the DeepAR library to support multi-time series id columns
+                # For now, we convert and concatenate the id_cols to a string
                 ts_id = "-".join([str(x) for x in grouped_id])
             else:
-                ts_id = str(grouped_id)
+                ts_id = grouped_id
             df_dict[ts_id] = (grouped_df.set_index(time_col).sort_index()
                               .reindex(valid_index).drop(id_cols, axis=1))
 
