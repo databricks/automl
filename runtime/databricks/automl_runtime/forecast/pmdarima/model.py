@@ -90,9 +90,17 @@ class ArimaModel(AbstractArimaModel):
     ARIMA mlflow model wrapper for univariate forecasting.
     """
 
-    def __init__(self, pickled_model: bytes, horizon: int, frequency_unit: str,
-                 frequency_quantity: int, start_ds: pd.Timestamp, end_ds: pd.Timestamp,
-                 time_col: str, exogenous_cols: Optional[List[str]] = None) -> None:
+    def __init__(self, 
+                 pickled_model: bytes, 
+                 horizon: int, 
+                 frequency_unit: str,
+                 frequency_quantity: int, 
+                 start_ds: pd.Timestamp, 
+                 end_ds: pd.Timestamp,
+                 time_col: str, 
+                 exogenous_cols: Optional[List[str]] = None,
+                 split_col: Optional[str] = None,
+                 preprocess_func: Optional[callable] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for ARIMA.
         :param pickled_model: the pickled ARIMA model as a bytes object.
@@ -114,6 +122,8 @@ class ArimaModel(AbstractArimaModel):
         self._end_ds = pd.to_datetime(end_ds)
         self._time_col = time_col
         self._exogenous_cols = exogenous_cols
+        self._split_col = split_col
+        self._preprocess_func = preprocess_func
 
     def model(self) -> pmdarima.arima.ARIMA:
         """
@@ -178,8 +188,44 @@ class ArimaModel(AbstractArimaModel):
         :return: A pd.Series with the prediction values.
         """
         self._validate_cols(model_input, [self._time_col])
-        result_df = self._predict_impl(model_input)
+        test_df = model_input.copy()
+        if self._preprocess_func and self._split_col:
+             # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
+            # and the split column to be present, as they are used in the trial notebook. These columns are added 
+            # temporarily and removed after preprocessing.
+            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
+            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
+            test_df["y"] = None
+            test_df[self._split_col] = "prediction"
+            test_df = self._preprocess_func(test_df)
+            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
+        result_df = self._predict_impl(test_df)
         return result_df["yhat"]
+
+    def predict_with_full_df_returned(self, model_input: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predict API for prediction tables with covariates.
+
+        Returns the prediction values for given timestamps in the input dataframe. If an input timestamp
+        to predict does not match the original frequency that the model trained on, an exception will be thrown.
+        :param model_input: The input dataframe of the model. Should have the same time column name
+                            as the training data of the ARIMA model.
+        :return: A pd.DataFrame with the prediction values.
+        """
+        self._validate_cols(model_input, [self._time_col])
+        test_df = model_input.copy()
+        if self._preprocess_func and self._split_col:
+             # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
+            # and the split column to be present, as they are used in the trial notebook. These columns are added 
+            # temporarily and removed after preprocessing.
+            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
+            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
+            test_df["y"] = None
+            test_df[self._split_col] = "prediction"
+            test_df = self._preprocess_func(test_df)
+            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
+        result_df = self._predict_impl(test_df)
+        return result_df
 
     def _predict_impl(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.rename(columns={self._time_col: "ds"})
@@ -272,9 +318,18 @@ class MultiSeriesArimaModel(AbstractArimaModel):
     ARIMA mlflow model wrapper for multivariate forecasting.
     """
 
-    def __init__(self, pickled_model_dict: Dict[Tuple, bytes], horizon: int, frequency_unit: str, frequency_quantity: int,
-                 start_ds_dict: Dict[Tuple, pd.Timestamp], end_ds_dict: Dict[Tuple, pd.Timestamp],
-                 time_col: str, id_cols: List[str], exogenous_cols: Optional[List[str]] = None) -> None:
+    def __init__(self, 
+                 pickled_model_dict: Dict[Tuple, bytes], 
+                 horizon: int, 
+                 frequency_unit: str, 
+                 frequency_quantity: int,
+                 start_ds_dict: Dict[Tuple, pd.Timestamp], 
+                 end_ds_dict: Dict[Tuple, pd.Timestamp],
+                 time_col: str, 
+                 id_cols: List[str], 
+                 exogenous_cols: Optional[List[str]] = None,
+                 split_col: Optional[str] = None,
+                 preprocess_func: Optional[callable] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for multiseries ARIMA.
         :param pickled_model_dict: the dictionary of binarized ARIMA models for different time series.
@@ -298,6 +353,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         self._time_col = time_col
         self._id_cols = id_cols
         self._exogenous_cols = exogenous_cols
+        self._split_col = split_col
+        self._preprocess_func = preprocess_func
 
     def model(self, id_: Tuple) -> pmdarima.arima.ARIMA:
         """
@@ -400,9 +457,57 @@ class MultiSeriesArimaModel(AbstractArimaModel):
                 ),
                 error_code=INVALID_PARAMETER_VALUE,
             )
+        if self._preprocess_func and self._split_col:
+            # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
+            # and the split column to be present, as they are used in the trial notebook. These columns are added 
+            # temporarily and removed after preprocessing.
+            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
+            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
+            df["y"] = None
+            df[self._split_col] = ""
+            df = df.groupby(self._id_cols).apply(self._preprocess_func).reset_index(drop=True)
+            df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
         preds_df = df.groupby(self._id_cols).apply(self._predict_single_id).reset_index(drop=True)
         df = df.merge(preds_df, how="left", on=[self._time_col] + self._id_cols)  # merge predictions to original order
         return df["yhat"]
+    
+    def predict_with_full_df_returned(self, model_input: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predict API for prediction tables with covariates.
+
+        Returns the prediction values for given timestamps in the input dataframe. If an input timestamp
+        to predict does not match the original frequency that the model trained on, an exception will be thrown.
+        :param model_input: input dataframe of the model. Should have the same time column
+                            and identity columns names as the training data of the ARIMA model.
+        :return: A pd.DataFrame with the prediction values.
+        """
+        self._validate_cols(model_input, self._id_cols + [self._time_col])
+        df = model_input.copy()
+        df["ts_id"] = df[self._id_cols].apply(tuple, axis=1)
+        known_ids = set(self._pickled_models.keys())
+        ids = set(df["ts_id"].unique())
+        if not ids.issubset(known_ids):
+            raise MlflowException(
+                message=(
+                    f"Input data includes unseen values in id columns '{self._id_cols}'."
+                    f"Expected combined ids: {known_ids}\n"
+                    f"Got ids: {ids}\n"
+                ),
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+        if self._preprocess_func and self._split_col:
+            # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
+            # and the split column to be present, as they are used in the trial notebook. These columns are added 
+            # temporarily and removed after preprocessing.
+            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
+            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
+            df["y"] = None
+            df[self._split_col] = ""
+            df = df.groupby(self._id_cols).apply(self._preprocess_func).reset_index(drop=True)
+            df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
+        preds_df = df.groupby(self._id_cols).apply(self._predict_single_id).reset_index(drop=True)
+        df = df.merge(preds_df, how="left", on=[self._time_col] + self._id_cols)  # merge predictions to original order
+        return df
 
     def _predict_single_id(self, df: pd.DataFrame) -> pd.DataFrame:
         id_ = df["ts_id"].to_list()[0]
@@ -413,7 +518,9 @@ class MultiSeriesArimaModel(AbstractArimaModel):
                                            self._starts[id_],
                                            self._ends[id_],
                                            self._time_col,
-                                           self._exogenous_cols)
+                                           self._exogenous_cols,
+                                           self._split_col,
+                                           self._preprocess_func)
         df["yhat"] = arima_model_single_id.predict(context=None, model_input=df).to_list()
         return df
 
