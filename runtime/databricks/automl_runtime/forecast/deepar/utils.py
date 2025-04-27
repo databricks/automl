@@ -92,6 +92,10 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
         weekday_name = total_min.strftime("%a").upper() # e.g., "FRI"
         frequency_unit = f"W-{weekday_name}"
 
+    if frequency_unit.upper() == "MS":
+        # Truncate the day of month to avoid issues with pandas frequency check
+        df = df.to_period("M")
+ 
     valid_index = validate_and_generate_index(df=df, time_col=time_col, frequency_unit=frequency_unit, frequency_quantity=frequency_quantity)
 
     if id_cols is not None:
@@ -105,14 +109,10 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
                               .reindex(valid_index).drop(id_cols, axis=1))
 
         return df_dict
+    else:
+        df = df.set_index(time_col).sort_index()
 
-    df = df.set_index(time_col).sort_index()
+        # Fill in missing time steps between the min and max time steps
+        df = df.reindex(valid_index)
 
-    # Fill in missing time steps between the min and max time steps
-    df = df.reindex(valid_index)
-
-    if frequency_unit.upper() == "MS":
-        # Truncate the day of month to avoid issues with pandas frequency check
-        df = df.to_period("M")
-
-    return df
+        return df
