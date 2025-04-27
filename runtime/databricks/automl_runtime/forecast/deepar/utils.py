@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import List, Optional
+from typing import List, Optional, Union, Dict
 
 import pandas as pd
-
 
 def validate_and_generate_index(df: pd.DataFrame, 
                                 time_col: str, 
@@ -66,10 +65,12 @@ def validate_and_generate_index(df: pd.DataFrame,
 
     return new_index_full
 
-def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
-                                          frequency_unit: str,
-                                          frequency_quantity: int,
-                                          id_cols: Optional[List[str]] = None):
+def set_index_and_fill_missing_time_steps(
+        df: pd.DataFrame, time_col: str,
+        frequency_unit: str,
+        frequency_quantity: int,
+        id_cols: Optional[List[str]] = None
+) -> Union[pd.DataFrame, Dict[any, pd.DataFrame]]:
     """
     Transform the input dataframe to an acceptable format for the GluonTS library.
 
@@ -85,7 +86,7 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
              multi-series - dictionary of transformed dataframes, each key is the (concatenated) id of the time series
     """
     total_min, total_max = df[time_col].min(), df[time_col].max()
-
+    print("Debug:linyuan")
     # We need to adjust the frequency_unit for pd.date_range if it is weekly,
     # otherwise it would always be "W-SUN"
     if frequency_unit.upper() == "W":
@@ -95,26 +96,25 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
     valid_index = validate_and_generate_index(df=df, time_col=time_col, frequency_unit=frequency_unit, frequency_quantity=frequency_quantity)
 
     if id_cols is not None:
+        if len(id_cols) > 1:
+            raise ValueError("DeepAR does not support multiple time series id columns")
         df_dict = {}
         for grouped_id, grouped_df in df.groupby(id_cols):
             if isinstance(grouped_id, tuple):
                 # TODO (ML-52171): Fix the DeepAR library to support multi-time series id columns
-                # For now, we convert and concatenate the id_cols to a string
-                ts_id = "-".join([str(x) for x in grouped_id])
-            else:
-                ts_id = grouped_id
-            df_dict[ts_id] = (grouped_df.set_index(time_col).sort_index()
-                              .reindex(valid_index).drop(id_cols, axis=1))
+                # For now, DeepAR is dropped for multiple id_cols
+                raise ValueError("DeepAR does not support multiple time series id columns")
+            print(f"Debug groupe_id type: {type(grouped_id)}")
+            df_dict[grouped_id] = (grouped_df.set_index(time_col).sort_index()
+                                   .reindex(valid_index).drop(id_cols, axis=1))
 
         return df_dict
-
-    df = df.set_index(time_col).sort_index()
-
-    # Fill in missing time steps between the min and max time steps
-    df = df.reindex(valid_index)
+    else:
+        df = df.set_index(time_col).sort_index()
+        # Fill in missing time steps between the min and max time steps
+        df = df.reindex(valid_index)
+        return df
 
     if frequency_unit.upper() == "MS":
         # Truncate the day of month to avoid issues with pandas frequency check
         df = df.to_period("M")
-
-    return df

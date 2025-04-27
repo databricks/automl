@@ -100,7 +100,7 @@ class DeepARModel(ForecastModel):
 
         pred_df = pred_df.rename(columns={'index': self._time_col})
         if self._id_cols:
-            id_col_name = '-'.join(self._id_cols)
+            id_col_name = self._id_cols[0]
             pred_df = pred_df.rename(columns={'item_id': id_col_name})
         else:
             pred_df = pred_df.drop(columns='item_id')
@@ -121,6 +121,7 @@ class DeepARModel(ForecastModel):
         if num_samples is None:
             num_samples = self._num_samples
 
+        print("Debug:enter predict_samples")
         # Group by the time column in case there are multiple rows for each time column,
         # for example, the user didn't provide all the identity columns for a multi-series dataset
         group_cols = [self._time_col]
@@ -134,10 +135,14 @@ class DeepARModel(ForecastModel):
                                                                         self._frequency_quantity,
                                                                         self._id_cols)
 
+        print(f"Debug model_input_transformed keys type: {type(model_input_transformed)}")
         test_ds = PandasDataset(model_input_transformed, target=self._target_col)
 
         forecast_iter = self._model.predict(test_ds, num_samples=num_samples)
         forecast_sample_list = list(forecast_iter)
+
+        for forecast in forecast_sample_list:
+            print(f"Debug forecast.item_id type: {type(forecast.item_id)}")
 
         return forecast_sample_list
 
