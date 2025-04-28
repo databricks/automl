@@ -110,7 +110,7 @@ class ProphetModel(ForecastModel):
                                                   freq=pd.DateOffset(**offset_kwarg),
                                                   include_history=include_history)
 
-    def _predict_impl(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame | None = None) -> pd.DataFrame:
+    def _predict_impl(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame = None) -> pd.DataFrame:
         """
         Predict using the API from prophet model.
         :param horizon: Int number of periods to forecast forward.
@@ -129,7 +129,7 @@ class ProphetModel(ForecastModel):
         future_pd.rename(columns={self._time_col: "ds"}, inplace=True)
         return self.model().predict(future_pd)
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame | None = None) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame = None) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
@@ -260,7 +260,7 @@ class MultiSeriesProphetModel(ProphetModel):
         future_pd[self._id_cols] = df[self._id_cols].iloc[0]
         return future_pd
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame | None = None) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame = None) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
