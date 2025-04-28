@@ -26,7 +26,7 @@ from mlflow.utils.environment import _mlflow_conda_env
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime import version
-from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe
+from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe, apply_preprocess_func
 
 
 PROPHET_ADDITIONAL_PIP_DEPS = [
@@ -110,7 +110,7 @@ class ProphetModel(ForecastModel):
                                                   freq=pd.DateOffset(**offset_kwarg),
                                                   include_history=include_history)
 
-    def _predict_impl(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def _predict_impl(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame | None = None) -> pd.DataFrame:
         """
         Predict using the API from prophet model.
         :param horizon: Int number of periods to forecast forward.
@@ -118,10 +118,18 @@ class ProphetModel(ForecastModel):
             frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
-        future_pd = self.make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
+        if df is not None:
+            future_pd = df
+        else:
+            future_pd = self.make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
+
+        if self._preprocess_func and self._split_col:
+            future_pd = apply_preprocess_func(future_pd, self._preprocess_func, self._split_col)
+
+        future_pd.rename(columns={self._time_col: "ds"}, inplace=True)
         return self.model().predict(future_pd)
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame | None = None) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
@@ -129,7 +137,7 @@ class ProphetModel(ForecastModel):
             frame for predictions.
         :return: A pd.DataFrame with the forecast components.
         """
-        return self._predict_impl(horizon, include_history)
+        return self._predict_impl(horizon, include_history, df)
 
     def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
@@ -143,43 +151,11 @@ class ProphetModel(ForecastModel):
         test_df = model_input.copy()
 
         if self._preprocess_func and self._split_col:
-            # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
-            # and the split column to be present, as they are used in the trial notebook. These columns are added 
-            # temporarily and removed after preprocessing.
-            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
-            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
-            test_df["y"] = None
-            test_df[self._split_col] = "prediction"
-            test_df = self._preprocess_func(test_df)
-            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
+            test_df = apply_preprocess_func(test_df, self._preprocess_func, self._split_col)
 
         test_df.rename(columns={self._time_col: "ds"}, inplace=True)
         predict_df = self.model().predict(test_df)
         return predict_df["yhat"]
-    
-    def predict_with_full_df_returned(self, model_input: pd.DataFrame) -> pd.DataFrame:
-        """
-        Predict API for prediction tables with covariates
-        :param model_input: Input dataframe
-        :return: A pd.DataFrame with the forecast components.
-        """
-        self._validate_cols(model_input, [self._time_col])
-        test_df = model_input.copy()
-
-        if self._preprocess_func and self._split_col:
-            # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
-            # and the split column to be present, as they are used in the trial notebook. These columns are added 
-            # temporarily and removed after preprocessing.
-            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
-            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
-            test_df["y"] = None
-            test_df[self._split_col] = "prediction"
-            test_df = self._preprocess_func(test_df)
-            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
-
-        test_df.rename(columns={self._time_col: "ds"}, inplace=True)
-        predict_df = self.model().predict(test_df)
-        return predict_df
 
     def infer_signature(self, sample_input: pd.DataFrame = None) -> ModelSignature:
         if sample_input is None:
@@ -284,27 +260,34 @@ class MultiSeriesProphetModel(ProphetModel):
         future_pd[self._id_cols] = df[self._id_cols].iloc[0]
         return future_pd
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame | None = None) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
+        :param df: Optional input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
         horizon=horizon or self._horizon
-        end_time = pd.Timestamp(self._timeseries_end)
-        future_df = make_future_dataframe(
-            start_time=self._timeseries_starts,
-            end_time=end_time,
-            horizon=horizon,
-            frequency_unit=self._frequency_unit,
-            frequency_quantity=self._frequency_quantity,
-            include_history=include_history,
-            groups=self._model_json.keys(),
-            identity_column_names=self._id_cols
-        )
+        if df is not None:
+            future_df = df
+        else:
+            end_time = pd.Timestamp(self._timeseries_end)
+            future_df = make_future_dataframe(
+                start_time=self._timeseries_starts,
+                end_time=end_time,
+                horizon=horizon,
+                frequency_unit=self._frequency_unit,
+                frequency_quantity=self._frequency_quantity,
+                include_history=include_history,
+                groups=self._model_json.keys(),
+                identity_column_names=self._id_cols
+            )
         future_df["ts_id"] = future_df[self._id_cols].apply(tuple, axis=1)
+        if self._preprocess_func and self._split_col:
+            future_df = apply_preprocess_func(future_df, self._preprocess_func, self._split_col)
+        future_df.rename(columns={self._time_col: "ds"}, inplace=True)
         return future_df.groupby(self._id_cols).apply(lambda df: self._predict_impl(df, horizon, include_history)).reset_index()
 
     @staticmethod
@@ -377,44 +360,6 @@ class MultiSeriesProphetModel(ProphetModel):
         predict_df = test_df.groupby(self._id_cols).apply(model_prediction).reset_index(drop=True)
         return_df = test_df.merge(predict_df, how="left", on=["ds"] + self._id_cols)
         return return_df["yhat"]
-    
-    def predict_with_full_df_returned(self, model_input: pd.DataFrame) -> pd.DataFrame:
-        """
-        Predict API for prediction tables with covariates
-        :param model_input: Input dataframe
-        :return: A pd.DataFrame with the forecast components.
-        """
-        self._validate_cols(model_input, self._id_cols + [self._time_col])
-        test_df = model_input.copy()
-        test_df["ts_id"] = test_df[self._id_cols].apply(tuple, axis=1)
-
-        if self._preprocess_func and self._split_col:
-            # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
-            # and the split column to be present, as they are used in the trial notebook. These columns are added 
-            # temporarily and removed after preprocessing.
-            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
-            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
-            test_df["y"] = None
-            test_df[self._split_col] = ""
-            test_df = test_df.groupby(self._id_cols).apply(self._preprocess_func).reset_index(drop=True)
-            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
-
-        test_df.rename(columns={self._time_col: "ds"}, inplace=True)
-
-        def model_prediction(df):
-            model = self.model(df["ts_id"].iloc[0])
-            if model:
-                predicts = model.predict(df)
-                # We have to explicitly assign the id columns to avoid KeyError when model_input
-                # only has one row. For multi-rows model_input, the ts_id will be kept as index
-                # after groupby(self._id_cols).apply(...) and we can retrieve it by reset_index, but
-                # for one-row model_input the id columns are missing from index.
-                predicts[self._id_cols] = df.name
-                return predicts
-        predict_df = test_df.groupby(self._id_cols).apply(model_prediction).reset_index(drop=True)
-        return_df = test_df.merge(predict_df, how="left", on=["ds"] + self._id_cols)
-        return return_df
-
 
 def mlflow_prophet_log_model(prophet_model: Union[ProphetModel, MultiSeriesProphetModel],
                              sample_input: pd.DataFrame = None) -> None:
