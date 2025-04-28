@@ -288,7 +288,7 @@ class MultiSeriesProphetModel(ProphetModel):
         if self._preprocess_func and self._split_col:
             future_df = apply_preprocess_func(future_df, self._preprocess_func, self._split_col)
         future_df.rename(columns={self._time_col: "ds"}, inplace=True)
-        return future_df.groupby(self._id_cols).apply(lambda df: self._predict_impl(df, horizon, include_history)).reset_index()
+        return future_df.groupby(self._id_cols).apply(lambda df: self._predict_impl(df, horizon, include_history)).reset_index(drop=True)
 
     @staticmethod
     def get_reserved_cols() -> List[str]:
