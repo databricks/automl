@@ -86,7 +86,7 @@ def set_index_and_fill_missing_time_steps(
              multi-series - dictionary of transformed dataframes, each key is the (concatenated) id of the time series
     """
     total_min, total_max = df[time_col].min(), df[time_col].max()
-    print("Debug:linyuan")
+
     # We need to adjust the frequency_unit for pd.date_range if it is weekly,
     # otherwise it would always be "W-SUN"
     if frequency_unit.upper() == "W":
@@ -104,17 +104,18 @@ def set_index_and_fill_missing_time_steps(
                 # TODO (ML-52171): Fix the DeepAR library to support multi-time series id columns
                 # For now, DeepAR is dropped for multiple id_cols
                 raise ValueError("DeepAR does not support multiple time series id columns")
-            print(f"Debug groupe_id type: {type(grouped_id)}")
             df_dict[grouped_id] = (grouped_df.set_index(time_col).sort_index()
                                    .reindex(valid_index).drop(id_cols, axis=1))
 
         return df_dict
-    else:
-        df = df.set_index(time_col).sort_index()
-        # Fill in missing time steps between the min and max time steps
-        df = df.reindex(valid_index)
-        return df
+
+    df = df.set_index(time_col).sort_index()
+
+    # Fill in missing time steps between the min and max time steps
+    df = df.reindex(valid_index)
 
     if frequency_unit.upper() == "MS":
         # Truncate the day of month to avoid issues with pandas frequency check
         df = df.to_period("M")
+
+    return df
