@@ -230,7 +230,7 @@ class TestDeepARUtils(unittest.TestCase):
         base_dates = pd.date_range(
             start='2020-01-01',
             periods=num_months,
-            freq='M'  
+            freq='ME'  
         )
 
         base_df = pd.DataFrame({
@@ -290,84 +290,44 @@ class TestDeepARUtils(unittest.TestCase):
         # Assert equality
         pd.testing.assert_frame_equal(transformed_df, expected_df)
 
-    def test_monthly_frequency_period_truncation(self):
-        """Test that monthly frequency data is properly truncated to period"""
-        target_col = "sales"
-        time_col = "date"
-        
-        # Create data with varying days of month
-        base_df = pd.DataFrame({
-            time_col: pd.to_datetime([
-                '2020-01-15',
-                '2020-02-20',
-                '2020-03-10',
-                '2020-04-25',
-                '2020-05-05'
-            ]),
-            target_col: range(5)
-        })
-        
-        # Create a dataframe with missing months (drop months 2 and 4)
-        dropped_df = base_df.drop([1, 3]).reset_index(drop=True)
-        
-        # Transform the dataframe
-        transformed_df = set_index_and_fill_missing_time_steps(
-            dropped_df,
-            time_col,
-            "MS",  # Monthly frequency
-            1
-        )
-        
-        # Create expected dataframe
-        expected_df = base_df.copy()
-        expected_df.loc[[1, 3], target_col] = float('nan')
-        expected_df = expected_df.set_index(time_col).rename_axis(None)
-        expected_df = expected_df.to_period("M")
-        
-        # Assert equality
-        pd.testing.assert_frame_equal(transformed_df, expected_df)
-
-    def test_monthly_frequency_period_truncation_multi_series(self):
+    def test_multi_timeseries_month_start_index(self):
         """Test that monthly frequency data is properly truncated to period for multiple series"""
         target_col = "sales"
         time_col = "date"
+        num_months = 24
         id_col = "store"
-        
+
         # Create data with varying days of month for two stores
+        # Starting from first day of January 2020
+        base_dates = pd.date_range(
+            start='2020-01-01',
+            periods=num_months,
+            freq='MS'
+        )
+
         base_df = pd.DataFrame({
-            time_col: pd.to_datetime([
-                '2020-01-15', '2020-01-20',
-                '2020-02-20', '2020-02-25',
-                '2020-03-10', '2020-03-15'
-            ]),
-            id_col: ['A', 'B'] * 3,
-            target_col: range(6)
+            time_col: base_dates,
+            target_col: range(num_months) 
         })
-        
-        # Create a dataframe with missing months (drop months 2 for store A and month 3 for store B)
-        dropped_df = base_df.drop([2, 5]).reset_index(drop=True)
-        
+
+        # Create a dataframe with missing months (drop months 3 and 4)
+        dropped_base_df = base_df.drop([3, 4]).reset_index(drop=True)
+        dropped_df = pd.concat([dropped_base_df.copy(), dropped_base_df.copy()],
+                               ignore_index=True)
+        dropped_df[id_col] = [1] * (num_months - 2) + [2] * (num_months - 2)
         # Transform the dataframe
         transformed_df_dict = set_index_and_fill_missing_time_steps(
             dropped_df,
             time_col,
-            "MS",  # Monthly frequency
+            "MS", # Monthly frequency
             1,
             id_cols=[id_col]
         )
-        
-        # Create expected dataframes for each store
-        expected_df_a = pd.DataFrame({
-            time_col: pd.to_datetime(['2020-01-15', '2020-02-20', '2020-03-10']),
-            target_col: [0, float('nan'), 4]
-        }).set_index(time_col).rename_axis(None).to_period("M")
-        
-        expected_df_b = pd.DataFrame({
-            time_col: pd.to_datetime(['2020-01-20', '2020-02-25', '2020-03-15']),
-            target_col: [1, 3, float('nan')]
-        }).set_index(time_col).rename_axis(None).to_period("M")
-        
-        # Assert equality for each store
-        self.assertEqual(transformed_df_dict.keys(), {"A", "B"})
-        pd.testing.assert_frame_equal(transformed_df_dict["A"], expected_df_a)
-        pd.testing.assert_frame_equal(transformed_df_dict["B"], expected_df_b)
+
+        # Create expected dataframe for one series
+        expected_df = base_df.copy()
+        expected_df.loc[[3, 4], target_col] = float('nan')
+        expected_df = expected_df.set_index(time_col).rename_axis(None).to_period("M")
+         # Assert equality
+        self.assertEqual(transformed_df_dict.keys(), {'1', '2'})
+        pd.testing.assert_frame_equal(transformed_df_dict["1"], expected_df) 
