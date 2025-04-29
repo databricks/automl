@@ -230,7 +230,7 @@ class TestDeepARUtils(unittest.TestCase):
         base_dates = pd.date_range(
             start='2020-01-01',
             periods=num_months,
-            freq='ME'  
+            freq='M'  
         )
 
         base_df = pd.DataFrame({
