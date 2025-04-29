@@ -15,6 +15,7 @@
 #
 
 import unittest
+from unittest.mock import patch
 import datetime
 
 import pandas as pd
@@ -103,6 +104,42 @@ class TestProphetModel(BaseProphetModelTest):
             include_history=False
         )
         self.assertEqual(len(forecast_future_pd), 1)
+    
+    @patch("databricks.automl_runtime.forecast.prophet.model.ProphetModel._predict_impl")
+    def test_predict_timeseries_with_preprocess_func(self, mock_predict_impl):
+        # Mock the output of _predict_impl
+        mock_predict_impl.side_effect = lambda df: df
+
+        # Define a preprocess function
+        def preprocess_func(df):
+            df["feature"] = df["feature"] * 2
+            return df
+
+        # Create a ProphetModel instance with preprocess_func
+        prophet_model = ProphetModel(
+            model_json=PROPHET_MODEL_JSON,
+            horizon=3,
+            frequency_unit="d",
+            frequency_quantity=1,
+            time_col="time",
+            preprocess_func=preprocess_func,
+            split_col="split"
+        )
+
+        # Input DataFrame
+        input_df = pd.DataFrame({"time": ["2020-10-01", "2020-10-02", "2020-10-03"], "feature": [1, 2, 3]})
+
+        # Call predict_timeseries
+        result = prophet_model.predict_timeseries(future_df=input_df)
+
+        # Assertions
+        mock_predict_impl.assert_called_once()
+        self.assertEqual(len(result), 3)
+
+        # Check if the preprocess_func was applied
+        processed_df = mock_predict_impl.call_args[0][0]  # Get the DataFrame passed to _predict_impl
+        self.assertTrue((processed_df["feature"] == [2, 4, 6]).all())  # Check if "y" was doubled
+        self.assertIn("ds", processed_df.columns)  # Ensure "ds" column exists
 
     def test_make_future_dataframe(self):
         for feq_unit in OFFSET_ALIAS_MAP:
@@ -451,3 +488,68 @@ class TestMultiSeriesProphetModel(BaseProphetModelTest):
         )
         yhat = prophet_model.predict(None, test_df)
         self.assertEqual(2, len(yhat))
+
+    @patch("databricks.automl_runtime.forecast.prophet.model.MultiSeriesProphetModel._predict_impl")
+    def test_predict_timeseries(self, mock_predict_impl):
+        # Mock the output of _predict_impl
+        mock_predict_impl.side_effect = lambda df, horizon, include_history: pd.DataFrame({
+            "ds": df["ds"],
+            "feature": df["feature"],
+            "id": df["id"]
+        })
+
+        # Define a preprocess function
+        def preprocess_func(df):
+            df["feature"] = df["feature"] * 2
+            return df
+
+        # Create a MultiSeriesProphetModel instance
+        model_json = {
+            ("id1",): '{"model": "mock_model_1"}',
+            ("id2",): '{"model": "mock_model_2"}'
+        }
+        timeseries_starts = {("id1",): pd.Timestamp("2020-01-01"), ("id2",): pd.Timestamp("2020-01-01")}
+        timeseries_end = "2020-12-31"
+        prophet_model = MultiSeriesProphetModel(
+            model_json=model_json,
+            timeseries_starts=timeseries_starts,
+            timeseries_end=timeseries_end,
+            horizon=3,
+            frequency_unit="d",
+            frequency_quantity=1,
+            time_col="time",
+            id_cols=["id"],
+            preprocess_func=preprocess_func,
+            split_col="split"
+        )
+
+        # Input DataFrame
+        input_df = pd.DataFrame({
+            "time": ["2020-10-01", "2020-10-02", "2020-10-03", "2020-10-01", "2020-10-02", "2020-10-03"],
+            "feature": [1, 2, 3, 4, 5, 6],
+            "id": ["id1", "id1", "id1", "id2", "id2", "id2"]
+        })
+
+        # Call predict_timeseries
+        result = prophet_model.predict_timeseries(future_df=input_df)
+
+        # Assertions
+        mock_predict_impl.assert_called()
+        self.assertEqual(len(result), 6)
+        self.assertIn("feature", result.columns)
+        self.assertIn("ds", result.columns)
+        self.assertIn("id", result.columns)
+
+        # Check the calls to _predict_impl
+        calls = mock_predict_impl.call_args_list
+        self.assertEqual(len(calls), 2)  # Ensure _predict_impl is called twice (once per group)
+
+        # Check the first call
+        first_call_df = calls[0][0][0]  # Get the DataFrame passed in the first call
+        self.assertTrue((first_call_df["feature"] == [2, 4, 6]).all())
+        self.assertTrue((first_call_df["id"] == ["id1", "id1", "id1"]).all())
+
+        # Check the second call
+        second_call_df = calls[1][0][0]  # Get the DataFrame passed in the second call
+        self.assertTrue((second_call_df["feature"] == [8, 10, 12]).all())
+        self.assertTrue((second_call_df["id"] == ["id2", "id2", "id2"]).all())
