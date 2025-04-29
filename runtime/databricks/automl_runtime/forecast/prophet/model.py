@@ -110,16 +110,17 @@ class ProphetModel(ForecastModel):
                                                   freq=pd.DateOffset(**offset_kwarg),
                                                   include_history=include_history)
 
-    def _predict_impl(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame = None) -> pd.DataFrame:
+    def _predict_impl(self, horizon: int = None, include_history: bool = True, future_df: pd.DataFrame = None) -> pd.DataFrame:
         """
         Predict using the API from prophet model.
         :param horizon: Int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
+        :param future_df: Optional future input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        if df is not None:
-            future_pd = df
+        if future_df is not None:
+            future_pd = future_df
         else:
             future_pd = self.make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
 
@@ -129,15 +130,16 @@ class ProphetModel(ForecastModel):
         future_pd.rename(columns={self._time_col: "ds"}, inplace=True)
         return self.model().predict(future_pd)
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame = None) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True, future_df: pd.DataFrame = None) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
+        :param future_df: Optional future input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        return self._predict_impl(horizon, include_history, df)
+        return self._predict_impl(horizon, include_history, future_df)
 
     def predict(self, context: mlflow.pyfunc.model.PythonModelContext, model_input: pd.DataFrame) -> pd.Series:
         """
@@ -260,19 +262,17 @@ class MultiSeriesProphetModel(ProphetModel):
         future_pd[self._id_cols] = df[self._id_cols].iloc[0]
         return future_pd
 
-    def predict_timeseries(self, horizon: int = None, include_history: bool = True, df: pd.DataFrame = None) -> pd.DataFrame:
+    def predict_timeseries(self, horizon: int = None, include_history: bool = True, future_df: pd.DataFrame = None) -> pd.DataFrame:
         """
         Predict using the prophet model.
         :param horizon: Int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
-        :param df: Optional input dataframe
+        :param future_df: Optional future input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
         horizon=horizon or self._horizon
-        if df is not None:
-            future_df = df
-        else:
+        if future_df is None:
             end_time = pd.Timestamp(self._timeseries_end)
             future_df = make_future_dataframe(
                 start_time=self._timeseries_starts,
