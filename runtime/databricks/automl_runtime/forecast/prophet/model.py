@@ -119,16 +119,14 @@ class ProphetModel(ForecastModel):
         :param future_df: Optional future input dataframe
         :return: A pd.DataFrame with the forecast components.
         """
-        if future_df is not None:
-            future_pd = future_df
-        else:
-            future_pd = self.make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
+        if future_df is None:
+            future_df = self.make_future_dataframe(horizon=horizon or self._horizon, include_history=include_history)
 
         if self._preprocess_func and self._split_col:
-            future_pd = apply_preprocess_func(future_pd, self._preprocess_func, self._split_col)
+            future_df = apply_preprocess_func(future_df, self._preprocess_func, self._split_col)
 
-        future_pd.rename(columns={self._time_col: "ds"}, inplace=True)
-        return self.model().predict(future_pd)
+        future_df.rename(columns={self._time_col: "ds"}, inplace=True)
+        return self.model().predict(future_df)
 
     def predict_timeseries(self, horizon: int = None, include_history: bool = True, future_df: pd.DataFrame = None) -> pd.DataFrame:
         """
