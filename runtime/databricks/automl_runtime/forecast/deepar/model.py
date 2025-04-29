@@ -100,7 +100,7 @@ class DeepARModel(ForecastModel):
 
         pred_df = pred_df.rename(columns={'index': self._time_col})
         if self._id_cols:
-            id_col_name = '-'.join(self._id_cols)
+            id_col_name = self._id_cols[0]
             pred_df = pred_df.rename(columns={'item_id': id_col_name})
         else:
             pred_df = pred_df.drop(columns='item_id')
