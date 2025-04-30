@@ -27,7 +27,7 @@ from mlflow.utils.environment import _mlflow_conda_env
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency, \
-    make_future_dataframe, make_single_future_dataframe
+    make_future_dataframe, make_single_future_dataframe, apply_preprocess_func
 from databricks.automl_runtime import version
 
 
@@ -136,20 +136,22 @@ class ArimaModel(AbstractArimaModel):
         self,
         horizon: int = None,
         include_history: bool = True,
-        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+        future_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
         :param horizon: int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
-        :param df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
+        :param future_df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
         :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
         """
+        if self._preprocess_func and self._split_col:
+            future_df = apply_preprocess_func(future_df, self._preprocess_func, self._split_col)
         horizon = horizon or self._horizon
         X = None
-        if self._exogenous_cols and df is not None:
+        if self._exogenous_cols and future_df is not None:
             time_col = self._time_col if self._time_col in df.columns else "ds"
-            X = (df[df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
+            X = (future_df[future_df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
         future_pd = self._forecast(horizon, X)
         if include_history:
             in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, X=X)
@@ -190,42 +192,9 @@ class ArimaModel(AbstractArimaModel):
         self._validate_cols(model_input, [self._time_col])
         test_df = model_input.copy()
         if self._preprocess_func and self._split_col:
-             # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
-            # and the split column to be present, as they are used in the trial notebook. These columns are added 
-            # temporarily and removed after preprocessing.
-            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
-            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
-            test_df["y"] = None
-            test_df[self._split_col] = "prediction"
-            test_df = self._preprocess_func(test_df)
-            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
+            test_df = apply_preprocess_func(test_df, self._preprocess_func, self._split_col)
         result_df = self._predict_impl(test_df)
         return result_df["yhat"]
-
-    def predict_with_full_df_returned(self, model_input: pd.DataFrame) -> pd.DataFrame:
-        """
-        Predict API for prediction tables with covariates.
-
-        Returns the prediction values for given timestamps in the input dataframe. If an input timestamp
-        to predict does not match the original frequency that the model trained on, an exception will be thrown.
-        :param model_input: The input dataframe of the model. Should have the same time column name
-                            as the training data of the ARIMA model.
-        :return: A pd.DataFrame with the prediction values.
-        """
-        self._validate_cols(model_input, [self._time_col])
-        test_df = model_input.copy()
-        if self._preprocess_func and self._split_col:
-             # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
-            # and the split column to be present, as they are used in the trial notebook. These columns are added 
-            # temporarily and removed after preprocessing.
-            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
-            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
-            test_df["y"] = None
-            test_df[self._split_col] = "prediction"
-            test_df = self._preprocess_func(test_df)
-            test_df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
-        result_df = self._predict_impl(test_df)
-        return result_df
 
     def _predict_impl(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.rename(columns={self._time_col: "ds"})
@@ -404,7 +373,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         self,
         horizon: int = None,
         include_history: bool = True,
-        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+        future_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
         Predict target column for given horizon_timedelta and history data.
         :param horizon: Int number of periods to forecast forward.
@@ -415,7 +384,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         """
         horizon = horizon or self._horizon
         ids = self._pickled_models.keys()
-        preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, include_history, df), ids))
+        preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, include_history, future_df), ids))
         return pd.concat(preds_dfs).reset_index(drop=True)
 
     def _predict_timeseries_single_id(
@@ -458,15 +427,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
                 error_code=INVALID_PARAMETER_VALUE,
             )
         if self._preprocess_func and self._split_col:
-            # Apply the same preprocessing pipeline to test_df. The preprocessing function requires the "y" column 
-            # and the split column to be present, as they are used in the trial notebook. These columns are added 
-            # temporarily and removed after preprocessing.
-            # see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
-            # and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
-            df["y"] = None
-            df[self._split_col] = ""
-            df = df.groupby(self._id_cols).apply(self._preprocess_func).reset_index(drop=True)
-            df.drop(columns=["y", self._split_col], inplace=True, errors="ignore")
+            df = apply_preprocess_func(df, self._preprocess_func, self._split_col)
         preds_df = df.groupby(self._id_cols).apply(self._predict_single_id).reset_index(drop=True)
         df = df.merge(preds_df, how="left", on=[self._time_col] + self._id_cols)  # merge predictions to original order
         return df["yhat"]
