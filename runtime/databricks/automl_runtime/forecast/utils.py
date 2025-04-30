@@ -279,3 +279,21 @@ def calculate_period_differences(
     freq_alias = PERIOD_ALIAS_MAP[OFFSET_ALIAS_MAP[frequency_unit]]
     # It is intended to get the floor value. And in the later check we will use this floor value to find out if it is not consistent.
     return  (end_time.to_period(freq_alias) - start_time.to_period(freq_alias)).n // frequency_quantity
+
+def apply_preprocess_func(df: pd.DataFrame, preprocess_func: callable, split_col: str) -> pd.DataFrame:
+    """
+    Apply the preprocessing function to the dataframe. The preprocessing function requires the "y" column
+    and the split column to be present, as they are used in the trial notebook. These columns are added
+    temporarily and removed after preprocessing.
+    see https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/finish_with_transform.jinja?L3
+    and https://src.dev.databricks.com/databricks-eng/universe/-/blob/automl/python/databricks/automl/core/sections/templates/preprocess/select_columns.jinja?L8-10
+    :param df: pd.DataFrame to be preprocessed.
+    :param preprocess_func: preprocessing function to be applied to the dataframe.
+    :param split_col: name of the split column to be added to the dataframe.
+    :return: preprocessed pd.DataFrame.
+    """
+    df["y"] = None
+    df[split_col] = "prediction"
+    df = preprocess_func(df)
+    df.drop(columns=["y", split_col], inplace=True, errors="ignore")
+    return df
