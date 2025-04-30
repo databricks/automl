@@ -112,6 +112,8 @@ class ArimaModel(AbstractArimaModel):
         :param time_col: the column name of the time column
         :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
         used as additional features in arima model.
+        :param split_col: Optional column name of the split column. It is only used for the preprocess_func.
+        :param preprocess_func: Optional function to preprocess the data. If provided, the data will be preprocessed before the model prediction.
         """
         super().__init__()
         self._pickled_model = pickled_model
@@ -312,6 +314,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         :param id_cols: the column names of the identity columns for multi-series time series
         :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
         used as additional features in arima model.
+        :param split_col: Optional column name of the split column. It is only used for the preprocess_func.
+        :param preprocess_func: Optional function to preprocess the data. If provided, the data will be preprocessed before the model prediction.
         """
         super().__init__()
         self._pickled_models = pickled_model_dict
