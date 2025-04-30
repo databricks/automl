@@ -197,13 +197,13 @@ class TestArimaModelWithExogenous(unittest.TestCase):
                                       exogenous_cols=self.exogenous_cols)
 
     def test_predict_timeseries_success(self):
-        forecast_pd = self.arima_model.predict_timeseries(df=self.df)
+        forecast_pd = self.arima_model.predict_timeseries(future_df=self.df)
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(10, forecast_pd.shape[0])
         pd.testing.assert_series_equal(self.df["date"], forecast_pd["ds"], check_names=False)
         # Test forecast without history data
-        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, df=self.df)
+        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, future_df=self.df)
         self.assertEqual(len(forecast_future_pd), self.horizon)
 
     def test_predict_success(self):
@@ -345,7 +345,8 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
             pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-{i + 1:02d}-13")),
             pd.Series(range(num_rows), name="y"),
             pd.Series(range(num_rows), name="x1"),
-            pd.Series(range(num_rows), name="x2")
+            pd.Series(range(num_rows), name="x2"),
+            pd.Series(["1" if i < 5 else "2" for i in range(num_rows)], name="id")  # Add id column with different values
         ], axis=1)
         train_df = self.df.set_index("date")
         self.exogenous_cols = ["x1", "x2"]
@@ -368,12 +369,12 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
                                                  exogenous_cols=self.exogenous_cols)
 
     def test_predict_timeseries_success(self):
-        forecast_pd = self.arima_model.predict_timeseries(df=self.df)
+        forecast_pd = self.arima_model.predict_timeseries(future_df=self.df)
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(18, forecast_pd.shape[0])
         # Test forecast without history data
-        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, df=self.df)
+        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, future_df=self.df)
         self.assertEqual(len(forecast_future_pd), 2)
 
     def test_predict_success(self):
