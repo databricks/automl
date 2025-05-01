@@ -150,13 +150,13 @@ class ArimaModel(AbstractArimaModel):
         if self._preprocess_func and self._split_col:
             future_df = apply_preprocess_func(future_df, self._preprocess_func, self._split_col)
         horizon = horizon or self._horizon
-        X = None
+        future_feature_df = None
         if self._exogenous_cols and future_df is not None:
             time_col = self._time_col if self._time_col in future_df.columns else "ds"
-            X = (future_df[future_df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
-        future_pd = self._forecast(horizon, X)
+            future_feature_df = (future_df[future_df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
+        future_pd = self._forecast(horizon, future_feature_df)
         if include_history:
-            in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, X=X)
+            in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, feature_df=future_feature_df)
             return pd.concat([in_sample_pd, future_pd]).reset_index(drop=True)
         else:
             return future_pd
@@ -226,18 +226,18 @@ class ArimaModel(AbstractArimaModel):
         # Out-of-sample prediction if needed
         horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency_unit, self._frequency_quantity)
         if horizon > 0:
-            X_future = df[df["ds"] > self._end_ds].set_index("ds")
+            future_feature_df = df[df["ds"] > self._end_ds].set_index("ds")
             future_pd = self._forecast(
                 horizon,
-                X=X_future[self._exogenous_cols] if self._exogenous_cols else None)
+                feature_df=future_feature_df[self._exogenous_cols] if self._exogenous_cols else None)
             preds_pds.append(future_pd)
         # In-sample prediction if needed
         if pred_start_ds <= self._end_ds:
-            X_in_sample = df[df["ds"] <= self._end_ds].set_index("ds")
+            df_in_sample = df[df["ds"] <= self._end_ds].set_index("ds")
             in_sample_pd = self._predict_in_sample(
                 start_ds=pred_start_ds,
                 end_ds=self._end_ds,
-                X=X_in_sample[self._exogenous_cols] if self._exogenous_cols else None)
+                feature_df=df_in_sample[self._exogenous_cols] if self._exogenous_cols else None)
             preds_pds.append(in_sample_pd)
         # Map predictions back to given timestamps
         preds_pd = pd.concat(preds_pds).set_index("ds")
@@ -248,7 +248,7 @@ class ArimaModel(AbstractArimaModel):
         self,
         start_ds: pd.Timestamp = None,
         end_ds: pd.Timestamp = None,
-        X: pd.DataFrame = None) -> pd.DataFrame:
+        feature_df: pd.DataFrame = None) -> pd.DataFrame:
         if start_ds and end_ds:
             start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency_unit, self._frequency_quantity)
             end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency_unit, self._frequency_quantity)
@@ -259,7 +259,7 @@ class ArimaModel(AbstractArimaModel):
         d = self.model().order[1]
         start_idx = max(start_idx, d)
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
-            X=X,
+            X=feature_df,
             start=start_idx,
             end=end_idx,
             return_conf_int=True)
@@ -272,12 +272,12 @@ class ArimaModel(AbstractArimaModel):
     def _forecast(
         self,
         horizon: int = None,
-        X: pd.DataFrame = None) -> pd.DataFrame:
+        feature_df: pd.DataFrame = None) -> pd.DataFrame:
         # set horizon to the length of future_df if future_df is provided to avoid the length mismatch error from pmdarima
-        horizon = horizon or self._horizon if X is None else len(X)
+        horizon = horizon or self._horizon if feature_df is None else len(feature_df)
         preds, conf = self.model().predict(
             horizon,
-            X=X,
+            X=feature_df,
             return_conf_int=True)
         ds_indices = self._get_ds_indices(start_ds=self._end_ds, periods=horizon + 1, frequency_unit=self._frequency_unit, frequency_quantity=self._frequency_quantity)[1:]
         preds_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds})
