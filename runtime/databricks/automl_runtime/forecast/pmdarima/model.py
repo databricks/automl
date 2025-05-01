@@ -27,7 +27,7 @@ from mlflow.utils.environment import _mlflow_conda_env
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime.forecast.utils import calculate_period_differences, is_frequency_consistency, \
-    make_future_dataframe, make_single_future_dataframe
+    make_future_dataframe, make_single_future_dataframe, apply_preprocess_func
 from databricks.automl_runtime import version
 
 
@@ -90,9 +90,17 @@ class ArimaModel(AbstractArimaModel):
     ARIMA mlflow model wrapper for univariate forecasting.
     """
 
-    def __init__(self, pickled_model: bytes, horizon: int, frequency_unit: str,
-                 frequency_quantity: int, start_ds: pd.Timestamp, end_ds: pd.Timestamp,
-                 time_col: str, exogenous_cols: Optional[List[str]] = None) -> None:
+    def __init__(self, 
+                 pickled_model: bytes, 
+                 horizon: int, 
+                 frequency_unit: str,
+                 frequency_quantity: int, 
+                 start_ds: pd.Timestamp, 
+                 end_ds: pd.Timestamp,
+                 time_col: str, 
+                 exogenous_cols: Optional[List[str]] = None,
+                 split_col: Optional[str] = None,
+                 preprocess_func: Optional[callable] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for ARIMA.
         :param pickled_model: the pickled ARIMA model as a bytes object.
@@ -104,6 +112,8 @@ class ArimaModel(AbstractArimaModel):
         :param time_col: the column name of the time column
         :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
         used as additional features in arima model.
+        :param split_col: Optional column name of the split column. It is only used for the preprocess_func.
+        :param preprocess_func: Optional function to preprocess the data. If provided, the data will be preprocessed before the model prediction.
         """
         super().__init__()
         self._pickled_model = pickled_model
@@ -114,6 +124,8 @@ class ArimaModel(AbstractArimaModel):
         self._end_ds = pd.to_datetime(end_ds)
         self._time_col = time_col
         self._exogenous_cols = exogenous_cols
+        self._split_col = split_col
+        self._preprocess_func = preprocess_func
 
     def model(self) -> pmdarima.arima.ARIMA:
         """
@@ -126,26 +138,57 @@ class ArimaModel(AbstractArimaModel):
         self,
         horizon: int = None,
         include_history: bool = True,
-        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+        future_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
-        Predict target column for given horizon_timedelta and history data.
+        Predict target column for given horizon and history data.
         :param horizon: int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
-        :param df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
-        :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
+        :param future_df: A pd.Dataframe containing future time indices and future covariates if covariates are used in training.
+        :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon and history data.
         """
+        if self._preprocess_func and self._split_col:
+            assert future_df is not None, "future_df is required when preprocess_func is provided"
+            future_df = apply_preprocess_func(future_df, self._preprocess_func, self._split_col)
         horizon = horizon or self._horizon
-        X = None
-        if self._exogenous_cols and df is not None:
-            time_col = self._time_col if self._time_col in df.columns else "ds"
-            X = (df[df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
-        future_pd = self._forecast(horizon, X)
+        future_feature_df = None
+        # TODO: investigate if we can use future_df directly in the forecast function
+        if self._exogenous_cols:
+            future_feature_df = self._get_future_feature_df(future_df)
+        future_pd = self._forecast(horizon, future_feature_df)
         if include_history:
-            in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, X=X)
+            history_feature_df = self._get_history_feature_df(future_df)
+            in_sample_pd = self._predict_in_sample(start_ds=self._start_ds, end_ds=self._end_ds, feature_df=history_feature_df)
             return pd.concat([in_sample_pd, future_pd]).reset_index(drop=True)
         else:
             return future_pd
+
+    def _get_future_feature_df(self, future_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Get the future feature dataframe.
+        :param future_df: A pd.Dataframe containing future time indices and future covariates if covariates are used in training.
+        :return: A pd.DataFrame with the future covariates, without the time column.
+        """
+        if future_df is not None:
+            time_col = self._time_col if self._time_col in future_df.columns else "ds"
+            future_feature_df = future_df[future_df[time_col] > self._end_ds].set_index(time_col)[self._exogenous_cols]
+            assert future_feature_df.empty == False, "future_feature_df is empty"
+            return future_feature_df
+        else:
+            return None
+    
+    def _get_history_feature_df(self, future_df: pd.DataFrame = None) -> pd.DataFrame:
+        """
+        Get the history feature dataframe.
+        :param future_df: A pd.Dataframe containing future time indices and future covariates if covariates are used in training.
+        :return: A pd.DataFrame with the history covariates, without the time column.
+        """
+        if future_df is not None:
+            history_feature_df = future_df[future_df[self._time_col] <= self._end_ds].set_index(self._time_col)[self._exogenous_cols]
+            assert history_feature_df.empty == False, "history_feature_df is empty"
+            return history_feature_df
+        else:
+            return None
 
     def make_future_dataframe(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
@@ -178,7 +221,10 @@ class ArimaModel(AbstractArimaModel):
         :return: A pd.Series with the prediction values.
         """
         self._validate_cols(model_input, [self._time_col])
-        result_df = self._predict_impl(model_input)
+        test_df = model_input.copy()
+        if self._preprocess_func and self._split_col:
+            test_df = apply_preprocess_func(test_df, self._preprocess_func, self._split_col)
+        result_df = self._predict_impl(test_df)
         return result_df["yhat"]
 
     def _predict_impl(self, input_df: pd.DataFrame) -> pd.DataFrame:
@@ -209,18 +255,18 @@ class ArimaModel(AbstractArimaModel):
         # Out-of-sample prediction if needed
         horizon = calculate_period_differences(self._end_ds, max(df["ds"]), self._frequency_unit, self._frequency_quantity)
         if horizon > 0:
-            X_future = df[df["ds"] > self._end_ds].set_index("ds")
+            future_feature_df = df[df["ds"] > self._end_ds].set_index("ds")
             future_pd = self._forecast(
                 horizon,
-                X=X_future[self._exogenous_cols] if self._exogenous_cols else None)
+                feature_df=future_feature_df[self._exogenous_cols] if self._exogenous_cols else None)
             preds_pds.append(future_pd)
         # In-sample prediction if needed
         if pred_start_ds <= self._end_ds:
-            X_in_sample = df[df["ds"] <= self._end_ds].set_index("ds")
+            df_in_sample = df[df["ds"] <= self._end_ds].set_index("ds")
             in_sample_pd = self._predict_in_sample(
                 start_ds=pred_start_ds,
                 end_ds=self._end_ds,
-                X=X_in_sample[self._exogenous_cols] if self._exogenous_cols else None)
+                feature_df=df_in_sample[self._exogenous_cols] if self._exogenous_cols else None)
             preds_pds.append(in_sample_pd)
         # Map predictions back to given timestamps
         preds_pd = pd.concat(preds_pds).set_index("ds")
@@ -231,7 +277,7 @@ class ArimaModel(AbstractArimaModel):
         self,
         start_ds: pd.Timestamp = None,
         end_ds: pd.Timestamp = None,
-        X: pd.DataFrame = None) -> pd.DataFrame:
+        feature_df: pd.DataFrame = None) -> pd.DataFrame:
         if start_ds and end_ds:
             start_idx = calculate_period_differences(self._start_ds, start_ds, self._frequency_unit, self._frequency_quantity)
             end_idx = calculate_period_differences(self._start_ds, end_ds, self._frequency_unit, self._frequency_quantity)
@@ -242,7 +288,7 @@ class ArimaModel(AbstractArimaModel):
         d = self.model().order[1]
         start_idx = max(start_idx, d)
         preds_in_sample, conf_in_sample = self.model().predict_in_sample(
-            X=X,
+            X=feature_df,
             start=start_idx,
             end=end_idx,
             return_conf_int=True)
@@ -255,11 +301,22 @@ class ArimaModel(AbstractArimaModel):
     def _forecast(
         self,
         horizon: int = None,
-        X: pd.DataFrame = None) -> pd.DataFrame:
-        horizon = horizon or self._horizon
+        feature_df: pd.DataFrame = None) -> pd.DataFrame:
+        """
+        Do forecast for future data. feature_df should only contain future covariates, without the time column.
+        Unlike Prophet, pmdarima does not require time column in the feature_df, it depends on horizon to determine the length of the prediction
+        :param horizon: int number of periods to forecast forward.
+        :param feature_df: A pd.Dataframe with the future covariates, without the time column.
+        :return: A pd.DataFrame with the forecasts.
+        """
+        # set horizon to the length of future_df if future_df is provided to avoid the length mismatch error from pmdarima
+        if feature_df is None:
+            horizon = horizon or self._horizon
+        else:
+            horizon = len(feature_df)
         preds, conf = self.model().predict(
             horizon,
-            X=X,
+            X=feature_df,
             return_conf_int=True)
         ds_indices = self._get_ds_indices(start_ds=self._end_ds, periods=horizon + 1, frequency_unit=self._frequency_unit, frequency_quantity=self._frequency_quantity)[1:]
         preds_pd = pd.DataFrame({'ds': ds_indices, 'yhat': preds})
@@ -272,9 +329,18 @@ class MultiSeriesArimaModel(AbstractArimaModel):
     ARIMA mlflow model wrapper for multivariate forecasting.
     """
 
-    def __init__(self, pickled_model_dict: Dict[Tuple, bytes], horizon: int, frequency_unit: str, frequency_quantity: int,
-                 start_ds_dict: Dict[Tuple, pd.Timestamp], end_ds_dict: Dict[Tuple, pd.Timestamp],
-                 time_col: str, id_cols: List[str], exogenous_cols: Optional[List[str]] = None) -> None:
+    def __init__(self, 
+                 pickled_model_dict: Dict[Tuple, bytes], 
+                 horizon: int, 
+                 frequency_unit: str, 
+                 frequency_quantity: int,
+                 start_ds_dict: Dict[Tuple, pd.Timestamp], 
+                 end_ds_dict: Dict[Tuple, pd.Timestamp],
+                 time_col: str, 
+                 id_cols: List[str], 
+                 exogenous_cols: Optional[List[str]] = None,
+                 split_col: Optional[str] = None,
+                 preprocess_func: Optional[callable] = None) -> None:
         """
         Initialize the mlflow Python model wrapper for multiseries ARIMA.
         :param pickled_model_dict: the dictionary of binarized ARIMA models for different time series.
@@ -287,6 +353,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         :param id_cols: the column names of the identity columns for multi-series time series
         :param exogenous_cols: Optional list of column names of exogenous variables. If provided, these columns are
         used as additional features in arima model.
+        :param split_col: Optional column name of the split column. It is only used for the preprocess_func.
+        :param preprocess_func: Optional function to preprocess the data. If provided, the data will be preprocessed before the model prediction.
         """
         super().__init__()
         self._pickled_models = pickled_model_dict
@@ -298,6 +366,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         self._time_col = time_col
         self._id_cols = id_cols
         self._exogenous_cols = exogenous_cols
+        self._split_col = split_col
+        self._preprocess_func = preprocess_func
 
     def model(self, id_: Tuple) -> pmdarima.arima.ARIMA:
         """
@@ -347,18 +417,21 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         self,
         horizon: int = None,
         include_history: bool = True,
-        df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+        future_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
-        Predict target column for given horizon_timedelta and history data.
+        Predict target column for given horizon and history data.
         :param horizon: Int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
-        :param df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
+        :param future_df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
         :return: A pd.DataFrame with the forecast components.
         """
         horizon = horizon or self._horizon
         ids = self._pickled_models.keys()
-        preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, include_history, df), ids))
+        if future_df is not None:
+            # Add ts_id column to future_df because preprocess_func requires it
+            future_df["ts_id"] = future_df[self._id_cols].apply(tuple, axis=1)
+        preds_dfs = list(map(lambda id_: self._predict_timeseries_single_id(id_, horizon, include_history, future_df), ids))
         return pd.concat(preds_dfs).reset_index(drop=True)
 
     def _predict_timeseries_single_id(
@@ -368,7 +441,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         include_history: bool = True,
         df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         arima_model_single_id = ArimaModel(self._pickled_models[id_], self._horizon, self._frequency_unit, self._frequency_quantity,
-                                           self._starts[id_], self._ends[id_], self._time_col, self._exogenous_cols)
+                                           self._starts[id_], self._ends[id_], self._time_col, self._exogenous_cols, self._split_col, self._preprocess_func)
         preds_df = arima_model_single_id.predict_timeseries(horizon, include_history, df)
         for id, col_name in zip(id_, self._id_cols):
             preds_df[col_name] = id
@@ -400,6 +473,8 @@ class MultiSeriesArimaModel(AbstractArimaModel):
                 ),
                 error_code=INVALID_PARAMETER_VALUE,
             )
+        if self._preprocess_func and self._split_col:
+            df = apply_preprocess_func(df, self._preprocess_func, self._split_col)
         preds_df = df.groupby(self._id_cols).apply(self._predict_single_id).reset_index(drop=True)
         df = df.merge(preds_df, how="left", on=[self._time_col] + self._id_cols)  # merge predictions to original order
         return df["yhat"]
@@ -413,7 +488,9 @@ class MultiSeriesArimaModel(AbstractArimaModel):
                                            self._starts[id_],
                                            self._ends[id_],
                                            self._time_col,
-                                           self._exogenous_cols)
+                                           self._exogenous_cols,
+                                           self._split_col,
+                                           self._preprocess_func)
         df["yhat"] = arima_model_single_id.predict(context=None, model_input=df).to_list()
         return df
 

@@ -17,6 +17,7 @@
 import unittest
 import pickle
 import datetime
+from unittest import mock
 
 import mlflow
 import pytest
@@ -197,13 +198,13 @@ class TestArimaModelWithExogenous(unittest.TestCase):
                                       exogenous_cols=self.exogenous_cols)
 
     def test_predict_timeseries_success(self):
-        forecast_pd = self.arima_model.predict_timeseries(df=self.df)
+        forecast_pd = self.arima_model.predict_timeseries(future_df=self.df)
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(10, forecast_pd.shape[0])
         pd.testing.assert_series_equal(self.df["date"], forecast_pd["ds"], check_names=False)
         # Test forecast without history data
-        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, df=self.df)
+        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, future_df=self.df)
         self.assertEqual(len(forecast_future_pd), self.horizon)
 
     def test_predict_success(self):
@@ -345,7 +346,8 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
             pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-{i + 1:02d}-13")),
             pd.Series(range(num_rows), name="y"),
             pd.Series(range(num_rows), name="x1"),
-            pd.Series(range(num_rows), name="x2")
+            pd.Series(range(num_rows), name="x2"),
+            pd.Series(["1" if i < 5 else "2" for i in range(num_rows)], name="id")  # Add id column with different values
         ], axis=1)
         train_df = self.df.set_index("date")
         self.exogenous_cols = ["x1", "x2"]
@@ -368,12 +370,12 @@ class TestMultiSeriesArimaModelWithExogenous(unittest.TestCase):
                                                  exogenous_cols=self.exogenous_cols)
 
     def test_predict_timeseries_success(self):
-        forecast_pd = self.arima_model.predict_timeseries(df=self.df)
+        forecast_pd = self.arima_model.predict_timeseries(future_df=self.df)
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
         self.assertEqual(18, forecast_pd.shape[0])
         # Test forecast without history data
-        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, df=self.df)
+        forecast_future_pd = self.arima_model.predict_timeseries(include_history=False, future_df=self.df)
         self.assertEqual(len(forecast_future_pd), 2)
 
     def test_predict_success(self):
@@ -619,3 +621,167 @@ class TestArimaModelFrequencyQuantity(unittest.TestCase):
             with pytest.raises(MlflowException, match="Input data columns") as e:
                 arima_model.predict(context=None, model_input=test_df)
             assert e.value.error_code == ErrorCode.Name(INVALID_PARAMETER_VALUE)
+
+class TestArimaModelWithPreprocess(unittest.TestCase):
+    def setUp(self) -> None:
+        self.num_rows = 9
+        self.start_ds = pd.Timestamp("2020-10-01")
+        self.horizon = 1
+        self.freq = 'W'
+        self.frequency_quantity = 1
+        dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency_unit=self.freq, frequency_quantity=self.frequency_quantity)
+        self.df = pd.concat([
+            pd.Series(dates, name='date'),
+            pd.Series(range(self.num_rows), name="y"),
+            pd.Series(range(self.num_rows), name="x1"),
+            pd.Series(range(self.num_rows), name="x2")
+        ], axis=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(self.df[["y", "date"]].set_index("date"), exogenous=self.df[["x1", "x2"]])
+        pickled_model = pickle.dumps(model)
+
+        # Create a mock preprocess function that doubles y values
+        def preprocess_func(df):
+            df = df.copy()
+            df["y"] = df["y"] * 2
+            return df
+        
+        self.mock_preprocess = mock.Mock(side_effect=preprocess_func)
+
+        self.arima_model = ArimaModel(pickled_model,
+                                     horizon=self.horizon,
+                                     frequency_unit=self.freq,
+                                     frequency_quantity=self.frequency_quantity,
+                                     start_ds=self.start_ds,
+                                     end_ds=pd.Timestamp("2020-11-26"),
+                                     time_col="date",
+                                     exogenous_cols=["x1", "x2"],
+                                     split_col="split",
+                                     preprocess_func=self.mock_preprocess)
+
+    def test_predict_timeseries_with_preprocess(self):
+        future_df = self.df.copy()
+        future_df = pd.concat([future_df, pd.DataFrame({
+            "date": [pd.to_datetime("2020-12-17"), pd.to_datetime("2020-12-24")],
+            "x1": [1, 2],
+            "x2": [3, 4]
+        })], axis=0)
+        future_df["split"] = "prediction"
+        
+        forecast_pd = self.arima_model.predict_timeseries(future_df=future_df)
+        expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
+        self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
+        self.assertEqual(11, forecast_pd.shape[0])
+        
+        # Verify that preprocess_func was called with the correct argument
+        self.mock_preprocess.assert_called_once()
+        call_arg = self.mock_preprocess.call_args[0][0]
+        
+        # Verify the structure of the dataframe passed to preprocess_func
+        expected_call = future_df.copy()
+        expected_call["y"] = None
+        expected_call["split"] = "prediction"
+        pd.testing.assert_frame_equal(call_arg, expected_call)
+        
+        # Verify the return value from preprocess_func
+        # The preprocess function doubles y values
+        expected_return = expected_call.copy()
+        expected_return["y"] = expected_return["y"] * 2 if expected_return["y"] is not None else 0
+        
+        # Get the actual return value from the call
+        actual_return = self.mock_preprocess.side_effect(call_arg)
+        pd.testing.assert_frame_equal(actual_return, expected_return)
+
+    def test_predict_with_preprocess(self):
+        test_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-12-17"), pd.to_datetime("2020-12-24")],
+            "x1": [1, 2],
+            "x2": [3, 4]
+        })
+        
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
+        self.assertEqual(2, len(yhat))
+        
+        # Verify that preprocess_func was called with the correct argument
+        self.mock_preprocess.assert_called_once()
+        call_arg = self.mock_preprocess.call_args[0][0]
+        
+        # Verify the structure of the dataframe passed to preprocess_func
+        expected_call = test_df.copy()
+        expected_call["y"] = None
+        expected_call["split"] = "prediction"
+        pd.testing.assert_frame_equal(call_arg, expected_call)
+        
+        # Verify the return value from preprocess_func
+        # The preprocess function doubles y values
+        expected_return = expected_call.copy()
+        expected_return["y"] = expected_return["y"] * 2 if expected_return["y"] is not None else 0
+        
+        # Get the actual return value from the call
+        actual_return = self.mock_preprocess.side_effect(call_arg)
+        pd.testing.assert_frame_equal(actual_return, expected_return)
+
+class TestMultiSeriesArimaModelWithPreprocess(unittest.TestCase):
+    def setUp(self) -> None:
+        num_rows = 9
+        self.df = pd.concat([
+            pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-{i + 1:02d}-13")),
+            pd.Series(range(num_rows), name="y")
+        ], axis=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(self.df.set_index("date"))
+        self.pickled_model = pickle.dumps(model)
+        pickled_model_dict = {("1",): self.pickled_model, ("2",): self.pickled_model}
+        start_ds_dict = {("1",): pd.Timestamp("2020-01-13"), ("2",): pd.Timestamp("2020-01-13")}
+        end_ds_dict = {("1",): pd.Timestamp("2020-09-13"), ("2",): pd.Timestamp("2020-09-13")}
+
+        # Create a mock preprocess function that adds 1 to y values
+        def preprocess_func(df):
+            df = df.copy()
+            df["y"] = df["y"] + 1
+            return df
+        
+        self.mock_preprocess = mock.Mock(side_effect=preprocess_func)
+
+        self.arima_model = MultiSeriesArimaModel(pickled_model_dict,
+                                                horizon=1,
+                                                frequency_unit='month',
+                                                frequency_quantity=1,
+                                                start_ds_dict=start_ds_dict,
+                                                end_ds_dict=end_ds_dict,
+                                                time_col="date",
+                                                id_cols=["id"],
+                                                split_col="split",
+                                                preprocess_func=self.mock_preprocess)
+
+    def test_predict_with_preprocess(self):
+        test_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-05-13"), pd.to_datetime("2020-05-13"),
+                     pd.to_datetime("2020-12-13"), pd.to_datetime("2020-12-13")],
+            "id": ["1", "2", "1", "2"]
+        })
+        
+        yhat = self.arima_model.predict(context=None, model_input=test_df)
+        self.assertEqual(4, len(yhat))
+        
+        # Verify that preprocess_func was called three times:
+        # 1. In predict() for the entire dataframe
+        # 2. For each time series (id=1 and id=2)
+        self.assertEqual(len(self.mock_preprocess.call_args_list), 3)
+        
+        # First call: entire dataframe
+        first_call_arg = self.mock_preprocess.call_args_list[0][0][0]
+        expected_first_call = test_df.copy()
+        expected_first_call["ts_id"] = expected_first_call[["id"]].apply(tuple, axis=1)
+        expected_first_call["y"] = None
+        expected_first_call["split"] = "prediction"
+        pd.testing.assert_frame_equal(first_call_arg, expected_first_call)
+        
+        # Verify the return value from preprocess_func
+        # The preprocess function adds 1 to y values
+        expected_return = expected_first_call.copy()
+        expected_return["y"] = expected_return["y"] + 1 if expected_return["y"] is not None else 1
+        
+        # Get the actual return value from the first call
+        actual_return = self.mock_preprocess.side_effect(first_call_arg)
+        pd.testing.assert_frame_equal(actual_return, expected_return)
