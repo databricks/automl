@@ -157,7 +157,7 @@ class ArimaModel(AbstractArimaModel):
             future_feature_df = (future_df[future_df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
         future_pd = self._forecast(horizon, future_feature_df)
         if include_history:
-            in_sample_pd = self._predict_in_sample(start_ds = self._start_ds, end_ds = self._end_ds, feature_df = future_feature_df)
+            in_sample_pd = self._predict_in_sample(start_ds = self._start_ds, end_ds = self._end_ds, feature_df = None)
             return pd.concat([in_sample_pd, future_pd]).reset_index(drop = True)
         else:
             return future_pd
