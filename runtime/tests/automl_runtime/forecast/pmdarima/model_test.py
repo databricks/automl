@@ -660,11 +660,12 @@ class TestArimaModelWithPreprocess(unittest.TestCase):
                                      preprocess_func=self.mock_preprocess)
 
     def test_predict_timeseries_with_preprocess(self):
-        future_df = pd.DataFrame({
+        future_df = self.df.copy()
+        future_df = pd.concat([future_df, pd.DataFrame({
             "date": [pd.to_datetime("2020-12-17"), pd.to_datetime("2020-12-24")],
             "x1": [1, 2],
             "x2": [3, 4]
-        })
+        })], axis=0)
         future_df["split"] = "prediction"
         
         forecast_pd = self.arima_model.predict_timeseries(future_df=future_df)
