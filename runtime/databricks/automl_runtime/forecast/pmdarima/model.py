@@ -151,6 +151,7 @@ class ArimaModel(AbstractArimaModel):
             future_df = apply_preprocess_func(future_df, self._preprocess_func, self._split_col)
         horizon = horizon or self._horizon
         future_feature_df = None
+        # TODO: investigate if we can use future_df directly in the forecast function
         if self._exogenous_cols and future_df is not None:
             time_col = self._time_col if self._time_col in future_df.columns else "ds"
             future_feature_df = (future_df[future_df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
