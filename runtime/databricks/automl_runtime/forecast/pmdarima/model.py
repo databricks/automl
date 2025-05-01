@@ -273,6 +273,7 @@ class ArimaModel(AbstractArimaModel):
         self,
         horizon: int = None,
         feature_df: pd.DataFrame = None) -> pd.DataFrame:
+        # Unlike Prophet, pmdarima does not require time column in the feature_df, it depends on horizon to determine the length of the prediction
         # set horizon to the length of future_df if future_df is provided to avoid the length mismatch error from pmdarima
         horizon = horizon or self._horizon if feature_df is None else len(feature_df)
         preds, conf = self.model().predict(
