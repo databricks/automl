@@ -632,10 +632,12 @@ class TestArimaModelWithPreprocess(unittest.TestCase):
         dates = AbstractArimaModel._get_ds_indices(self.start_ds, periods=self.num_rows, frequency_unit=self.freq, frequency_quantity=self.frequency_quantity)
         self.df = pd.concat([
             pd.Series(dates, name='date'),
-            pd.Series(range(self.num_rows), name="y")
+            pd.Series(range(self.num_rows), name="y"),
+            pd.Series(range(self.num_rows), name="x1"),
+            pd.Series(range(self.num_rows), name="x2")
         ], axis=1)
         model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
-        model.fit(self.df.set_index("date"))
+        model.fit(self.df[["y", "date"]].set_index("date"), exogenous=self.df[["x1", "x2"]])
         pickled_model = pickle.dumps(model)
 
         # Create a mock preprocess function that doubles y values
@@ -653,18 +655,22 @@ class TestArimaModelWithPreprocess(unittest.TestCase):
                                      start_ds=self.start_ds,
                                      end_ds=pd.Timestamp("2020-11-26"),
                                      time_col="date",
+                                     exogenous_cols=["x1", "x2"],
                                      split_col="split",
                                      preprocess_func=self.mock_preprocess)
 
     def test_predict_timeseries_with_preprocess(self):
-        # Test with future_df that has y values
-        future_df = self.df.copy()
+        future_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-12-17"), pd.to_datetime("2020-12-24")],
+            "x1": [1, 2],
+            "x2": [3, 4]
+        })
         future_df["split"] = "prediction"
         
         forecast_pd = self.arima_model.predict_timeseries(future_df=future_df)
         expected_columns = {"yhat", "yhat_lower", "yhat_upper"}
         self.assertTrue(expected_columns.issubset(set(forecast_pd.columns)))
-        self.assertEqual(10, forecast_pd.shape[0])
+        self.assertEqual(11, forecast_pd.shape[0])
         
         # Verify that preprocess_func was called with the correct argument
         self.mock_preprocess.assert_called_once()
@@ -687,7 +693,9 @@ class TestArimaModelWithPreprocess(unittest.TestCase):
 
     def test_predict_with_preprocess(self):
         test_df = pd.DataFrame({
-            "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-12-10")]
+            "date": [pd.to_datetime("2020-12-17"), pd.to_datetime("2020-12-24")],
+            "x1": [1, 2],
+            "x2": [3, 4]
         })
         
         yhat = self.arima_model.predict(context=None, model_input=test_df)

@@ -140,27 +140,41 @@ class ArimaModel(AbstractArimaModel):
         include_history: bool = True,
         future_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
-        Predict target column for given horizon_timedelta and history data.
+        Predict target column for given horizon and history data.
         :param horizon: int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
-        :param future_df: A pd.Dataframe containing regressors (exogenous variables), if they were used to train the model.
-        :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon_timedelta and history data.
+        :param future_df: A pd.Dataframe containing future time indices and future covariates if covariates are used in training.
+        :return: A pd.DataFrame with the forecasts and confidence intervals for given horizon and history data.
         """
         if self._preprocess_func and self._split_col:
+            assert future_df is not None, "future_df is required when preprocess_func is provided"
             future_df = apply_preprocess_func(future_df, self._preprocess_func, self._split_col)
         horizon = horizon or self._horizon
         future_feature_df = None
         # TODO: investigate if we can use future_df directly in the forecast function
-        if self._exogenous_cols and future_df is not None:
-            time_col = self._time_col if self._time_col in future_df.columns else "ds"
-            future_feature_df = (future_df[future_df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
+        if self._exogenous_cols:
+            future_feature_df = self._get_future_feature_df(future_df)
         future_pd = self._forecast(horizon, future_feature_df)
         if include_history:
-            in_sample_pd = self._predict_in_sample(start_ds = self._start_ds, end_ds = self._end_ds, feature_df = None)
+            history_feature_df = self._get_history_feature_df(future_df)
+            in_sample_pd = self._predict_in_sample(start_ds = self._start_ds, end_ds = self._end_ds, feature_df = history_feature_df)
             return pd.concat([in_sample_pd, future_pd]).reset_index(drop = True)
         else:
             return future_pd
+
+    def _get_future_feature_df(self, future_df: pd.DataFrame) -> pd.DataFrame:
+        if future_df is not None:
+            time_col = self._time_col if self._time_col in future_df.columns else "ds"
+            return (future_df[future_df[time_col] > self._end_ds].set_index(time_col))[self._exogenous_cols]
+        else:
+            return None
+    
+    def _get_history_feature_df(self, future_df: pd.DataFrame = None) -> pd.DataFrame:
+        if future_df is not None:
+            return future_df[future_df[self._time_col] <= self._end_ds].set_index(self._time_col)[self._exogenous_cols]
+        else:
+            return None
 
     def make_future_dataframe(self, horizon: int = None, include_history: bool = True) -> pd.DataFrame:
         """
@@ -274,6 +288,9 @@ class ArimaModel(AbstractArimaModel):
         self,
         horizon: int = None,
         feature_df: pd.DataFrame = None) -> pd.DataFrame:
+        """
+        
+        """
         # Unlike Prophet, pmdarima does not require time column in the feature_df, it depends on horizon to determine the length of the prediction
         # set horizon to the length of future_df if future_df is provided to avoid the length mismatch error from pmdarima
         if feature_df is None:
@@ -385,7 +402,7 @@ class MultiSeriesArimaModel(AbstractArimaModel):
         include_history: bool = True,
         future_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
-        Predict target column for given horizon_timedelta and history data.
+        Predict target column for given horizon and history data.
         :param horizon: Int number of periods to forecast forward.
         :param include_history: Boolean to include the historical dates in the data
             frame for predictions.
