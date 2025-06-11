@@ -19,6 +19,7 @@ import cloudpickle
 import mlflow
 import pandas as pd
 import prophet
+import category_encoders
 
 from mlflow.models.signature import ModelSignature
 from mlflow.utils.environment import _mlflow_conda_env
@@ -32,6 +33,7 @@ from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_fut
 PROPHET_ADDITIONAL_PIP_DEPS = [
         f"prophet=={prophet.__version__}",
         f"cloudpickle=={cloudpickle.__version__}",
+        f"category_encoders=={category_encoders.__version__}",
         f"databricks-automl-runtime=={version.__version__}",
     ]
 

@@ -15,6 +15,7 @@
 #
 from typing import List, Optional
 
+import category_encoders
 import gluonts
 import mlflow
 import pandas as pd
@@ -29,6 +30,7 @@ from databricks.automl_runtime.forecast.deepar.utils import set_index_and_fill_m
 DEEPAR_ADDITIONAL_PIP_DEPS = [
     f"gluonts[torch]=={gluonts.__version__}",
     f"pandas=={pd.__version__}",
+    f"category_encoders=={category_encoders.__version__}",
     f"databricks-automl-runtime=={version.__version__}"
 ]
 
