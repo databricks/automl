@@ -683,7 +683,13 @@ class TestProphetModelCategoryEncoders(BaseProphetModelTest):
         # Get the model environment
         model_env = prophet_model.model_env
         
-        # Verify category_encoders is in the additional pip dependencies
-        pip_deps = model_env.get('pip', [])
+        # Navigate to pip dependencies: dependencies list -> find dict with 'pip' key -> get pip list
+        dependencies = model_env.get('dependencies', [])
+        pip_deps = []
+        for dep in dependencies:
+            if isinstance(dep, dict) and 'pip' in dep:
+                pip_deps = dep['pip']
+                break
+        
         category_encoders_found = any("category_encoders" in dep for dep in pip_deps)
         self.assertTrue(category_encoders_found, "category_encoders should be in model environment pip dependencies")
