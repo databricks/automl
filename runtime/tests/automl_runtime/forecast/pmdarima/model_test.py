@@ -785,3 +785,163 @@ class TestMultiSeriesArimaModelWithPreprocess(unittest.TestCase):
         # Get the actual return value from the first call
         actual_return = self.mock_preprocess.side_effect(first_call_arg)
         pd.testing.assert_frame_equal(actual_return, expected_return)
+
+class TestArimaModelCategoryEncoders(unittest.TestCase):
+    """Test category_encoders dependency inclusion"""
+    
+    def setUp(self) -> None:
+        num_rows = 9
+        self.df = pd.concat([
+            pd.to_datetime(pd.Series(range(num_rows), name="date").apply(lambda i: f"2020-10-{i + 1}")),
+            pd.Series(range(num_rows), name="y")
+        ], axis=1)
+        model = ARIMA(order=(2, 0, 2), suppress_warnings=True)
+        model.fit(self.df.set_index("date"))
+        self.pickled_model = pickle.dumps(model)
+
+    def test_category_encoders_in_requirements(self):
+        """Test that category_encoders is included in model requirements"""
+        arima_model = ArimaModel(
+            self.pickled_model, 
+            horizon=1, 
+            frequency_unit='d', 
+            frequency_quantity=1,
+            start_ds=pd.to_datetime("2020-10-01"), 
+            end_ds=pd.to_datetime("2020-10-09"),
+            time_col="date"
+        )
+        
+        with mlflow.start_run() as run:
+            mlflow_arima_log_model(arima_model)
+        
+        run_id = run.info.run_id
+        
+        # Read requirements.txt from the run
+        requirements_path = mlflow.artifacts.download_artifacts(f"runs:/{run_id}/model/requirements.txt")
+        with open(requirements_path, "r") as f:
+            requirements = f.read()
+        
+        # Verify category_encoders is included in requirements
+        self.assertIn("category_encoders", requirements, "category_encoders should be included in model requirements")
+        
+        # Verify the specific version is included (from ARIMA_ADDITIONAL_PIP_DEPS)
+        import category_encoders
+        expected_dep = f"category_encoders=={category_encoders.__version__}"
+        self.assertIn(expected_dep, requirements, f"Specific category_encoders version {expected_dep} should be in requirements")
+
+    def test_model_with_category_encoding_preprocessing(self):
+        """Test that models work correctly with category encoding preprocessing functions"""
+        import category_encoders as ce
+        
+        def preprocess_func_with_category_encoding(df):
+            """Preprocessing function that uses category_encoders"""
+            # Simulate categorical encoding preprocessing
+            if 'category_col' in df.columns:
+                encoder = ce.BinaryEncoder(cols=['category_col'])
+                df = encoder.fit_transform(df)
+            return df
+        
+        arima_model = ArimaModel(
+            self.pickled_model,
+            horizon=1,
+            frequency_unit='d',
+            frequency_quantity=1,
+            start_ds=pd.to_datetime("2020-10-01"),
+            end_ds=pd.to_datetime("2020-10-09"),
+            time_col="date",
+            split_col="split",
+            preprocess_func=preprocess_func_with_category_encoding
+        )
+        
+        # Test data with categorical column
+        test_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-10-10")],
+            "category_col": ["A", "B"]
+        })
+        
+        # This should work without errors if category_encoders is properly available
+        yhat = arima_model.predict(context=None, model_input=test_df)
+        self.assertEqual(2, len(yhat))
+
+    def test_multiseries_model_with_category_encoding_preprocessing(self):
+        """Test that multi-series models work with category encoding preprocessing"""
+        import category_encoders as ce
+        
+        def preprocess_func_with_category_encoding(df):
+            """Preprocessing function that uses category_encoders for multi-series"""
+            if 'category_col' in df.columns:
+                # Use target encoder which is commonly used in multi-series scenarios
+                encoder = ce.TargetEncoder(cols=['category_col'])
+                # For this test, we'll just transform without fitting since we don't have a real target
+                df = df.copy()
+                df['category_col'] = df['category_col'].astype('category').cat.codes
+            return df
+        
+        pickled_model_dict = {("1",): self.pickled_model, ("2",): self.pickled_model}
+        start_ds_dict = {("1",): pd.Timestamp("2020-10-01"), ("2",): pd.Timestamp("2020-10-01")}
+        end_ds_dict = {("1",): pd.Timestamp("2020-10-09"), ("2",): pd.Timestamp("2020-10-09")}
+        
+        multiseries_arima_model = MultiSeriesArimaModel(
+            pickled_model_dict,
+            horizon=1,
+            frequency_unit='d',
+            frequency_quantity=1,
+            start_ds_dict=start_ds_dict,
+            end_ds_dict=end_ds_dict,
+            time_col="date",
+            id_cols=["id"],
+            split_col="split",
+            preprocess_func=preprocess_func_with_category_encoding
+        )
+        
+        test_df = pd.DataFrame({
+            "date": [pd.to_datetime("2020-10-08"), pd.to_datetime("2020-10-10")],
+            "id": ["1", "2"],
+            "category_col": ["X", "Y"]
+        })
+        
+        # This should work without errors if category_encoders is properly available
+        yhat = multiseries_arima_model.predict(context=None, model_input=test_df)
+        self.assertEqual(2, len(yhat))
+
+    def test_category_encoders_version_compatibility(self):
+        """Test that the correct version of category_encoders is specified in dependencies"""
+        # Verify that category_encoders is in ARIMA_ADDITIONAL_PIP_DEPS
+        category_encoders_deps = [dep for dep in ARIMA_ADDITIONAL_PIP_DEPS if "category_encoders" in dep]
+        self.assertEqual(len(category_encoders_deps), 1, "category_encoders should be in ARIMA_ADDITIONAL_PIP_DEPS")
+        
+        # Verify the format includes version specification
+        category_encoders_dep = category_encoders_deps[0]
+        self.assertIn("==", category_encoders_dep, "category_encoders dependency should specify exact version")
+        
+        # Verify it matches the currently installed version
+        import category_encoders
+        expected_dep = f"category_encoders=={category_encoders.__version__}"
+        self.assertEqual(category_encoders_dep, expected_dep, 
+                        f"Dependency should match installed version: {expected_dep}")
+
+    def test_model_environment_includes_category_encoders(self):
+        """Test that the model environment includes category_encoders"""
+        arima_model = ArimaModel(
+            self.pickled_model, 
+            horizon=1, 
+            frequency_unit='d', 
+            frequency_quantity=1,
+            start_ds=pd.to_datetime("2020-10-01"), 
+            end_ds=pd.to_datetime("2020-10-09"),
+            time_col="date"
+        )
+        
+        # Get the model environment
+        model_env = arima_model.model_env
+        
+        # Navigate to pip dependencies: dependencies list -> find dict with 'pip' key -> get pip list
+        dependencies = model_env.get('dependencies', [])
+        pip_deps = []
+        for dep in dependencies:
+            if isinstance(dep, dict) and 'pip' in dep:
+                pip_deps = dep['pip']
+                break
+        
+        category_encoders_found = any("category_encoders" in dep for dep in pip_deps)
+        self.assertTrue(category_encoders_found, "category_encoders should be in model environment pip dependencies")

@@ -17,6 +17,7 @@ import pickle
 from abc import abstractmethod
 from typing import List, Dict, Tuple, Optional, Union
 
+import category_encoders
 import pandas as pd
 import mlflow
 import pmdarima
@@ -34,6 +35,7 @@ from databricks.automl_runtime import version
 ARIMA_ADDITIONAL_PIP_DEPS = [
     f"pmdarima=={pmdarima.__version__}",
     f"pandas=={pd.__version__}",
+    f"category_encoders=={category_encoders.__version__}",
     f"databricks-automl-runtime=={version.__version__}"
 ]
 
