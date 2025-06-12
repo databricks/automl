@@ -356,7 +356,7 @@ class TestDeepARModel(unittest.TestCase):
 
 class TestDeepARModelCategoryEncoders(unittest.TestCase):
     """Test category_encoders dependency inclusion"""
-    
+
     @classmethod
     def setUpClass(cls) -> None:
         # Use the same setup as the main test class
@@ -430,15 +430,15 @@ class TestDeepARModelCategoryEncoders(unittest.TestCase):
             mlflow_deepar_log_model(deepar_model, sample_input)
 
         run_id = run.info.run_id
-        
+
         # Read requirements.txt from the run
         requirements_path = mlflow.artifacts.download_artifacts(f"runs:/{run_id}/model/requirements.txt")
         with open(requirements_path, "r") as f:
             requirements = f.read()
-        
+ 
         # Verify category_encoders is included in requirements
         self.assertIn("category_encoders", requirements, "category_encoders should be included in model requirements")
-        
+
         # Verify the specific version is included (from DEEPAR_ADDITIONAL_PIP_DEPS)
         import category_encoders
         expected_dep = f"category_encoders=={category_encoders.__version__}"
@@ -533,15 +533,15 @@ class TestDeepARModelCategoryEncoders(unittest.TestCase):
         # Verify that category_encoders is in DEEPAR_ADDITIONAL_PIP_DEPS
         category_encoders_deps = [dep for dep in DEEPAR_ADDITIONAL_PIP_DEPS if "category_encoders" in dep]
         self.assertEqual(len(category_encoders_deps), 1, "category_encoders should be in DEEPAR_ADDITIONAL_PIP_DEPS")
-        
+
         # Verify the format includes version specification
         category_encoders_dep = category_encoders_deps[0]
         self.assertIn("==", category_encoders_dep, "category_encoders dependency should specify exact version")
-        
+
         # Verify it matches the currently installed version
         import category_encoders
         expected_dep = f"category_encoders=={category_encoders.__version__}"
-        self.assertEqual(category_encoders_dep, expected_dep, 
+        self.assertEqual(category_encoders_dep, expected_dep,
                         f"Dependency should match installed version: {expected_dep}")
 
     def test_model_environment_includes_category_encoders(self):
@@ -561,7 +561,7 @@ class TestDeepARModelCategoryEncoders(unittest.TestCase):
         
         # Get the model environment
         model_env = deepar_model.model_env
-        
+ 
         # Navigate to pip dependencies: dependencies list -> find dict with 'pip' key -> get pip list
         dependencies = model_env.get('dependencies', [])
         pip_deps = []
@@ -569,6 +569,6 @@ class TestDeepARModelCategoryEncoders(unittest.TestCase):
             if isinstance(dep, dict) and 'pip' in dep:
                 pip_deps = dep['pip']
                 break
-        
+ 
         category_encoders_found = any("category_encoders" in dep for dep in pip_deps)
         self.assertTrue(category_encoders_found, "category_encoders should be in model environment pip dependencies")
