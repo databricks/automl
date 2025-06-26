@@ -107,10 +107,7 @@ class DeepARModel(ForecastModel):
         else:
             pred_df = pred_df.drop(columns='item_id')
 
-        if self._frequency_unit == 'W':
-            pred_df[self._time_col] = pred_df[self._time_col].dt.end_time.dt.normalize()
-        else:
-            pred_df[self._time_col] = pred_df[self._time_col].dt.to_timestamp()
+        pred_df = self._period_to_timestamp(pred_df=pred_df)
 
         return pred_df
 
@@ -145,6 +142,20 @@ class DeepARModel(ForecastModel):
         forecast_sample_list = list(forecast_iter)
 
         return forecast_sample_list
+    
+    def _period_to_timestamp(self, pred_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Convert the period to timestamp for the prediction dataframe
+        If the frequency unit is 'W', use the end of the week,
+        otherwise convert to timestamp.
+        :param pred_df: prediction dataframe
+        :return: prediction dataframe with timestamp
+        """
+        if self._frequency_unit == 'W':
+            pred_df[self._time_col] = pred_df[self._time_col].dt.end_time.dt.normalize()
+        else:
+            pred_df[self._time_col] = pred_df[self._time_col].dt.to_timestamp()
+        return pred_df
 
 
 def mlflow_deepar_log_model(deepar_model: DeepARModel,
