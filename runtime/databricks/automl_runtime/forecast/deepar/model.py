@@ -107,7 +107,7 @@ class DeepARModel(ForecastModel):
         else:
             pred_df = pred_df.drop(columns='item_id')
 
-        pred_df[self._time_col] = pred_df[self._time_col].dt.to_timestamp()
+        pred_df[self._time_col] = pred_df[self._time_col].dt.end_time.dt.normalize()
 
         return pred_df
 
