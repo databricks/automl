@@ -353,6 +353,127 @@ class TestDeepARModel(unittest.TestCase):
         self.assertEqual(len(pred_df), self.prediction_length)
         self.assertGreater(pred_df[time_col].min(), sample_input[time_col].max())
 
+    def test_period_to_timestamp(self):
+        """Test the _period_to_timestamp method for different frequency units"""
+        target_col = "sales"
+        time_col = "date"
+
+        # Test with weekly frequency (W)
+        deepar_model_weekly = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            frequency_unit="W",
+            frequency_quantity=1,
+            num_samples=1,
+            target_col=target_col,
+            time_col=time_col,
+        )
+
+        # Create a DataFrame with Period objects for weekly frequency
+        # Use proper weekly period format
+        weekly_periods = pd.PeriodIndex(['2020-01-05', '2020-01-12', '2020-01-19'], freq='W')
+        pred_df_weekly = pd.DataFrame({
+            time_col: weekly_periods,
+            'yhat': [10.0, 20.0, 30.0]
+        })
+
+        result_weekly = deepar_model_weekly._period_to_timestamp(pred_df_weekly)
+        
+        # For weekly frequency, should use end_time and normalize
+        expected_weekly_timestamps = pd.to_datetime(['2020-01-05', '2020-01-12', '2020-01-19']).to_series().reset_index(drop=True)
+        expected_weekly_timestamps.name = time_col
+        pd.testing.assert_series_equal(
+            result_weekly[time_col], 
+            expected_weekly_timestamps,
+            check_dtype=False
+        )
+
+        # Test with daily frequency (D)
+        deepar_model_daily = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            frequency_unit="D",
+            frequency_quantity=1,
+            num_samples=1,
+            target_col=target_col,
+            time_col=time_col,
+        )
+
+        # Create a DataFrame with Period objects for daily frequency
+        daily_periods = pd.PeriodIndex(['2020-01-01', '2020-01-02', '2020-01-03'], freq='D')
+        pred_df_daily = pd.DataFrame({
+            time_col: daily_periods,
+            'yhat': [10.0, 20.0, 30.0]
+        })
+
+        result_daily = deepar_model_daily._period_to_timestamp(pred_df_daily)
+        
+        # For non-weekly frequency, should convert to timestamp
+        expected_daily_timestamps = pd.to_datetime(['2020-01-01', '2020-01-02', '2020-01-03']).to_series().reset_index(drop=True)
+        expected_daily_timestamps.name = time_col
+        pd.testing.assert_series_equal(
+            result_daily[time_col], 
+            expected_daily_timestamps,
+            check_dtype=False
+        )
+
+        # Test with monthly frequency (M)
+        deepar_model_monthly = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            frequency_unit="M",
+            frequency_quantity=1,
+            num_samples=1,
+            target_col=target_col,
+            time_col=time_col,
+        )
+
+        # Create a DataFrame with Period objects for monthly frequency
+        monthly_periods = pd.PeriodIndex(['2020-01', '2020-02', '2020-03'], freq='M')
+        pred_df_monthly = pd.DataFrame({
+            time_col: monthly_periods,
+            'yhat': [10.0, 20.0, 30.0]
+        })
+
+        result_monthly = deepar_model_monthly._period_to_timestamp(pred_df_monthly)
+        
+        # For non-weekly frequency, should convert to timestamp
+        expected_monthly_timestamps = pd.to_datetime(['2020-01-01', '2020-02-01', '2020-03-01']).to_series().reset_index(drop=True)
+        expected_monthly_timestamps.name = time_col
+        pd.testing.assert_series_equal(
+            result_monthly[time_col], 
+            expected_monthly_timestamps,
+            check_dtype=False
+        )
+
+        # Test with quarterly frequency (Q)
+        deepar_model_quarterly = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            frequency_unit="Q",
+            frequency_quantity=1,
+            num_samples=1,
+            target_col=target_col,
+            time_col=time_col,
+        )
+
+        # Create a DataFrame with Period objects for quarterly frequency
+        quarterly_periods = pd.PeriodIndex(['2020Q1', '2020Q2', '2020Q3'], freq='Q')
+        pred_df_quarterly = pd.DataFrame({
+            time_col: quarterly_periods,
+            'yhat': [10.0, 20.0, 30.0]
+        })
+
+        result_quarterly = deepar_model_quarterly._period_to_timestamp(pred_df_quarterly)
+        
+        # For non-weekly frequency, should convert to timestamp
+        expected_quarterly_timestamps = pd.to_datetime(['2020-01-01', '2020-04-01', '2020-07-01']).to_series().reset_index(drop=True)
+        expected_quarterly_timestamps.name = time_col
+        pd.testing.assert_series_equal(
+            result_quarterly[time_col], 
+            expected_quarterly_timestamps,
+            check_dtype=False
+        )
 
 class TestDeepARModelCategoryEncoders(unittest.TestCase):
     """Test category_encoders dependency inclusion"""
