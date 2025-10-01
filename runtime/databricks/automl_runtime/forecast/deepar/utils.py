@@ -66,21 +66,27 @@ def validate_and_generate_index(df: pd.DataFrame,
 
     return new_index_full
 
-def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
-                                          frequency_unit: str,
-                                          frequency_quantity: int,
-                                          id_cols: Optional[List[str]] = None):
+def set_index_and_fill_missing_time_steps(
+    df: pd.DataFrame,
+    time_col: str,
+    frequency_unit: str,
+    frequency_quantity: int,
+    id_cols: Optional[List[str]] = None,
+    feature_cols: Optional[List[str]] = None
+):
     """
     Transform the input dataframe to an acceptable format for the GluonTS library.
 
     - Set the time column as the index
     - Impute missing time steps between the min and max time steps
+    - Forward/backward fill covariates if provided
 
     :param df: the input dataframe that contains time_col
     :param time_col: time column name
     :param frequency_unit: the frequency unit of the time series
     :param frequency_quantity: the frequency quantity of the time series
     :param id_cols: the column names of the identity columns for multi-series time series; None for single series
+    :param feature_cols: covariate columns to preserve (optional)
     :return: single-series - transformed dataframe;
              multi-series - dictionary of transformed dataframes, each key is the (concatenated) id of the time series
     """
@@ -93,6 +99,11 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
 
     valid_index = validate_and_generate_index(df=df, time_col=time_col, frequency_unit=frequency_unit, frequency_quantity=frequency_quantity)
 
+    cols_to_keep = [c for c in df.columns if c not in id_cols] if id_cols else df.columns.tolist()
+    if feature_cols:
+        # ensure feature_cols are included in the reindexing
+        cols_to_keep = list(set(cols_to_keep) | set(feature_cols))
+
     if id_cols is not None:
         df_dict = {}
         for grouped_id, grouped_df in df.groupby(id_cols):
@@ -100,18 +111,31 @@ def set_index_and_fill_missing_time_steps(df: pd.DataFrame, time_col: str,
                 ts_id = "-".join([str(x) for x in grouped_id])
             else:
                 ts_id = str(grouped_id)
-            df_dict[ts_id] = (grouped_df.set_index(time_col).sort_index()
-                              .reindex(valid_index).drop(id_cols, axis=1))
+
+            temp_df = grouped_df[cols_to_keep].set_index(time_col).sort_index()
+            temp_df = temp_df.reindex(valid_index)  # add missing timestamps
+
+            if feature_cols:
+                # Only fill covariates
+                covars = [c for c in feature_cols if c in temp_df.columns]
+                temp_df[covars] = temp_df[covars].ffill().bfill()
+
+            # Apply MS conversion if needed
             if frequency_unit.upper() == "MS":
                 # Truncate the day of month to avoid issues with pandas frequency check
-                df_dict[ts_id] = df_dict[ts_id].to_period("M")
+                temp_df = temp_df.to_period("M")
+
+            df_dict[ts_id] = temp_df
 
         return df_dict
     else:
-        df = df.set_index(time_col).sort_index()
-
-        # Fill in missing time steps between the min and max time steps
+        df = df[cols_to_keep].set_index(time_col).sort_index()
         df = df.reindex(valid_index)
+
+        if feature_cols:
+            # Only fill covariates
+            covars = [c for c in feature_cols if c in df.columns]
+            df[covars] = df[covars].ffill().bfill()
 
         if frequency_unit.upper() == "MS":
             # Truncate the day of month to avoid issues with pandas frequency check
