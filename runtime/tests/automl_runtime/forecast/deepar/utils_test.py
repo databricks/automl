@@ -330,4 +330,111 @@ class TestDeepARUtils(unittest.TestCase):
         expected_df = expected_df.set_index(time_col).rename_axis(None).to_period("M")
          # Assert equality
         self.assertEqual(transformed_df_dict.keys(), {'1', '2'})
-        pd.testing.assert_frame_equal(transformed_df_dict["1"], expected_df) 
+        pd.testing.assert_frame_equal(transformed_df_dict["1"], expected_df)
+
+    def test_uni_timeseries_with_covariates(self):
+        """Test that covariates are preserved, forward/backward filled, and aligned for multiple series"""
+        target_col = "sales"
+        time_col = "date"
+        feature_col = "promo"
+        num_training_months = 6
+        num_future_months = 4
+        num_months = num_training_months + num_future_months
+
+        # Base dates
+        base_dates = pd.date_range(start="2020-01-01", periods=num_months, freq="MS")
+
+        # Create a base dataframe for one store with covariate
+        df = pd.DataFrame({
+            time_col: base_dates,
+            target_col: list(range(10, 10 + num_training_months)) + [None] * num_future_months,
+            feature_col: [None, 2, 3, 4, None, 6, 2, 3, 4, 5]  # intentionally include NaNs
+        })
+
+        # Transform the dataframe with covariates
+        transformed = set_index_and_fill_missing_time_steps(
+            df,
+            time_col=time_col,
+            frequency_unit="MS",
+            frequency_quantity=1,
+            feature_cols=[feature_col]
+        )
+
+        # Assert index is PeriodIndex monthly
+        self.assertTrue(isinstance(transformed.index, pd.PeriodIndex))
+        self.assertEqual(transformed.index.freqstr, "M")
+
+        # Assert target column has NaNs filled in correct positions
+        self.assertTrue(pd.isna(transformed.loc[transformed.index[6], target_col]))
+        self.assertTrue(pd.isna(transformed.loc[transformed.index[7], target_col]))
+        self.assertTrue(pd.isna(transformed.loc[transformed.index[8], target_col]))
+        self.assertTrue(pd.isna(transformed.loc[transformed.index[9], target_col]))
+
+        # Assert covariates are forward/backward filled
+        # For original NaNs in promo, they should be filled
+        self.assertFalse(pd.isna(transformed[feature_col]).any())
+
+        # Assert that the feature cols have the expected values
+        expected_feature = pd.Series([2.0, 2.0, 3.0, 4.0, 4.0, 6.0, 2.0, 3.0, 4.0, 5.0], name=feature_col,
+                                     index=transformed.index)
+        self.assertTrue(transformed[feature_col].equals(expected_feature))
+
+    def test_multi_timeseries_with_covariates(self):
+        """Test that covariates are preserved, forward/backward filled, and aligned for multiple series"""
+        target_col = "sales"
+        time_col = "date"
+        feature_col = "promo"
+        num_training_months = 6
+        num_future_months = 4
+        num_months = num_training_months + num_future_months
+        id_col = "store"
+
+        # Base dates
+        base_dates = pd.date_range(start="2020-01-01", periods=num_months, freq="MS")
+
+        # Create a base dataframe for one store with covariate
+        base_df = pd.DataFrame({
+            time_col: base_dates,
+            target_col: list(range(10, 10 + num_training_months)) + [None] * num_future_months,
+            feature_col: [None, 2, None, 4, None, 6, None, None, None, None]  # intentionally include NaNs
+        })
+
+        # Duplicate for second store with shifted covariate
+        df = pd.concat([base_df.copy(), base_df.copy()], ignore_index=True)
+        df[id_col] = [1] * num_months + [2] * num_months
+
+        # Drop a couple of months to test missing time step filling
+        df = df.drop([2, 12]).reset_index(drop=True)
+
+        # Transform the dataframe with covariates
+        transformed = set_index_and_fill_missing_time_steps(
+            df,
+            time_col=time_col,
+            frequency_unit="MS",
+            frequency_quantity=1,
+            id_cols=[id_col],
+            feature_cols=[feature_col]
+        )
+
+        # Assert keys exist for both series
+        self.assertEqual(set(transformed.keys()), {"1", "2"})
+
+        for ts_id in ["1", "2"]:
+            ts_df = transformed[ts_id]
+
+            # Assert index is PeriodIndex monthly
+            self.assertTrue(isinstance(ts_df.index, pd.PeriodIndex))
+            self.assertEqual(ts_df.index.freqstr, "M")
+
+            # Assert target column has NaNs filled in correct positions
+            self.assertTrue(pd.isna(ts_df.loc[ts_df.index[2], target_col]))
+            self.assertTrue(pd.isna(ts_df.loc[ts_df.index[7], target_col]))
+
+            # Assert covariates are forward/backward filled
+            # For original NaNs in promo, they should be filled
+            self.assertFalse(pd.isna(ts_df[feature_col]).any())
+
+            # Assert that the feature cols have the expected values
+            expected_feature = pd.Series([2.0, 2.0, 2.0, 4.0, 4.0, 6.0, 6.0, 6.0, 6.0, 6.0], name=feature_col,
+                                         index=ts_df.index)
+            self.assertTrue(ts_df[feature_col].equals(expected_feature))
