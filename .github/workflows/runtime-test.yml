@@ -22,10 +22,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install "pip<23"
         pip install "setuptools<70"
-        pip install "numpy<1.25" cython
-        pip install "pystan==2.19.1.1"
+        pip install numpy cython
+        pip install pystan==2.19.1.1
         # install packages to setup the environment
         if [ -f environment.txt ]; then pip install -r environment.txt; fi
         # install packages to setup the test environment
