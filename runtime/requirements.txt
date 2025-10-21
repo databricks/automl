@@ -2,6 +2,7 @@
 # * Keep dependencies sorted.
 
 category_encoders
+cmdstanpy
 gluonts
 holidays
 hyperopt

@@ -2,7 +2,6 @@
 # * Keep dependencies sorted.
 
 category_encoders==2.6.0
-cmdstanpy==1.1.0
 gluonts[torch]==0.15.1
 holidays==0.28
 hyperopt==0.2.7
