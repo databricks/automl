@@ -25,7 +25,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest pytest-cov
         python -m pip install build --user
-        if [ -f environment.lock.txt ]; then pip install -r environment.lock.txt; fi
+        if [ -f environment.lock.txt ]; then pip install --no-deps -r environment.lock.txt; fi
         if [ -f test-environment.txt ]; then pip install -r test-environment.txt; fi
       working-directory: runtime
     - name: Lint with flake8
