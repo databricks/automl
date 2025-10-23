@@ -380,7 +380,7 @@ class TestDeepARUtils(unittest.TestCase):
         self.assertTrue(transformed[feature_col].equals(expected_feature))
 
     def test_multi_timeseries_with_covariates(self):
-        """Test that covariates are preserved, forward/backward filled, and aligned for multiple series"""
+        """Test that covariates are preserved, forward/backward filled, and aligned for multiple time series"""
         target_col = "sales"
         time_col = "date"
         feature_col = "promo"
