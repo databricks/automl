@@ -64,6 +64,8 @@ class DeepARModel(ForecastModel):
         :param time_col: the time column name
         :param id_cols: the column names of the identity columns for multi-series time series; None for single series
         :param feature_cols: the column names of the covariate feature columns; None if no covariates
+        :param split_col: Optional column name of the split columns
+        :param preprocess_func: Optional callable function for preprocessing input data
         """
 
         super().__init__()
@@ -100,10 +102,13 @@ class DeepARModel(ForecastModel):
                 # multi-series: combine id columns
                 model_input_preprocessed['ts_id'] = model_input_preprocessed[self._id_cols].astype(str).agg('-'.join,
                                                                                                             axis=1)
+            # Apply the custom preprocessing function, which may use the split column
+            # (e.g., to filter or transform data differently for train/test)
             model_input_preprocessed = apply_preprocess_func(model_input_preprocessed,
                                                              self._preprocess_func,
                                                              self._split_col)
-            # Save target column from the original input
+            # Rejoin the original target column after preprocessing in case it was dropped or transformed.
+            # This ensures the model still has the correct target values for forecasting.
             model_input_preprocessed = model_input_preprocessed.join(model_input[self._target_col])
 
         required_cols = [self._target_col, self._time_col]
@@ -152,7 +157,10 @@ class DeepARModel(ForecastModel):
         # Prepare aggregation dictionary
         agg_dict = {self._target_col: "mean"}
         if self._feature_cols:
-            # For feature columns, take the mean as well (could also be first/last depending on use case)
+            # When grouping time series, aggregate feature columns as well.
+            # - Numeric features: averaged across duplicates (e.g. multiple sensors reporting same timestamp)
+            # - Categorical features: take the first value (arbitrary but consistent)
+            # This ensures a single feature vector per time step before passing to GluonTS.
             for feature_col in self._feature_cols:
                 if pd.api.types.is_numeric_dtype(model_input[feature_col]):
                     agg_dict[feature_col] = "mean"
@@ -161,6 +169,8 @@ class DeepARModel(ForecastModel):
 
         model_input = model_input.groupby(group_cols).agg(agg_dict).reset_index()
 
+        # Ensure the time index is continuous and all covariates are aligned with target steps.
+        # This also fills missing timestamps, which DeepAR requires for consistent sequence input.
         model_input_transformed = set_index_and_fill_missing_time_steps(model_input,
                                                                         self._time_col,
                                                                         self._frequency_unit,
@@ -168,12 +178,16 @@ class DeepARModel(ForecastModel):
                                                                         self._id_cols,
                                                                         self._feature_cols)
         if self._feature_cols:
-            # Your input can be a dict (multi-series) or a single DataFrame (single-series)
+            # GluonTS's PandasDataset does not support dynamic features.
+            # Switch to ListDataset when feature columns are provided.
             list_dataset = []
 
             if isinstance(model_input_transformed, dict):
                 # Multi-series: iterate over each series
                 for ts_id, df in model_input_transformed.items():
+                    # GluonTS expects dynamic real-valued features with shape (num_features, time_length).
+                    # Transpose from DataFrame shape (time_length, num_features) -> (num_features, time_length).
+                    # These features must align exactly with each timestamp in the target.
                     target_array = df[self._target_col].dropna().to_numpy()  # keep NaNs for horizon
                     feat_array = df[self._feature_cols].to_numpy().T  # transpose for GluonTS
                     list_dataset.append({

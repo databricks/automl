@@ -116,7 +116,9 @@ def set_index_and_fill_missing_time_steps(
             temp_df = temp_df.reindex(valid_index)  # add missing timestamps
 
             if feature_cols:
-                # Only fill covariates
+                # Only forward/backward fill covariates.
+                # Do not fill the target column: DeepAR handles missing targets differently.
+                # This ensures covariate arrays have no NaNs and align with the full timestamp index.
                 covars = [c for c in feature_cols if c in temp_df.columns]
                 temp_df[covars] = temp_df[covars].ffill().bfill()
 
@@ -133,7 +135,9 @@ def set_index_and_fill_missing_time_steps(
         df = df.reindex(valid_index)
 
         if feature_cols:
-            # Only fill covariates
+            # Only forward/backward fill covariates.
+            # Do not fill the target column: DeepAR handles missing targets differently.
+            # This ensures covariate arrays have no NaNs and align with the full timestamp index.
             covars = [c for c in feature_cols if c in df.columns]
             df[covars] = df[covars].ffill().bfill()
 
