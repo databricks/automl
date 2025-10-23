@@ -5,11 +5,6 @@ name: Publish AutoML runtime package to PyPI and TestPyPI
 
 on: [push]
 
-env:
-  CUDA_VISIBLE_DEVICES: ""
-  TORCH_CUDA_ARCH_LIST: "None"
-  TORCH_USE_CUDA_DSA: "0"
-
 jobs:
   build:
 
