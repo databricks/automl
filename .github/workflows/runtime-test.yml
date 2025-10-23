@@ -5,6 +5,11 @@ name: Python package
 
 on: [push, pull_request, workflow_dispatch]
 
+env:
+  CUDA_VISIBLE_DEVICES: ""
+  TORCH_CUDA_ARCH_LIST: "None"
+  TORCH_USE_CUDA_DSA: "0"
+
 jobs:
   build:
 
