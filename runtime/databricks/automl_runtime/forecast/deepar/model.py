@@ -191,6 +191,7 @@ class DeepARModel(ForecastModel):
                     target_array = df[self._target_col].dropna().to_numpy()  # keep NaNs for horizon
                     feat_array = df[self._feature_cols].to_numpy().T  # transpose for GluonTS
                     list_dataset.append({
+                        "item_id": ts_id,
                         "start": df.index[0],
                         "target": target_array,
                         "feat_dynamic_real": feat_array

@@ -823,6 +823,65 @@ class TestDeepARModelWithCovariates(unittest.TestCase):
         with self.assertRaises(Exception):
             deepar_model.predict(context=None, model_input=sample_input_missing_features)
 
+    def test_multi_series_model_with_covariates_preserves_item_id(self):
+        """Test that multi-series DeepAR model with covariates preserves series identifiers"""
+        target_col = "sales"
+        time_col = "date"
+        id_col = "store"
+        feature_cols = ["temperature", "promotion"]
+
+        deepar_model = DeepARModel(
+            model=self.model,
+            horizon=self.prediction_length,
+            frequency_unit="d",
+            frequency_quantity=3,
+            num_samples=1,
+            target_col=target_col,
+            time_col=time_col,
+            id_cols=[id_col],
+            feature_cols=feature_cols,
+        )
+
+        num_rows_per_series = 10
+        # Create data for two stores
+        sample_input_store1 = pd.DataFrame({
+            time_col: pd.date_range("2020-10-01", periods=num_rows_per_series + self.prediction_length),
+            target_col: list(range(num_rows_per_series)) + [None] * self.prediction_length,
+            id_col: [1] * (num_rows_per_series + self.prediction_length),
+            "temperature": list(range(20, 20 + num_rows_per_series)) + [0] * self.prediction_length,
+            "promotion": [i % 2 for i in range(num_rows_per_series)] + [0] * self.prediction_length
+        })
+
+        sample_input_store2 = pd.DataFrame({
+            time_col: pd.date_range("2020-10-01", periods=num_rows_per_series + self.prediction_length),
+            target_col: list(range(num_rows_per_series)) + [None] * self.prediction_length,
+            id_col: [2] * (num_rows_per_series + self.prediction_length),
+            "temperature": list(range(25, 25 + num_rows_per_series)) + [0] * self.prediction_length,
+            "promotion": [i % 2 for i in range(num_rows_per_series)] + [0] * self.prediction_length
+        })
+
+        sample_input = pd.concat([sample_input_store1, sample_input_store2], ignore_index=True)
+
+        with mlflow.start_run() as run:
+            mlflow_deepar_log_model(deepar_model, sample_input)
+        run_id = run.info.run_id
+
+        # Load model and test prediction
+        loaded_model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+        pred_df = loaded_model.predict(sample_input)
+
+        # Verify that series identifiers are preserved in the output
+        self.assertIn(id_col, pred_df.columns,
+                      f"Series identifier '{id_col}' should be preserved in predictions for multi-series model with covariates")
+        self.assertEqual(pred_df.columns.tolist(), [time_col, "yhat", id_col])
+        self.assertEqual(len(pred_df), self.prediction_length * 2)  # predictions for both stores
+
+        # Verify both stores are present
+        unique_stores = pred_df[id_col].unique()
+        self.assertEqual(len(unique_stores), 2, "Should have predictions for both stores")
+        self.assertIn('1', unique_stores, "Should have predictions for store 1")
+        self.assertIn('2', unique_stores, "Should have predictions for store 2")
+
 
 class TestDeepARModelWithPreprocess(unittest.TestCase):
     @classmethod
