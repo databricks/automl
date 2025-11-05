@@ -482,5 +482,5 @@ zipp==3.23.0
     #   importlib-metadata
     #   importlib-resources
 
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
+setuptools<68
+    # added manually
