@@ -482,6 +482,6 @@ zipp==3.23.0
     #   importlib-metadata
     #   importlib-resources
 
-setuptools>=68.0.0
+setuptools<68
     # added manually
 
