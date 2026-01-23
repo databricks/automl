@@ -64,3 +64,30 @@ class TestDiagnostics(unittest.TestCase):
         df_cv = cross_validation(model, horizon=horizon, cutoffs=cutoffs)
         self.assertEqual(df_cv["ds"].tolist(), expected_ds.tolist())
         self.assertEqual(set(df_cv.columns), set(expected_cols))
+
+    def test_cross_validation_month_end_cutoff(self):
+        df = pd.DataFrame({
+            "ds": pd.to_datetime([
+                "2019-03-31",
+                "2019-06-30",
+                "2019-09-30",
+                "2019-12-31",
+                "2020-03-31",
+                "2020-06-30",
+                "2020-09-30",
+            ]),
+            "y": range(7),
+        })
+        model = Prophet(
+            yearly_seasonality=False,
+            weekly_seasonality=False,
+            daily_seasonality=False,
+        )
+        model.fit(df)
+
+        cutoffs = [pd.Timestamp("2020-03-31")]
+        horizon = pd.DateOffset(months=6)
+        df_cv = cross_validation(model, horizon=horizon, cutoffs=cutoffs)
+
+        expected_ds = df[(df["ds"] > cutoffs[0]) & (df["ds"] <= cutoffs[0] + horizon)]["ds"]
+        self.assertEqual(df_cv["ds"].tolist(), expected_ds.tolist())
