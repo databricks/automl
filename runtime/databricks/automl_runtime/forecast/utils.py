@@ -219,8 +219,8 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, frequency_unit: str,
     # First cutoff is the cutoff bewteen splits
     cutoff = split_cutoff
     result = []
-    max_cutoff = max(df["ds"]) - horizon_dateoffset
-    while cutoff <= max_cutoff:
+    max_cutoff = max(df["ds"])
+    while cutoff + horizon_dateoffset <= max_cutoff:
         # If data does not exist in data range (cutoff, cutoff + horizon_dateoffset]
         if (not (((df["ds"] > cutoff) & (df["ds"] <= cutoff + horizon_dateoffset)).any())):
             # Next cutoff point is "next date after cutoff in data - horizon_dateoffset"

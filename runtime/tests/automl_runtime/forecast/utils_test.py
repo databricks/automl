@@ -284,6 +284,13 @@ class TestTestGenerateCustomCutoffs(unittest.TestCase):
         cutoffs = generate_custom_cutoffs(df, horizon=7, frequency_unit="QS", split_cutoff=pd.Timestamp('2020-07-12 00:00:00'))
         self.assertEqual([pd.Timestamp('2020-07-12 00:00:00'), pd.Timestamp('2020-10-12 00:00:00')], cutoffs)
 
+    def test_generate_custom_cutoffs_success_quaterly_end(self):
+        df = pd.DataFrame(
+            pd.date_range(start="2020-03-31", periods=3, freq=pd.DateOffset(months=3)), columns=["ds"]
+        ).rename_axis("y").reset_index()
+        cutoffs = generate_custom_cutoffs(df, horizon=2, frequency_unit="QS", split_cutoff=pd.Timestamp('2020-03-31 00:00:00'))
+        self.assertEqual([pd.Timestamp('2020-03-31 00:00:00')], cutoffs)
+
     def test_generate_custom_cutoffs_success_annualy(self):
         df = pd.DataFrame(
             pd.date_range(start="2012-07-14", periods=10, freq=pd.DateOffset(years=1)), columns=["ds"]
