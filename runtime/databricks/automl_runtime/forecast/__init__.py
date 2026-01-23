@@ -77,7 +77,7 @@ DATE_OFFSET_KEYWORD_MAP = {
     }
 }
 
-QUATERLY_OFFSET_ALIAS = [
+QUARTERLY_OFFSET_ALIAS = [
     'Q', 'QS', 'BQ', 'BQS'
 ]
 

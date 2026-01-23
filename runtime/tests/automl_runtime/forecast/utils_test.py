@@ -71,7 +71,7 @@ class TestGetValidationHorizon(unittest.TestCase):
         validation_horizon = get_validation_horizon(df, 17, "YS")
         self.assertEqual(validation_horizon, 2)
 
-        # for dataframe with 12 quaters of data, maximum horizon is 3 quaters.
+        # for dataframe with 12 quarters of data, maximum horizon is 3 quarters.
         df = pd.DataFrame(pd.date_range(start="2012-01-14", periods=13, freq=pd.DateOffset(months=3)), columns=["ds"])
         validation_horizon = get_validation_horizon(df, 17, "QS")
         self.assertEqual(validation_horizon, 3)
@@ -197,7 +197,7 @@ class TestGenerateCutoffs(unittest.TestCase):
         cutoffs = generate_cutoffs(df, horizon=2, frequency_unit="MS", num_folds=3, seasonal_period=1)
         self.assertEqual([pd.Timestamp('2021-08-12 00:00:00'), pd.Timestamp('2021-9-12 00:00:00'), pd.Timestamp('2021-10-12 00:00:00')], cutoffs)
 
-    def test_generate_cutoffs_success_quaterly(self):
+    def test_generate_cutoffs_success_quarterly(self):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-12", periods=9, freq=pd.DateOffset(months=3)), columns=["ds"]
         ).rename_axis("y").reset_index()
@@ -277,14 +277,14 @@ class TestTestGenerateCustomCutoffs(unittest.TestCase):
         cutoffs = generate_custom_cutoffs(df, horizon=7, frequency_unit="MS", split_cutoff=pd.Timestamp('2021-03-12 00:00:00'))
         self.assertEqual([pd.Timestamp('2021-03-12 00:00:00'), pd.Timestamp('2021-04-12 00:00:00'), pd.Timestamp('2021-05-12 00:00:00')], cutoffs)
 
-    def test_generate_custom_cutoffs_success_quaterly(self):
+    def test_generate_custom_cutoffs_success_quarterly(self):
         df = pd.DataFrame(
             pd.date_range(start="2020-07-12", periods=9, freq=pd.DateOffset(months=3)), columns=["ds"]
         ).rename_axis("y").reset_index()
         cutoffs = generate_custom_cutoffs(df, horizon=7, frequency_unit="QS", split_cutoff=pd.Timestamp('2020-07-12 00:00:00'))
         self.assertEqual([pd.Timestamp('2020-07-12 00:00:00'), pd.Timestamp('2020-10-12 00:00:00')], cutoffs)
 
-    def test_generate_custom_cutoffs_success_quaterly_end(self):
+    def test_generate_custom_cutoffs_success_quarterly_end(self):
         df = pd.DataFrame(
             pd.date_range(start="2020-03-31", periods=3, freq=pd.DateOffset(months=3)), columns=["ds"]
         ).rename_axis("y").reset_index()

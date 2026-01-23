@@ -27,7 +27,7 @@ from mlflow.utils.environment import _mlflow_conda_env
 from databricks.automl_runtime.forecast import OFFSET_ALIAS_MAP, DATE_OFFSET_KEYWORD_MAP
 from databricks.automl_runtime.forecast.model import ForecastModel, mlflow_forecast_log_model
 from databricks.automl_runtime import version
-from databricks.automl_runtime.forecast.utils import is_quaterly_alias, make_future_dataframe, apply_preprocess_func
+from databricks.automl_runtime.forecast.utils import is_quarterly_alias, make_future_dataframe, apply_preprocess_func
 
 
 PROPHET_ADDITIONAL_PIP_DEPS = [
@@ -71,7 +71,7 @@ class ProphetModel(ForecastModel):
         self._frequency_unit = frequency_unit
         self._frequency_quantity = frequency_quantity
         self._time_col = time_col
-        self._is_quaterly = is_quaterly_alias(frequency_unit)
+        self._is_quarterly = is_quarterly_alias(frequency_unit)
         self._split_col = split_col
         self._preprocess_func = preprocess_func
         super().__init__()

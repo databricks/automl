@@ -117,7 +117,7 @@ class ProphetHyperoptEstimator(ABC):
         :param split_cutoff: Optional cutoff specified by user. If provided, 
         it is the starting point of cutoffs for cross validation.
         For tuning job, it is the cutoff between train and validate split.
-        For training job, it is the cutoff bewteen validate and test split.
+        For training job, it is the cutoff between validate and test split.
         :param prophet_kwargs: Optional keyword arguments for Prophet model.
             For information about the parameters see:
             `The Prophet source code <https://github.com/facebook/prophet/blob/master/python/prophet/forecaster.py>`_.

@@ -16,7 +16,7 @@
 import logging
 from typing import Dict, List, Optional, Tuple, Union
 from databricks.automl_runtime.forecast import DATE_OFFSET_KEYWORD_MAP,\
-    QUATERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS, OFFSET_ALIAS_MAP, PERIOD_ALIAS_MAP
+    QUARTERLY_OFFSET_ALIAS, NON_DAILY_OFFSET_ALIAS, OFFSET_ALIAS_MAP, PERIOD_ALIAS_MAP
 
 import pandas as pd
 
@@ -155,7 +155,7 @@ def generate_cutoffs(df: pd.DataFrame, horizon: int, frequency_unit: str,
     """
     period = max(0.5 * horizon, 1)  # avoid empty cutoff buckets
 
-    # avoid non-integer months, quaters ands years.
+    # avoid non-integer months, quarters ands years.
     if frequency_unit in NON_DAILY_OFFSET_ALIAS:
         period = int(period)
         period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*frequency_quantity*period
@@ -208,7 +208,7 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, frequency_unit: str,
     :param split_cutoff: the user-specified cutoff, as the starting point of cutoffs.
     :param frequency_quantity: frequency quantity of the time series.
     For tuning job, it is the cutoff between train and validate split.
-    For training job, it is the cutoff bewteen validate and test split.
+    For training job, it is the cutoff between validate and test split.
     :return: list of pd.Timestamp cutoffs for cross-validation.
     """
     # TODO: [ML-43528] expose period as input.
@@ -216,7 +216,7 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, frequency_unit: str,
     period_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*period*frequency_quantity
     horizon_dateoffset = pd.DateOffset(**DATE_OFFSET_KEYWORD_MAP[frequency_unit])*horizon*frequency_quantity
 
-    # First cutoff is the cutoff bewteen splits
+    # First cutoff is the cutoff between splits
     cutoff = split_cutoff
     result = []
     max_cutoff = max(df["ds"])
@@ -230,8 +230,8 @@ def generate_custom_cutoffs(df: pd.DataFrame, horizon: int, frequency_unit: str,
         cutoff += period_dateoffset
     return result
 
-def is_quaterly_alias(freq: str):
-    return freq in QUATERLY_OFFSET_ALIAS
+def is_quarterly_alias(freq: str):
+    return freq in QUARTERLY_OFFSET_ALIAS
 
 def is_frequency_consistency(
                 start_time: pd.Timestamp,
