@@ -143,7 +143,7 @@ class TestProphetModel(BaseProphetModelTest):
 
     def test_make_future_dataframe(self):
         for feq_unit in OFFSET_ALIAS_MAP:
-            # Temporally disable the year, month and quater since we
+            # Temporally disable the year, month and quarter since we
             # don't have full support yet.
             if OFFSET_ALIAS_MAP[feq_unit] in ['YS', 'MS', 'QS']:
                 continue

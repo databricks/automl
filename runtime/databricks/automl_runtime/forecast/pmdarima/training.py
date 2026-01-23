@@ -50,7 +50,7 @@ class ArimaEstimator:
         :param frequency_quantity: The number of frequency units in the frequency. Default is 1.
         it is the starting point of cutoffs for cross validation.
         For tuning job, it is the cutoff between train and validate split.
-        For training job, it is the cutoff bewteen validate and test split.
+        For training job, it is the cutoff between validate and test split.
         """
         self._horizon = horizon
         self._frequency_unit = OFFSET_ALIAS_MAP[frequency_unit]
